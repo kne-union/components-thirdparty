@@ -1,0 +1,13 @@
+name: Publish Npm Package
+on:
+  pull_request:
+    branches: [master]
+    types:
+      - closed
+jobs:
+  libs-npm:
+    if: github.event.pull_request.merged == true
+    uses: kne-union/actions/.github/workflows/publish-remote-components-workflow.yml@master
+    secrets: inherit
+    with:
+      package_name: '@kne-components/components-thirdparty'

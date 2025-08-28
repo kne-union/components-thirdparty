@@ -1,0 +1,87 @@
+{
+  "name": "@kne-components/components-thirdparty",
+  "version": "0.1.0",
+  "description": "用于封装一些体积较大的需要使用时再加载的第三方库",
+  "scripts": {
+    "init": "husky",
+    "start": "cross-env PORT=3010 COMPONENTS_NAME=components-thirdparty MODULES_DEV_PUBLIC_URL=/ craco start",
+    "build": "cross-env COMPONENTS_NAME=components-thirdparty MODULES_DEV_PUBLIC_URL=components-thirdparty craco build",
+    "create": "modules-dev-create",
+    "test": "craco test --coverage",
+    "eject": "react-scripts eject",
+    "prettier": "prettier --config .prettierrc --write '{src/**/*}.{js,jsx,ts,tsx,json,css,scss}'",
+    "lint-staged": "npx lint-staged"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "lint-staged"
+    }
+  },
+  "lint-staged": {
+    "src/**/*.{js,jsx,ts,tsx,json,css,scss}": [
+      "prettier --config .prettierrc --write",
+      "git add"
+    ]
+  },
+  "files": [
+    "build"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/kne-union/components-thirdparty.git"
+  },
+  "keywords": [],
+  "author": "linzp",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/kne-union/components-thirdparty/issues"
+  },
+  "homepage": "https://www.kne-union.top/#/components",
+  "eslintConfig": {
+    "extends": [
+      "react-app",
+      "react-app/jest"
+    ]
+  },
+  "browserslist": {
+    "production": [
+      ">0.2%",
+      "not dead",
+      "not op_mini all"
+    ],
+    "development": [
+      "last 1 chrome version",
+      "last 1 firefox version",
+      "last 1 safari version"
+    ]
+  },
+  "jest": {
+    "moduleNameMapper": {
+      "^@common/(.*)": "<rootDir>/src/common/$1",
+      "^@components/(.*)": "<rootDir>/src/components/$1",
+      "^@utils/(.*)": "<rootDir>/src/common/utils/$1"
+    }
+  },
+  "devDependencies": {
+    "@craco/craco": "^7.1.0",
+    "@kne/modules-dev": "^2.0.14",
+    "@kne/react-fetch": "^1.4.3",
+    "@kne/remote-loader": "^1.2.3",
+    "@testing-library/jest-dom": "^6.4.2",
+    "antd": "^5.14.2",
+    "axios": "^1.6.7",
+    "classnames": "^2.5.1",
+    "cross-env": "^7.0.3",
+    "http-proxy-middleware": "^2.0.6",
+    "husky": "^9.0.11",
+    "lodash": "^4.17.21",
+    "prettier": "^3.2.5",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.22.2",
+    "sass": "^1.75.0"
+  },
+  "dependencies": {
+    "@kne/use-resize": "^0.1.1"
+  }
+}

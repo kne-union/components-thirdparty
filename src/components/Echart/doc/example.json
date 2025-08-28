@@ -1,0 +1,27 @@
+{
+  "isFull": false,
+  "list": [
+    {
+      "title": "这里填写示例标题",
+      "description": "这里填写示例说明",
+      "code": "./base.js",
+      "scope": [
+        {
+          "name": "_Echart",
+          "packageName": "@components/Echart"
+        }
+      ]
+    },
+    {
+      "title": "动态数据",
+      "description": "动态数据",
+      "code": "./dynamic-data.js",
+      "scope": [
+        {
+          "name": "_Echart",
+          "packageName": "@components/Echart"
+        }
+      ]
+    }
+  ]
+}
