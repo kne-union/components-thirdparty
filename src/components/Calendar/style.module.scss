@@ -1,0 +1,45 @@
+.calendar {
+  --fc-event-bg-color: var(--primary-color);
+  --fc-event-border-color: var(--primary-color);
+  --fc-today-bg-color: var(--primary-color-1);
+  --fc-button-bg-color: var(--primary-color);
+  --fc-button-border-color: var(--primary-color);
+  --fc-button-hover-bg-color: var(--primary-color-8);
+  --fc-button-hover-border-color: var(--primary-color-8);
+  --fc-button-active-bg-color: var(--primary-color-8);
+  --fc-button-active-border-color: var(--primary-color-8);
+  --fc-border-color: #f0f0f0;
+
+  :global {
+    .fc {
+      .fc-license-message {
+        display: none;
+      }
+
+      .fc-daygrid-event {
+        white-space: normal;
+      }
+
+      .fc-event {
+        overflow: hidden;
+      }
+
+      .fc-button {
+        padding: 0 4px;
+
+        &:active,
+        &:focus {
+          box-shadow: none !important;
+        }
+      }
+
+      .fc-toolbar-title {
+        font-size: 1.2em;
+      }
+
+      .fc-toolbar.fc-header-toolbar {
+        margin-bottom: 10px;
+      }
+    }
+  }
+}
