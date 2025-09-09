@@ -1,6 +1,6 @@
 {
   "name": "@kne-components/components-thirdparty",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "用于封装一些体积较大的需要使用时再加载的第三方库",
   "scripts": {
     "init": "husky",
