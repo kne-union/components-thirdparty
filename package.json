@@ -1,6 +1,6 @@
 {
   "name": "@kne-components/components-thirdparty",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "用于封装一些体积较大的需要使用时再加载的第三方库",
   "scripts": {
     "init": "husky",
@@ -82,13 +82,19 @@
     "sass": "^1.75.0"
   },
   "dependencies": {
+    "@ant-design/icons": "^6.1.0",
+    "@babel/standalone": "^7.28.5",
     "@fullcalendar/core": "^6.1.19",
     "@fullcalendar/daygrid": "^6.1.19",
     "@fullcalendar/interaction": "^6.1.19",
     "@fullcalendar/react": "^6.1.19",
     "@fullcalendar/scrollgrid": "^6.1.19",
     "@fullcalendar/timegrid": "^6.1.19",
+    "@kne/ensure-slash": "^0.1.0",
+    "@kne/react-error-boundary": "^0.1.1",
     "@kne/use-resize": "^0.1.1",
-    "dayjs": "^1.11.15"
+    "@monaco-editor/react": "^4.7.0",
+    "dayjs": "^1.11.19",
+    "plantuml-encoder": "^1.4.0"
   }
 }
