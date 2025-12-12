@@ -4,21 +4,38 @@ import { Tabs, Flex, Alert, Segmented, Splitter } from 'antd';
 import { MenuOutlined, SplitCellsOutlined, EyeOutlined } from '@ant-design/icons';
 import CodeEditor from '@components/CodeEditor';
 import LiveComponentView from '@components/LiveComponentView';
+import useRefCallback from '@kne/use-ref-callback';
+import lodash from 'lodash';
+import dayjs from 'dayjs';
 import transform from 'lodash/transform';
 import get from 'lodash/get';
 import { useState, useRef, useEffect, useMemo } from 'react';
+import { createRoot } from 'react-dom/client';
 import style from './style.module.scss';
 
-const ExampleContainer = createWithRemoteLoader({
-  modules: ['components-core:FormInfo@Form']
+const SafeRender = createWithRemoteLoader({
+  modules: ['components-core:Global@useGlobalContext', 'components-core:Global@PureGlobal']
 })(({ remoteModules, children }) => {
-  const [Form] = remoteModules;
-  return <Form>{children}</Form>;
+  const [useGlobalContext, PureGlobal] = remoteModules;
+  const { global } = useGlobalContext();
+  const ref = useRef(null);
+  useEffect(() => {
+    ref.current.innerHTML = '';
+    const dom = document.createElement('div');
+    ref.current.appendChild(dom);
+    const app = createRoot(dom);
+    app.render(
+      <PureGlobal preset={{ locale: global.locale }} themeToken={global.themeToken}>
+        {children}
+      </PureGlobal>
+    );
+  }, [children]);
+  return <div ref={ref} />;
 });
 
 const LiveComponentEditor = createWithRemoteLoader({
   modules: ['components-core:FormInfo', 'components-core:InfoPage', 'components-core:InfoPage@CentralContent']
-})(({ remoteModules, defaultValue, defaultMod = 'mix', onChange }) => {
+})(({ remoteModules, defaultValue, defaultMod = 'mix', libs = { lodash, dayjs }, onChange }) => {
   const [FormInfo, InfoPage, CentralContent] = remoteModules;
   const { Form, TableList } = FormInfo;
   const { Input, Select } = FormInfo.fields;
@@ -37,12 +54,13 @@ const LiveComponentEditor = createWithRemoteLoader({
   const outputContent = useMemo(() => {
     return encode(JSON.stringify(params));
   }, [params]);
+  const handleChange = useRefCallback(onChange);
   useEffect(() => {
     if (defaultValueRef.current !== outputContent) {
       defaultValueRef.current = outputContent;
-      onChange && onChange(outputContent);
+      handleChange && handleChange(outputContent);
     }
-  }, [outputContent]);
+  }, [outputContent, handleChange]);
   const [mod, setMod] = useState(defaultMod);
   const { content, props, scope } = Object.assign({}, { content: '', props: {}, scope: {} }, params);
   const propsFormRef = useRef(null);
@@ -56,7 +74,11 @@ const LiveComponentEditor = createWithRemoteLoader({
 
   const preview = (
     <div className={style['preview']}>
-      <LiveComponentView content={outputContent} container={ExampleContainer} />
+      <SafeRender>
+        <Form>
+          <LiveComponentView content={outputContent} libs={libs} />
+        </Form>
+      </SafeRender>
     </div>
   );
 
@@ -80,7 +102,8 @@ const LiveComponentEditor = createWithRemoteLoader({
                   return {
                     name,
                     type: item.type,
-                    defaultValue: ['array', 'object', 'boolean', 'number'].indexOf(item.type) ? JSON.stringify(item.defaultValue) : item.defaultValue
+                    defaultValue:
+                      ['array', 'object', 'boolean', 'number'].indexOf(item.type) > -1 ? JSON.stringify(item.defaultValue) : item.defaultValue
                   };
                 })
               }}
@@ -128,24 +151,34 @@ const LiveComponentEditor = createWithRemoteLoader({
                       { label: '对象', value: 'object' },
                       { label: '函数', value: 'function' }
                     ]}
+                    onChange={(value, item, { openApi, groupArgs }) => {
+                      setTimeout(() => {
+                        openApi.setField({
+                          name: 'defaultValue',
+                          groupName: 'props',
+                          groupIndex: groupArgs[0].index,
+                          value: ''
+                        });
+                      }, 100);
+                    }}
                   />,
                   <Input
                     name="defaultValue"
                     label="默认值"
-                    rule="LEN-0-500"
+                    rule="REQ LEN-0-500"
                     display={({ formData, groupArgs }) => {
                       return get(formData.props, `${groupArgs[0].index}.type`) !== 'function';
                     }}
                   />,
-                  <Input
+                  <div
+                    className={style['function-default-value']}
                     name="defaultValue"
                     label="默认值"
-                    rule="LEN-0-500"
-                    disabled
                     display={({ formData, groupArgs }) => {
                       return get(formData.props, `${groupArgs[0].index}.type`) === 'function';
-                    }}
-                  />
+                    }}>
+                    {'()=>null'}
+                  </div>
                 ]}
               />
             </Form>
@@ -162,7 +195,7 @@ const LiveComponentEditor = createWithRemoteLoader({
                   const item = scope[name];
                   return {
                     name,
-                    token: item.token
+                    token: item
                   };
                 })
               }}
@@ -219,7 +252,7 @@ const LiveComponentEditor = createWithRemoteLoader({
                           name: 'lib',
                           title: '可使用库',
                           getValueOf: () => {
-                            return ['lodash', 'dayjs'].join(',');
+                            return Object.keys(libs).join(',');
                           }
                         }
                       ]}

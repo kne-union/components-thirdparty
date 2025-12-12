@@ -1,17 +1,13 @@
-import React, { useEffect, useRef, useMemo } from 'react';
-import ReactDOM from 'react-dom/client';
+import React, { useEffect, useMemo } from 'react';
 import { decode } from 'plantuml-encoder';
-import { useState } from 'react';
-import { withRemoteLoader, createWithRemoteLoader } from '@kne/remote-loader';
+import { useState, useRef } from 'react';
+import { withRemoteLoader } from '@kne/remote-loader';
 import ErrorBoundary from '@kne/react-error-boundary';
-import lodash from 'lodash';
-import dayjs from 'dayjs';
 import { transform as _transform } from '@babel/standalone';
+import transform from 'lodash/transform';
 import * as Antd from 'antd';
 import { Flex, Spin } from 'antd';
 import style from './style.module.scss';
-
-const { transform, memoize } = lodash;
 
 const ErrorComponent = ({ error }) => {
   return (
@@ -21,94 +17,42 @@ const ErrorComponent = ({ error }) => {
   );
 };
 
-const LiveComponent = withRemoteLoader(({ remoteModules, children, props, themeToken, locale, container }) => {
+const LiveComponent = withRemoteLoader(({ remoteModules, children, props, libs = {} }) => {
   const [error, setError] = useState(null);
   const { content, moduleNames } = children;
-  const rootRef = useRef(null);
   const scope = useMemo(() => {
-    return memoize(moduleNames => {
-      return transform(
-        remoteModules,
-        (result, module, index) => {
-          result[moduleNames[index]] = module;
-        },
-        {}
-      );
-    })(moduleNames);
+    return transform(
+      remoteModules,
+      (result, module, index) => {
+        result[moduleNames[index]] = module;
+      },
+      {}
+    );
   }, [remoteModules, moduleNames]);
-
+  const [renderJsx, setRenderJsx] = useState(null);
+  const libsRef = useRef(libs);
   useEffect(() => {
-    if (!rootRef.current) {
-      return;
-    }
-    const el = document.createElement('div');
-    rootRef.current.innerHTML = '';
-    setError(null);
-    rootRef.current.appendChild(el);
-    const root = ReactDOM.createRoot(el);
+    const libs = libsRef.current;
     try {
-      const ContainerComponent = container || (({ children }) => children);
-      const code = _transform(
-        `render(<ErrorBoundary errorComponent={ErrorComponent}>
-  <PureGlobal themeToken={${JSON.stringify(themeToken)}} preset={${JSON.stringify({
-    locale
-  })}}>
-    <ContainerComponent>
-      ${content}
-    </ContainerComponent>
-  </PureGlobal>
-</ErrorBoundary>);`,
-        { presets: ['es2015', 'react'] }
-      ).code;
+      setError(null);
+      const code = _transform(`render(${content});`, { presets: ['es2015', 'react'] }).code;
       // eslint-disable-next-line no-new-func
-      const runnerFunction = new Function(
-        'React',
-        'render',
-        'props',
-        'Antd',
-        'ErrorBoundary',
-        'ErrorComponent',
-        'ContainerComponent',
-        'lodash',
-        'dayjs',
-        ...moduleNames,
-        code
-      );
-      runnerFunction(
-        React,
-        jsx => root.render(jsx),
-        props,
-        Antd,
-        ErrorBoundary,
-        ErrorComponent,
-        ContainerComponent,
-        lodash,
-        dayjs,
-        ...moduleNames.map(name => scope[name])
-      );
+      const runnerFunction = new Function('React', 'render', 'props', 'Antd', ...Object.keys(libs), ...moduleNames, code);
+      runnerFunction(React, jsx => setRenderJsx(jsx), props, Antd, ...Object.values(libs), ...moduleNames.map(name => scope[name]));
     } catch (e) {
       setError(e);
     }
-    return () => {
-      if (rootRef.current) {
-        rootRef.current.innerHTML = '';
-      }
-    };
   }, [scope, moduleNames, props, content]);
 
   return (
     <Flex vertical>
-      {moduleNames.length !== remoteModules.length ? <Spin /> : <div ref={rootRef} />}
+      <ErrorBoundary errorComponent={ErrorComponent}>{moduleNames.length !== remoteModules.length ? <Spin /> : renderJsx}</ErrorBoundary>
       {error && <ErrorComponent error={error.message} />}
     </Flex>
   );
 });
 
-const LiveComponentView = createWithRemoteLoader({
-  modules: ['components-core:Global@useGlobalContext']
-})(({ remoteModules, content: inputStr, themeColor, locale, container, props: componentProps }) => {
-  const [useGlobalContext] = remoteModules;
-  const { global } = useGlobalContext();
+const LiveComponentView = ({ content: inputStr, props: componentProps, libs }) => {
   const { content, props, scope, error } = useMemo(() => {
     try {
       if (!inputStr) {
@@ -162,13 +106,11 @@ const LiveComponentView = createWithRemoteLoader({
   return (
     <LiveComponent
       props={targetProps}
-      container={container}
-      themeToken={themeColor || global.themeToken}
-      locale={locale || global.locale}
+      libs={libs}
       modules={['components-core:Global@PureGlobal'].concat(moduleNames.map(name => scope[name]))}
       children={{ content, moduleNames: ['PureGlobal'].concat(moduleNames) }}
     />
   );
-});
+};
 
 export default LiveComponentView;

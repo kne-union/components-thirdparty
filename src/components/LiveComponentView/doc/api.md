@@ -54,14 +54,6 @@ const ErrorComponent = ({ error }) => {
 };
 ```
 
-#### 默认容器组件
-
-如果不提供 container 属性，使用默认容器：
-
-```javascript
-const DefaultContainer = ({ children }) => children;
-```
-
 #### 远程模块加载
 
 支持通过 scope 配置加载远程模块，模块会在组件执行前动态加载并注入到运行环境中。
