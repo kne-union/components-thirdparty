@@ -18,10 +18,10 @@ const EchartInner = ({ data, option, ...props }) => {
   const instanceRef = useRef(null);
   const { echarts } = data;
   useEffect(() => {
+    if (!echarts) {
+      return;
+    }
     instanceRef.current = echarts.init(ref.current);
-    return () => {
-      //echarts.dispose(ref.current);
-    };
   }, [echarts, ref]);
   useEffect(() => {
     instanceRef.current && instanceRef.current.setOption(option);
