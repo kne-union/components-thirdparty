@@ -4,7 +4,7 @@
 
 | 属性名 | 类型 | 默认值 | 说明 |
 |--------|------|--------|------|
-| height | string | '500px' | 编辑器高度 |
+| height | number | 500 | 编辑器高度 |
 | defaultLanguage | string | - | 默认编程语言 |
 | defaultValue | string | - | 默认代码内容 |
 | value | string | - | 受控的代码内容 |
@@ -13,6 +13,17 @@
 | options | object | - | Monaco Editor 配置选项 |
 | loading | ReactNode | - | 自定义加载组件 |
 | path | string | - | 文件路径，用于语言检测 |
+
+#### Ref 方法
+
+通过 ref 可以访问编辑器的实例方法：
+
+| 方法名 | 参数 | 返回值 | 说明 |
+|--------|------|--------|------|
+| getValue | - | string | 获取编辑器内容 |
+| setValue | value: string | - | 设置编辑器内容 |
+| getEditor | - | Editor | 获取 Monaco Editor 实例 |
+| getMonaco | - | Monaco | 获取 Monaco 命名空间 |
 
 #### 全局配置
 

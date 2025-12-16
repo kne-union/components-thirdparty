@@ -6,6 +6,8 @@
 |--------|------|--------|------|
 | defaultValue | string | - | 默认组件配置（PlantUML 编码） |
 | defaultMod | string | 'mix' | 默认显示模式 |
+| height | number | 500 | 编辑器和预览区域高度 |
+| libs | object | { lodash, dayjs } | 可用库集合 |
 | onChange | function | - | 配置变化回调函数 |
 
 #### 显示模式 (mod)

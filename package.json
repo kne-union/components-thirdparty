@@ -1,6 +1,6 @@
 {
   "name": "@kne-components/components-thirdparty",
-  "version": "0.1.4",
+  "version": "0.1.5",
   "description": "用于封装一些体积较大的需要使用时再加载的第三方库",
   "scripts": {
     "init": "husky",
@@ -96,6 +96,7 @@
     "@kne/use-resize": "^0.1.1",
     "@monaco-editor/react": "^4.7.0",
     "dayjs": "^1.11.19",
+    "lottie-web": "^5.13.0",
     "plantuml-encoder": "^1.4.0"
   }
 }

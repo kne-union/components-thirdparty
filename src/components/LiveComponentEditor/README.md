@@ -33,16 +33,17 @@ LiveComponentEditor 是一个实时的组件编辑器，允许用户在运行时
 
 ```jsx
 const { default: LiveComponentEditor } = _LiveComponentEditor;
-const { Flex, Alert } = antd;
-const { useState } = React;
+const { Flex, Alert, Input } = antd;
+const { useState, useRef } = React;
 const BaseExample = () => {
+  const ref = useRef(null);
   const [value, setValue] = useState(
-    'bPDTIzn058R_IfWRRx8VtfMm6x2YHIY5rjARfXVPoLbDdSo4cKbP2G6b56f1Ld3fGYcKVg4ehRqGANlZdzb4zrzq9kwc2QoMpaqovvpdvRndPcA46PL09R9GotQeeLPhbV5WZNQP8Nr9e1s7d8MYdcyIW_X2jkFdDwMLydhN1-A9-XeD8sbGDu2sW_J7GGPnEq3KDZqwJ0_sLO17HAUVh3ms7guygZLhYyscWngsUOVmEX30XR87eSjbe7elwKzU7q-6nnLzjM6Xz1aLbRRrYdFCMiZUxMGVpnIxOBvoIGIMWugGWn9pFZKPxAI3dnMg22dgB_GYkTlNyYRWhGxhFU0i2eqEONXhPj9NXyD1b2scRywlBxx-svMgtFqm-Vx3GKLxiy0jZfJhy-7Lbs69c0Lk9_OEixtJTF_qQl2fp5N2_p6Bfz2JInpSwXWy49ZxkT_I9B9-__hobxurDu9QUtg5bwZqwgi4UiRBI4Y_kwtACUXXAdx33TlnlSIUryPwr0byUJ-Iab4xwn-CHzzQZVdPUVYoIp6GQK7QVvzTl2tXbUoqqqRHgegq6ZOoaS0i16J5Q0QgnubP8496bOKQPXoi8fMOA7-VkZv_elh7WwuR4VbCduQ2nxzFngFH-F9pjdkczEMsbaT2Sfzke2H9_W00'
+    'xLLTIzn05FqhOLvysI_xLCBkWXKjWXHQIr-QFcHdxzhKsPamcSXA22YbeCAoWjikY53i1rqgLHz4ohxuPpPnzrzq9cvYqgwMqbVd9RbtxZdSStCouo7Cg00ga8xASrJK2ui4MjewS65XasYhfbtnPX_uLODgSfKN6MykqGRJX2K8L3oRCzifH86l4SiH5U_bTMcclD2mWDITmXArNQ5HimaL0wc7WJHYre38CFYs7-orPOAxH6q_MtYgBIyyoPVoiwMIWOhLt1t4Aq009ynri4qkcb9MYd_yjZ_kzJFyCc2si1XrCcshvKKmVIRStGmFJoLs9hTk4XTq0oKf0_cvwQXnTpFedcHGIKgYRa2l_BjrpRy6l5PZhSUSkRPM8molnI8j-TquE6c9mRlpqSNdlwkIbLi7uwy_39Iq5oTkKIHLd_UkFlLIY3XnEs9dFzmv3jh7LzsFQLmc_G-pU0ujCSV1p8wX3WxcLgGtDOcmqnbTdYdNN1CgxjyiN5YMTftuMEhVxesE-k7xix1z8dacvChHYlNUsFV6_ZzZ_s73cyFsZUi8gx4XPM9GqgNCwDXz69-wsG6kkBMc9HwvGZ1Q3Jjxmy6NSd7wxZJul4ana4b1qFaGNcodu9dTIQV5f5MPIKSeXnpCR42wXs86UOzWrdHiHgMMF6OSz6JBpw7elb3rqN-dNkhGC5qYNgWXIl3mv_VXO32yF0gtJYM_s53qo17Segl8z_rV'
   );
   return (
     <Flex vertical gap={12}>
-      <Alert message={value || '暂无内容'} />
-      <LiveComponentEditor defaultValue={value} onChange={setValue} />
+      <Alert message={<Input.TextArea variant="borderless" autoSize value={value || ''} onChange={e => ref.current.setValue(e.target.value)} />} />
+      <LiveComponentEditor defaultValue={value} onChange={setValue} ref={ref} />
     </Flex>
   );
 };
@@ -62,6 +63,8 @@ render(<BaseExample />);
 |--------|------|--------|------|
 | defaultValue | string | - | 默认组件配置（PlantUML 编码） |
 | defaultMod | string | 'mix' | 默认显示模式 |
+| height | number | 500 | 编辑器和预览区域高度 |
+| libs | object | { lodash, dayjs } | 可用库集合 |
 | onChange | function | - | 配置变化回调函数 |
 
 #### 显示模式 (mod)

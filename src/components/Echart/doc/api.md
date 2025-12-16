@@ -10,6 +10,12 @@
 | className | string | - | 自定义样式类名 |
 | style | object | - | 自定义内联样式 |
 
+#### 注意事项
+
+- option 更新时会自动重新渲染图表
+- 如果 ECharts 库未成功加载，会显示错误状态
+- 组件会自动处理图表的初始化和销毁
+
 #### option 配置
 
 option 对象遵循 ECharts 官方配置规范，主要包含以下部分：

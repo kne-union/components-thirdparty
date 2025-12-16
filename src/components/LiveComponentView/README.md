@@ -51,10 +51,8 @@ render(<BaseExample />);
 | 属性名 | 类型 | 默认值 | 说明 |
 |--------|------|--------|------|
 | content | string | - | 组件配置（PlantUML 编码，必需） |
-| themeColor | object | - | 自定义主题配置 |
-| locale | string | - | 语言环境设置 |
-| container | ReactComponent | - | 自定义容器组件 |
 | props | object | - | 注入到组件的属性 |
+| libs | object | - | 可用库集合，在组件运行环境中使用 |
 
 #### 输入格式 (content)
 
