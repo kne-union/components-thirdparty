@@ -56,7 +56,7 @@ const LiveComponentView = ({ content: inputStr, props: componentProps, libs }) =
   const { content, props, scope, error } = useMemo(() => {
     try {
       if (!inputStr) {
-        return { error: '组件为空' };
+        return { content: '', scope: {}, props: {}, error: null };
       }
       const { content, props, scope } = JSON.parse(decode(inputStr));
 
