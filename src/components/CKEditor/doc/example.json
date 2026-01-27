@@ -1,0 +1,88 @@
+{
+  "isFull": false,
+  "list": [
+    {
+      "title": "基础示例",
+      "description": "展示富文本编辑器的基本功能，包含完整的工具栏和内容编辑功能",
+      "code": "./base.js",
+      "scope": [
+        {
+          "name": "_CKEditor",
+          "packageName": "@components/CKEditor"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        }
+      ]
+    },
+    {
+      "title": "Markdown 模式",
+      "description": "展示 Markdown 模式下的编辑器，支持 Markdown 语法输入和编辑",
+      "code": "./markdown.js",
+      "scope": [
+        {
+          "name": "_CKEditor",
+          "packageName": "@components/CKEditor"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        },
+        {
+          "name": "_MarkdownRender",
+          "packageName": "@kne/markdown-components-render"
+        }
+      ]
+    },
+    {
+      "title": "自定义配置",
+      "description": "展示如何通过 config 属性自定义编辑器的工具栏和功能配置",
+      "code": "./custom.js",
+      "scope": [
+        {
+          "name": "_CKEditor",
+          "packageName": "@components/CKEditor"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        }
+      ]
+    },
+    {
+      "title": "国际化支持",
+      "description": "展示如何配置编辑器的语言，支持多种国际化选项",
+      "code": "./i18n.js",
+      "scope": [
+        {
+          "name": "_CKEditor",
+          "packageName": "@components/CKEditor"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        }
+      ]
+    },
+    {
+      "title": "在Form中使用",
+      "description": "展示如何在Form中使用编辑器",
+      "code": "./form.js",
+      "scope": [
+        {
+          "name": "_CKEditor",
+          "packageName": "@components/CKEditor"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        },
+        {
+          "name": "remoteLoader",
+          "packageName": "@kne/remote-loader"
+        }
+      ]
+    }
+  ]
+}
