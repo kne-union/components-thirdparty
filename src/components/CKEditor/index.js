@@ -61,7 +61,7 @@ import {
 } from 'ckeditor5';
 import coreTranslationsZh from 'ckeditor5/translations/zh-cn';
 import coreTranslationsEn from 'ckeditor5/translations/en';
-import { useGlobalValue } from '@kne/global-context';
+import { useGlobalValue, usePreset } from '@kne/global-context';
 import 'ckeditor5/ckeditor5.css';
 import classnames from 'classnames';
 import OssUploadAdapterPlugin from './OssUploadAdapterPlugin';
@@ -245,9 +245,10 @@ const defaultConfig = {
   }
 };
 
-const CKEditorField = ({ className, isMarkdown, config, plugins: customPlugins = [], locale: customLocale, ...props }) => {
+const CKEditorField = ({ className, isMarkdown, config, plugins: customPlugins = [], locale: customLocale, uploadAdapter, ...props }) => {
   const [value, onChange] = useControlValue(props);
   const contextLocale = useGlobalValue('locale');
+  const { apis } = usePreset();
   const locale = customLocale || contextLocale;
   const plugins = useMemo(() => {
     const plugins = [...defaultPlugins, ...customPlugins];
@@ -264,7 +265,15 @@ const CKEditorField = ({ className, isMarkdown, config, plugins: customPlugins =
         config={merge({}, defaultConfig, config, {
           licenseKey: 'GPL',
           plugins,
-          translations: [locale === 'zh-CN' ? coreTranslationsZh : coreTranslationsEn]
+          translations: [locale === 'zh-CN' ? coreTranslationsZh : coreTranslationsEn],
+          uploadAdapter: Object.assign(
+            {},
+            {
+              upload: apis?.file?.upload,
+              uploadUrl: apis?.file?.uploadUrl
+            },
+            uploadAdapter
+          )
         })}
         onChange={(event, editor) => {
           const data = editor.getData();
