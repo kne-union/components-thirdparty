@@ -172,8 +172,7 @@ const LiveComponentEditor = createWithRemoteLoader({
                     return {
                       name,
                       type: item.type,
-                      defaultValue:
-                        ['array', 'object', 'boolean', 'number'].indexOf(item.type) > -1 ? JSON.stringify(item.defaultValue) : item.defaultValue
+                      defaultValue: item.defaultValue
                     };
                   })
                 }}
@@ -186,7 +185,7 @@ const LiveComponentEditor = createWithRemoteLoader({
                           result[value.name] = {
                             defaultValue: (() => {
                               if (['array', 'object', 'boolean', 'number'].indexOf(value.type) > -1) {
-                                return JSON.parse(value.defaultValue);
+                                return value.defaultValue;
                               }
                               if (value.type === 'string') {
                                 return value.defaultValue;
