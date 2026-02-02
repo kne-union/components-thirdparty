@@ -21,17 +21,22 @@ const SafeRender = createWithRemoteLoader({
   const [useGlobalContext, PureGlobal] = remoteModules;
   const { global } = useGlobalContext();
   const ref = useRef(null);
+  const [renderComponent] = useState(() =>
+    debounce((children, locale, themeToken) => {
+      ref.current.innerHTML = '';
+      const dom = document.createElement('div');
+      ref.current.appendChild(dom);
+      const app = createRoot(dom);
+      app.render(
+        <PureGlobal preset={{ locale }} themeToken={themeToken}>
+          {children}
+        </PureGlobal>
+      );
+    }, 1000)
+  );
   useEffect(() => {
-    ref.current.innerHTML = '';
-    const dom = document.createElement('div');
-    ref.current.appendChild(dom);
-    const app = createRoot(dom);
-    app.render(
-      <PureGlobal preset={{ locale: global.locale }} themeToken={global.themeToken}>
-        {children}
-      </PureGlobal>
-    );
-  }, [children, global.locale, global.themeToken]);
+    renderComponent(children, global.locale, global.themeToken);
+  }, [children, global.locale, global.themeToken, renderComponent]);
   return <div ref={ref} />;
 });
 
@@ -66,26 +71,42 @@ const LiveComponentEditor = createWithRemoteLoader({
 
     const handleChange = useRefCallback(onChange);
 
+    // 创建稳定的 setValue debounced 函数
+    const setValueDebouncedRef = useRef(null);
+
+    if (!setValueDebouncedRef.current) {
+      setValueDebouncedRef.current = debounce(
+        (value, codeEditorRef) => {
+          const newParams = (() => {
+            try {
+              return JSON.parse(decode(value));
+            } catch (e) {
+              console.error(e);
+              return {};
+            }
+          })();
+          setParams(newParams);
+          codeEditorRef.current && codeEditorRef.current.setValue(newParams.content || '');
+        },
+        500,
+        { leading: true, trailing: true }
+      );
+    }
+
+    // 创建稳定的 content update debounced 函数，避免频繁更新
+    const updateContentDebouncedRef = useRef(null);
+
+    if (!updateContentDebouncedRef.current) {
+      updateContentDebouncedRef.current = debounce((newContent, setParams, prevParams) => {
+        setParams(prev => ({ ...prev, content: newContent }));
+      }, 300);
+    }
+
     useImperativeHandle(
       ref,
       () => ({
         getValue: () => outputContent,
-        setValue: debounce(
-          value => {
-            const newParams = (() => {
-              try {
-                return JSON.parse(decode(value));
-              } catch (e) {
-                console.error(e);
-                return {};
-              }
-            })();
-            setParams(newParams);
-            codeEditorRef.current && codeEditorRef.current.setValue(newParams.content || '');
-          },
-          500,
-          { leading: true, trailing: true }
-        )
+        setValue: value => setValueDebouncedRef.current(value, codeEditorRef)
       }),
       [outputContent]
     );
@@ -107,7 +128,7 @@ const LiveComponentEditor = createWithRemoteLoader({
           height={height}
           defaultValue={content}
           defaultLanguage="javascript"
-          onChange={value => setParams({ ...params, content: value })}
+          onChange={value => updateContentDebouncedRef.current(value, setParams, params)}
         />
       </div>
     );
