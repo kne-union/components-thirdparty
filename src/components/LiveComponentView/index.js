@@ -21,7 +21,6 @@ const LiveComponent = withRemoteLoader(({ remoteModules, children, props, libs =
   const [error, setError] = useState(null);
   const [renderJsx, setRenderJsx] = useState(null);
   const [compiledCode, setCompiledCode] = useState(null);
-  const [moduleScopeValues, setModuleScopeValues] = useState([]);
   
   const { content, moduleNames } = children;
   const scope = useMemo(() => {
@@ -64,8 +63,6 @@ const LiveComponent = withRemoteLoader(({ remoteModules, children, props, libs =
       // eslint-disable-next-line no-new-func
       const runnerFunction = new Function('React', 'render', 'props', 'Antd', ...libKeys, ...moduleNames, compiledCode);
       const newModuleScopeValues = moduleNames.map(name => scope[name]);
-      setModuleScopeValues(newModuleScopeValues);
-      
       runnerFunction(React, jsx => setRenderJsx(jsx), props, Antd, ...libValues, ...newModuleScopeValues);
     } catch (e) {
       setError(e);
