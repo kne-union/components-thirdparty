@@ -20,7 +20,7 @@ const JSONEditorField = ({ value, onChange }) => {
 
   useEffect(() => {
     if (editor && value !== editor.getValue()) {
-      editor.setValue(value);
+      editor.setValue(value || '');
     }
   }, [value, editor]);
 
@@ -35,7 +35,8 @@ const JSONEditorField = ({ value, onChange }) => {
         onChange={setType}
       />
       {type === 'code' && (
-        <CodeEditor className={style['code-editor']}
+        <CodeEditor
+          className={style['code-editor']}
           defaultValue={value}
           onChange={onChange}
           language="json"
@@ -44,7 +45,7 @@ const JSONEditorField = ({ value, onChange }) => {
           }}
         />
       )}
-      {type === 'preview' && <JSONView data={data} theme="light"/>}
+      {type === 'preview' && <JSONView data={data} theme="light" />}
     </Flex>
   );
 };
