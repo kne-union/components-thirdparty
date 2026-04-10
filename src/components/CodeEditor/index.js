@@ -12,10 +12,10 @@ const CodeEditor = forwardRef((props, ref) => {
     ref,
     () => ({
       getValue: () => {
-        return apiRef.current.editor.getValue();
+        return apiRef.current.editor && apiRef.current.editor.getValue();
       },
       setValue: value => {
-        apiRef.current.editor.setValue(value);
+        apiRef.current.editor && apiRef.current.editor.setValue(value);
       },
       getEditor: () => apiRef.current.editor,
       getMonaco: () => apiRef.current.monaco
@@ -27,6 +27,7 @@ const CodeEditor = forwardRef((props, ref) => {
       {...Object.assign({}, { height: 500 }, props)}
       onMount={(editor, monaco) => {
         apiRef.current = { editor, monaco };
+        props.onMount?.({ editor, monaco });
       }}
     />
   );
