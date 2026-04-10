@@ -87,7 +87,7 @@ function OssUploadAdapterPlugin(editor) {
       return;
     }
     data.content = editor.data.htmlProcessor.toView('');
-    const loadingClose = message.loading('粘贴内容中含有图片，正在进行图片上传...', { duration: 0 });
+    const loadingClose = message ? message.loading('粘贴内容中含有图片，正在进行图片上传...', { duration: 0 }) : () => {};
     Promise.all(
       [].slice.call(domDocument.querySelectorAll('img'), 0).map(async img => {
         if (typeof options.uploadUrl !== 'function') {
