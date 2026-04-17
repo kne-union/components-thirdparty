@@ -1,6 +1,4 @@
-
 # JSONEditor
-
 
 ### 概述
 
@@ -115,7 +113,6 @@ render(<BaseExample />);
 
 ```
 
-
 ### API
 
 |属性名|说明|类型|默认值|
@@ -130,4 +127,3 @@ render(<BaseExample />);
 ### JSONEditor（默认导出）
 
 通过 `createWithRemoteLoader` 包装的表单字段组件，在 FormInfo 表单中使用时自动通过 `useDecorator` 绑定表单上下文，支持 `name`、`label`、`rule` 等表单字段属性。
-
