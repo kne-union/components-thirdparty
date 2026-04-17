@@ -1,6 +1,4 @@
-
 # LottiePlayer
-
 
 ### 概述
 
@@ -44,7 +42,6 @@ const BaseExample = () => {
 render(<BaseExample />);
 
 ```
-
 
 ### API
 
@@ -91,4 +88,3 @@ render(<BaseExample />);
 - path 和 animationData 必须提供其中一个
 - 动画文件必须是 Lottie 兼容的 JSON 格式
 - 组件会自动处理动画的销毁和清理
-

@@ -1,14 +1,14 @@
 import { Segmented, Flex } from 'antd';
-import { useState, useRef, useMemo, useEffect } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import CodeEditor from '@components/CodeEditor';
+import classnames from 'classnames';
 import JSONView from '@kne/json-view';
 import style from './style.module.scss';
 import '@kne/json-view/dist/index.css';
 
-const JSONEditorField = ({ value, onChange }) => {
+const JSONEditorField = ({ value, onChange, className }) => {
   const [type, setType] = useState('code');
-  const ref = useRef();
   const [editor, setEditor] = useState();
   const data = useMemo(() => {
     try {
@@ -19,13 +19,13 @@ const JSONEditorField = ({ value, onChange }) => {
   }, [value]);
 
   useEffect(() => {
-    if (editor && value !== editor.getValue()) {
+    if (editor && value && value !== editor.getValue()) {
       editor.setValue(value || '');
     }
   }, [value, editor]);
 
   return (
-    <Flex vertical gap={8}>
+    <Flex vertical gap={8} className={classnames(className, style['json-editor'])}>
       <Segmented
         value={type}
         options={[
