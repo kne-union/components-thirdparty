@@ -66,6 +66,21 @@
       ]
     },
     {
+      "title": "3D模型上传",
+      "description": "使用 model-viewer 上传并展示 GLB 3D 模型，未配置上传 API 时自动使用 base64",
+      "code": "./model3d.js",
+      "scope": [
+        {
+          "name": "_CKEditor",
+          "packageName": "@components/CKEditor"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        }
+      ]
+    },
+    {
       "title": "在Form中使用",
       "description": "展示如何在Form中使用编辑器",
       "code": "./form.js",

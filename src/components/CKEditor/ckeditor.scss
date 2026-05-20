@@ -3,6 +3,89 @@
   visibility: hidden;
 }
 
+.ck-editor__editable {
+  --ck-image-style-spacing: 1.5em;
+
+  figure.ck-model3d,
+  figure.image.ck-model3d {
+    --model3d-height: 400px;
+    display: block;
+    margin: 1em 0;
+    max-width: 100%;
+    height: var(--model3d-height);
+    box-sizing: border-box;
+    clear: both;
+
+    &.image_resized {
+      max-width: 100%;
+    }
+
+    &.image-style-side {
+      float: right;
+      margin-left: var(--ck-image-style-spacing);
+      max-width: 50%;
+    }
+
+    &.image-style-align-left {
+      float: left;
+      margin-right: var(--ck-image-style-spacing);
+    }
+
+    &.image-style-align-right {
+      float: right;
+      margin-left: var(--ck-image-style-spacing);
+    }
+
+    &.image-style-align-center {
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    &.image-style-block-align-left {
+      margin-left: 0;
+      margin-right: auto;
+    }
+
+    &.image-style-block-align-right {
+      margin-right: 0;
+      margin-left: auto;
+    }
+
+    .ck-model3d-viewer {
+      display: block;
+      width: 100%;
+      height: var(--model3d-height);
+      min-height: 0 !important;
+      max-height: none !important;
+      overflow: hidden;
+      line-height: 0;
+      position: relative;
+    }
+
+    model-viewer {
+      display: block;
+      width: 100% !important;
+      height: var(--model3d-height) !important;
+      min-height: 0 !important;
+      max-height: none !important;
+      vertical-align: top;
+    }
+
+    // 缩放时仅隐藏多余尺寸浮层与 resizer 外框，保留紫色 widget 选中描边
+    &.ck-widget_with-resizer {
+      .ck-widget__resizer {
+        outline: none;
+        border: none;
+        box-shadow: none;
+      }
+
+      .ck-size-view {
+        display: none !important;
+      }
+    }
+  }
+}
+
 .ck {
   --ck-color-base-border: #FFFFFF;
   --ck-color-toolbar-border: var(--font-color-grey-3);
@@ -44,6 +127,64 @@
   figure.image img, p img {
     max-width: 100%;
     height: auto;
+  }
+
+  figure.image.ck-model3d,
+  .ck-model3d {
+    --model3d-height: 400px;
+    display: block;
+    width: 100%;
+    margin: 1em 0;
+    border-radius: var(--radius-default, 2px);
+    background: var(--font-color-grey-4, #f5f5f5);
+    box-sizing: border-box;
+
+    &.image-style-side {
+      float: right;
+      margin-left: 1.5em;
+      max-width: 50%;
+    }
+
+    &.image-style-align-left {
+      float: left;
+      margin-right: 1.5em;
+    }
+
+    &.image-style-align-right {
+      float: right;
+      margin-left: 1.5em;
+    }
+
+    &.image-style-align-center {
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    &.image-style-block-align-left {
+      margin-left: 0;
+      margin-right: auto;
+    }
+
+    &.image-style-block-align-right {
+      margin-right: 0;
+      margin-left: auto;
+    }
+
+    .ck-model3d-viewer {
+      height: var(--model3d-height);
+      min-height: 0;
+      overflow: hidden;
+      line-height: 0;
+    }
+
+    model-viewer,
+    .ck-model3d-viewer model-viewer {
+      display: block;
+      width: 100% !important;
+      height: var(--model3d-height) !important;
+      min-height: 0 !important;
+      vertical-align: top;
+    }
   }
 
   .primary-part-title {
