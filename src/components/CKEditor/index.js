@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { CKEditor as CKEditor5 } from '@ckeditor/ckeditor5-react';
 import { ClassicEditor } from 'ckeditor5';
 import { createWithRemoteLoader } from '@kne/remote-loader';
@@ -65,6 +65,9 @@ import { useGlobalValue, usePreset } from '@kne/global-context';
 import 'ckeditor5/ckeditor5.css';
 import classnames from 'classnames';
 import OssUploadAdapterPlugin from './OssUploadAdapterPlugin';
+import Model3dPlugin from './Model3dPlugin';
+import whenModelViewerReady from '../../common/loadModelViewer';
+import { syncModelViewerLayout } from '../../common/modelViewerMount';
 import useControlValue from '@kne/use-control-value';
 import merge from 'lodash/merge';
 import style from './style.module.scss';
@@ -126,7 +129,8 @@ const defaultPlugins = [
   GeneralHtmlSupport,
   Style,
   SelectAll,
-  OssUploadAdapterPlugin
+  OssUploadAdapterPlugin,
+  Model3dPlugin
 ];
 
 const defaultConfig = {
@@ -160,6 +164,7 @@ const defaultConfig = {
       'superscript',
       '|',
       'imageUpload',
+      'model3dUpload',
       'blockQuote',
       'insertTable',
       'codeBlock',
@@ -236,11 +241,46 @@ const defaultConfig = {
     allow: [
       { name: 'div', classes: true, styles: true },
       {
+        name: 'div',
+        classes: ['ck-model3d'],
+        styles: true,
+        attributes: true
+      },
+      {
+        name: 'model-viewer',
+        attributes: true,
+        styles: true,
+        classes: true
+      },
+      {
         name: 'section',
         classes: ['component-box'],
         styles: true,
         attributes: true
       }
+    ]
+  },
+  modelUpload: {},
+  model3d: {
+    toolbar: [
+      'model3dStyle:block',
+      'model3dStyle:side',
+      'model3dStyle:alignLeft',
+      'model3dStyle:alignRight',
+      'model3dStyle:alignCenter',
+      'model3dStyle:alignBlockLeft',
+      'model3dStyle:alignBlockRight',
+      '|',
+      'resizeModel3d:25',
+      'resizeModel3d:50',
+      'resizeModel3d:75',
+      'resizeModel3d:original',
+      '|',
+      'resizeModel3dHeight:300',
+      'resizeModel3dHeight:400',
+      'resizeModel3dHeight:500',
+      'resizeModel3dHeight:600',
+      'resizeModel3dHeight:original'
     ]
   }
 };
@@ -273,6 +313,14 @@ const CKEditorField = ({ className, isMarkdown, config, plugins: customPlugins =
               uploadUrl: apis?.file?.uploadUrl
             },
             uploadAdapter
+          ),
+          modelUpload: Object.assign(
+            {},
+            {
+              upload: apis?.file?.upload
+            },
+            uploadAdapter,
+            config?.modelUpload
           )
         })}
         onChange={(event, editor) => {
@@ -296,7 +344,47 @@ const CKEditor = createWithRemoteLoader({
 CKEditor.Field = CKEditorField;
 
 const CKContent = ({ className, children }) => {
-  return <div className={classnames('ck ck-content', className)} dangerouslySetInnerHTML={{ __html: children }} />;
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const container = ref.current;
+    if (!container?.querySelector('model-viewer')) {
+      return;
+    }
+
+    whenModelViewerReady().then(() => {
+      container.querySelectorAll('figure.ck-model3d, .ck-model3d').forEach(figure => {
+        const modelViewer = figure.querySelector('model-viewer');
+
+        if (!modelViewer) {
+          return;
+        }
+
+        const height =
+          figure.style.height ||
+          figure.querySelector('.ck-model3d-viewer')?.style.height ||
+          figure.querySelector('.ck-model3d')?.style.height ||
+          modelViewer.style.height ||
+          '400px';
+
+        const host = figure.querySelector('.ck-model3d-viewer') || figure.querySelector('.ck-model3d') || figure;
+
+        if (typeof customElements !== 'undefined' && customElements.upgrade) {
+          customElements.upgrade(modelViewer);
+        }
+
+        syncModelViewerLayout(host, modelViewer, height);
+      });
+    });
+  }, [children]);
+
+  return (
+    <div
+      ref={ref}
+      className={classnames('ck ck-content', className)}
+      dangerouslySetInnerHTML={{ __html: children }}
+    />
+  );
 };
 
 CKEditor.Content = CKContent;

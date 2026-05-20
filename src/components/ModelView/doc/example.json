@@ -1,0 +1,16 @@
+{
+  "isFull": false,
+  "list": [
+    {
+      "title": "基础用法",
+      "description": "展示3D模型的基本使用，支持拖拽旋转和缩放",
+      "code": "./base.js",
+      "scope": [
+        {
+          "name": "_ModelView",
+          "packageName": "@components/ModelView"
+        }
+      ]
+    }
+  ]
+}
