@@ -2,7 +2,22 @@
 
 ### 概述
 
-基于 CKEditor 5 的功能强大的富文本编辑器组件，支持丰富的文本编辑功能、图片上传、表格编辑、Markdown 模式等。
+基于 CKEditor 5 的富文本编辑器封装，面向表单与内容生产场景，提供完整工具栏、图片/表格编辑、Markdown 输出，以及 3D 模型、视频、交互组件等富媒体能力。
+
+### 主要特性
+
+- **双模式**：富文本（HTML）与 Markdown（`isMarkdown`），Markdown 下自动剔除 3D、视频、交互组件相关工具与配置
+- **富媒体插件**：GLB 3D 模型（`@google/model-viewer`）、HTML5 视频、LiveComponent（`LiveComponentEditor` 编辑 + `LiveComponentView` 渲染）
+- **统一上传**：图片、3D、视频共用 `uploadAdapter` / `preset.apis.file`，未配置 `upload` 时回退 base64
+- **预览增强**：`CKEditor.Content` 同步视频尺寸、挂载交互组件、3D 全屏预览（含移动端 overlay）
+- **工具栏适配**：`CKEditor.Field` 按容器宽度设置 `--ck-toolbar-dropdown-max-width`，避免「显示更多」下拉过宽
+
+### 使用场景
+
+- 文章/公告/知识库等内容编辑与预览
+- 需要嵌入 3D 产品模型或说明视频的营销/帮助文档
+- 需要可配置、可复用的交互区块（LiveComponent）的运营页面
+- 技术文档等需要 Markdown 源码编辑与输出的场景
 
 
 ### 示例
@@ -287,15 +302,22 @@ render(<I18nExample />);
 
 - 3D模型上传
 - 使用 model-viewer 上传并展示 GLB 3D 模型，未配置上传 API 时自动使用 base64
-- _CKEditor(@components/CKEditor),antd(antd)
+- _CKEditor(@components/CKEditor),antd(antd),remoteLoader(@kne/remote-loader)
 
 ```jsx
 const { default: CKEditor } = _CKEditor;
 const { Flex, Card, Space, Typography, Divider, message } = antd;
 const { useState } = React;
 const { Title, Paragraph } = Typography;
+const { getPublicPath } = remoteLoader;
 
-const initData = &#96;<h2>3D模型上传示例</h2><p>点击工具栏中的<span style="color: #1677ff;">3D模型按钮</span>，选择 <strong>.glb</strong> 文件即可插入编辑器。</p><p>未配置上传接口时，模型会以 base64 嵌入内容；配置 <code>modelUpload.upload</code> 或 <code>uploadAdapter.upload</code> 后走服务端上传。</p>&#96;;
+const initData = &#96;<h2>3D模型上传示例</h2><p>点击工具栏中的<span style="color: #1677ff;">3D模型按钮</span>，选择 <strong>.glb</strong> 文件即可插入编辑器。</p><p>未配置上传接口时，模型会以 base64 嵌入内容；配置 <code>modelUpload.upload</code> 或 <code>uploadAdapter.upload</code> 后走服务端上传。
+<figure class="ck-model3d" style="height:626px;">
+    <div class="ck-model3d" style="height:626px;">
+        <model-viewer style="height:626px;width:100%;" src="${getPublicPath('components-thirdparty')}/3d/NeilArmstrong.glb" alt="NeilArmstrong.glb" camera-controls="" auto-rotate="" loading="lazy"></model-viewer>
+    </div>
+</figure>
+</p>&#96;;
 
 const BaseExample = () => {
   const [content, setContent] = useState(initData);
@@ -308,19 +330,95 @@ const BaseExample = () => {
         <Space direction="vertical" style={{ width: '100%' }} size="middle">
           <div>
             <Title level={4}>3D模型上传</Title>
+            <Paragraph type="secondary">点击工具栏中的 3D模型 按钮上传模型文件，编辑器与预览均使用 @google/model-viewer 渲染</Paragraph>
+          </div>
+          <CKEditor.Field
+            value={content}
+            onChange={setContent}
+            config={{ message: messageApi }}
+            model3d={{
+              viewer: {
+                autoRotate: true,
+                cameraControls: true,
+                loading: 'lazy'
+              }
+            }}
+          />
+          <Divider orientation="left">内容预览</Divider>
+          <CKEditor.Content
+            model3d={{
+              viewer: {
+                autoRotate: true,
+                cameraControls: true,
+                loading: 'lazy'
+              },
+              preview: { enableFullscreen: true }
+            }}>
+            {content}
+          </CKEditor.Content>
+        </Space>
+      </Card>
+    </Flex>
+  );
+};
+
+render(<BaseExample />);
+
+```
+
+- 交互组件
+- 弹窗使用 LiveComponentEditor 编辑，以 section 特殊标签插入，LiveComponentView 渲染
+- _CKEditor(@components/CKEditor),antd(antd),lodash(lodash),dayjs(dayjs)
+
+```jsx
+const { default: CKEditor } = _CKEditor;
+const { Flex, Card, Space, Typography, Divider, message } = antd;
+const { useState } = React;
+const { Title, Paragraph } = Typography;
+
+const initData = &#96;<h2>
+    交互组件示例
+</h2>
+<section class="component-box ck-live-component" data-live-component="xLLDIzn06FuhOIvUijcrfn9s5rIq259eBRqqFMGdipPrCXCc4ra90QKKjB2iuBOBKYZsWowLgWUHiXV_p2Rk_elEn4rCx6eflJgNvFru7kPvysGc090IZWW7EgWkKUOiaoRLv4lT8DKvmYrj2QEMie4Ojw69bJNJhGMp3q9HLiJAC0gtEKQrm6NKzRGa21LiUxmMlBXgBRHhJHjXozEMYUjpXPWEgXb0FWoWOBE1i0YZx_lHNbiac8zb-UdY4sLbyN6fKfgjL0nGhgjt4AyYZ636R27NPDmHEdFyupVzSQzVu1S1TRbDYLVOjbn10jDdudTRySSJWPrHDqpi8zq0MSe0eJeTDUvkHTtZ0YfB2TGrw6Lujww5LmYkDsZh4QE-gpGmXUkfI5jyI8QylCJexTde_ClVLOdExOFnjvy6oBQN9cvH95IVzIu_ztA8D74xOdS_tZsAsaUNtKzvN27z3xDuXbfyZY6pE0OBUP3PYTxS9E9EPtHnAbrpHIYvRrXOMn5sdVXOwD_fZGxxyVlJk7qiU2Raqj6IzTxOzyR-FsF_OSFhm_Qrxt6xkIbaGYIb2vd9iVimFNMB0rpr6uxDvttEAQd7dRtXu6krFBqw3RvW4eZmf27gV8ZFTtBmGdMoqtAsLNb9t8YAbmXGGN8Z03q0oPybNopKD7tCdyinYNjd-El7S30ONXp6soUYds-wCkjnPfCr48Ogy21r4s3ABSgGEYubOZnU2LA6zAmKXhy1">
+    &nbsp;
+</section>
+<p>
+    点击工具栏「交互组件」按钮，在弹窗中使用 LiveComponentEditor 编写组件，确认后以特殊标签插入文档。
+</p>&#96;;
+
+const BaseExample = () => {
+  const [content, setContent] = useState(initData);
+  const [messageApi, contextHolder] = message.useMessage();
+
+  return (
+    <Flex vertical gap={16}>
+      {contextHolder}
+      <Card>
+        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+          <div>
+            <Title level={4}>交互组件</Title>
             <Paragraph type="secondary">
-              点击工具栏中的 3D模型 按钮上传模型文件，编辑器与预览均使用 @google/model-viewer 渲染
+              插入后保存为 section 标签；编辑区与 CKEditor.Content 预览均通过 LiveComponentView 渲染。双击已插入组件可再次编辑。
             </Paragraph>
           </div>
           <CKEditor.Field
             value={content}
             onChange={setContent}
-            config={{
-              message: messageApi
+            config={{ message: messageApi }}
+            liveComponent={{
+              height: 400,
+              libs: { lodash, dayjs },
+              editor: { height: 520, libs: { lodash, dayjs } }
             }}
           />
           <Divider orientation="left">内容预览</Divider>
-          <CKEditor.Content>{content}</CKEditor.Content>
+          <CKEditor.Content
+            liveComponent={{
+              height: 400,
+              libs: { lodash, dayjs }
+            }}>
+            {content}
+          </CKEditor.Content>
         </Space>
       </Card>
     </Flex>
@@ -410,25 +508,127 @@ render(<BaseExample />);
 
 ### API
 
-|属性名|说明|类型|默认值|
-|  ---  | --- | --- | --- |
-|className|自定义类名|string|-
-|isMarkdown|是否启用 Markdown 模式（不含 3D 模型、视频上传及相关插件）|boolean|false
-|config|编辑器配置对象，可自定义工具栏和插件配置|object|详见下方配置
-|plugins|自定义插件数组|array|[]
-|value|编辑器内容|string|-
-|onChange|内容变化回调函数|function|-
-|style|外层容器样式|object|-
+### CKEditor
 
-`CKEditor.Field` 会根据外层容器宽度自动设置 CSS 变量 `--ck-toolbar-dropdown-max-width`，用于限制工具栏「显示更多」下拉的最大宽度。
+经 `createWithRemoteLoader` 包装，用于 `components-core:FormInfo` 表单场景。作为表单项使用时属性与 `CKEditor.Field` 一致（如 `name`、`label`、`value`、`onChange`、`isMarkdown`、`config` 等），由 `useDecorator` 注入受控逻辑。
+
+### CKEditor.Field
+
+富文本 / Markdown 编辑器本体。
+
+#### 属性说明
+
+| 属性名 | 说明 | 类型 | 默认值 |
+| --- | --- | --- | --- |
+| className | 外层容器类名 | string | - |
+| style | 外层容器样式；内部会合并 `--ck-toolbar-dropdown-max-width` | object | - |
+| isMarkdown | 是否 Markdown 模式。为 `true` 时不加载 3D、视频、交互组件插件，并从工具栏移除 `model3dUpload`、`videoUpload`、`insertLiveComponent` | boolean | false |
+| config | CKEditor 5 配置，与内置 `defaultConfig` 深合并 | object | 见下方 config |
+| plugins | 追加的 CKEditor 插件类 | array | [] |
+| locale | 界面语言，`zh-CN` 或 `en` 等；未传时使用 `@kne/global-context` 的 `locale` | string | 上下文 locale |
+| uploadAdapter | 图片上传与粘贴转存；富文本下亦作为 `modelUpload` / `videoUpload` 的默认合并源 | object | `preset.apis.file` 的 `upload`、`uploadUrl` |
+| liveComponent | 交互组件预览/编辑扩展参数，与 `config.liveComponent` 合并，见下表 | object | `{}` |
+| model3d | 3D 模型预览扩展参数，与 `config.model3d` 合并，见下表 | object | 见 `defaultConfig.model3d` |
+| value | 编辑器 HTML / Markdown 内容 | string | - |
+| onChange | 内容变化回调 `(html: string) => void` | function | - |
+
+#### 工具栏宽度
+
+容器通过 `useToolbarDropdownMaxWidth` 监听宽度，将 CSS 变量 `--ck-toolbar-dropdown-max-width` 写入外层 `style`，限制主工具栏「显示更多」下拉的最大宽度。也可在业务侧使用包内导出的 `useToolbarDropdownMaxWidth`、`getToolbarDropdownMaxWidthStyle`、`formatToolbarDropdownMaxWidth` 自定义包裹层。
+
+### CKEditor.Content
+
+只读内容预览，接收与编辑器一致的 HTML 字符串。
+
+#### 属性说明
+
+| 属性名 | 说明 | 类型 | 默认值 |
+| --- | --- | --- | --- |
+| className | 预览根节点类名（叠加 `ck ck-content`） | string | - |
+| children | HTML 字符串，经 `dangerouslySetInnerHTML` 渲染 | string | - |
+| liveComponent | 传给 `LiveComponentView` 的扩展参数，需与编辑区 `Field` 侧配置一致 | object | - |
+| model3d | 传给预览区 `model-viewer` 的属性与全屏等行为配置 | object | - |
+
+#### 预览行为
+
+- **视频**：对 `figure.ck-video` 同步内联宽高到内部 `video`
+- **3D 模型**：加载 `model-viewer` 后同步布局；支持全屏预览（桌面全屏 API，移动端固定层 overlay）
+- **交互组件**：对 `section.ck-live-component[data-live-component]` 挂载 `LiveComponentView`；卸载时清理
 
 ### config 配置说明
-- `toolbar`: 工具栏配置，包含各种编辑功能按钮
-- `image`: 图片编辑工具栏配置
-- `table`: 表格编辑工具栏配置
-- `htmlSupport`: HTML支持配置，允许的标签和属性
-- `uploadAdapter`: 图片上传配置，`upload` 上传文件，`uploadUrl` 粘贴图片转存
-- `modelUpload`: 3D 模型上传配置（仅支持 `.glb`，**仅富文本模式**），默认合并 `uploadAdapter`；`upload` 与图片相同，返回 `{ code, data, msg }`，`data` 为模型 URL。未配置 `upload` 时模型文件转为 base64 嵌入
-- `videoUpload`: 视频上传配置（**仅富文本模式**），默认合并 `uploadAdapter`；`upload` 与图片相同。支持 mp4、webm、ogg、mov 等常见格式。未配置 `upload` 时视频转为 base64 嵌入
-- `model3d.toolbar`: 3D 模型浮动工具栏（**仅富文本模式**），默认含 `model3dStyle:*`、`resizeModel3d:*`、`resizeModel3dHeight:*`，可拖拽边角自由缩放
-- `mediaVideo.toolbar`: 视频浮动工具栏（**仅富文本模式**），默认含 `mediaVideoStyle:*`、`resizeMediaVideo:*`、`resizeMediaVideoHeight:*`，行为与 3D 模型一致
+
+与 CKEditor 5 一致项以外，本组件扩展如下（`merge` 进编辑器 `config`）：
+
+| 配置项 | 说明 |
+| --- | --- |
+| toolbar | 主工具栏。富文本默认含 `imageUpload`、`model3dUpload`、`videoUpload`、`insertLiveComponent` 等 |
+| image | 图片浮动工具栏 |
+| table | 表格内容工具栏 |
+| htmlSupport | GeneralHtmlSupport 白名单；已允许 `model-viewer`、`figure.ck-video`、`section.ck-live-component` 等 |
+| uploadAdapter | 图片上传：`upload(file)` 返回 URL 或 `{ code, data, msg }`；`uploadUrl` 粘贴外链转存；`base64MaxWidth` / `base64MaxHeight` 控制无 `upload` 时的 base64 缩放 |
+| modelUpload | **仅富文本**。3D 上传，默认合并 `uploadAdapter`；仅 `.glb`；无 `upload` 时 base64 嵌入 |
+| videoUpload | **仅富文本**。视频上传，默认合并 `uploadAdapter`；支持 mp4、webm、ogg、mov 等；无 `upload` 时 base64 嵌入 |
+| model3d.toolbar | **仅富文本**。3D 浮动工具栏，默认 `model3dStyle:*`、`resizeModel3d:*`、`resizeModel3dHeight:*`，可拖拽缩放 |
+| mediaVideo.toolbar | **仅富文本**。视频浮动工具栏，默认 `mediaVideoStyle:*`、`resizeMediaVideo:*`、`resizeMediaVideoHeight:*` |
+| liveComponent | **仅富文本**。交互组件渲染/编辑参数，见下表 |
+| model3d | **仅富文本**。3D 模型 `model-viewer` 参数，见下表 |
+
+上传函数约定与图片相同：返回字符串 URL，或 `{ code: 0, data: 'url', msg }`（`code !== 0` 时展示失败占位图/提示）。
+
+### 富文本扩展与存储结构
+
+#### 3D 模型（Model3dPlugin）
+
+- 工具栏：`model3dUpload`
+- 存储：`figure` + `model-viewer`，类名 `ck-model3d`，支持对齐与拖拽缩放
+
+#### 视频（VideoPlugin）
+
+- 工具栏：`videoUpload`
+- 存储：`figure.ck-video` 包裹 `video`，支持对齐与拖拽缩放
+
+#### 交互组件（LiveComponentPlugin）
+
+- 工具栏：`insertLiveComponent`，弹窗内嵌 `LiveComponentEditor`
+- 存储：`<section class="component-box ck-live-component" data-live-component="PlantUML编码配置">`
+- 编辑区与 `CKEditor.Content` 均通过 `LiveComponentView` 渲染；双击已插入块可再次打开编辑
+
+#### liveComponent 参数（Field / Content / config.liveComponent）
+
+| 字段 | 说明 | 类型 |
+| --- | --- | --- |
+| height | 编辑区/预览区挂载容器最小高度 | number \| string |
+| libs | 传给 `LiveComponentView` 的运行库（如 `{ lodash, dayjs }`） | object |
+| props | 传给 `LiveComponentView` 的属性覆盖 | object |
+| editor.height | `LiveComponentEditor` 弹窗高度 | number |
+| editor.libs | 传给 `LiveComponentEditor` 的 `libs` | object |
+
+`CKEditor.Field` 与 `CKEditor.Content` 应传入**相同**的 `liveComponent`，保证编辑预览与阅读预览一致。
+
+#### model3d 参数（Field / Content / config.model3d）
+
+| 字段 | 说明 | 类型 |
+| --- | --- | --- |
+| height | 预览默认高度（内容未内联高度时） | string |
+| viewer | `model-viewer` 属性，与 `ModelView` 对齐：`autoRotate`、`cameraControls`、`poster`、`loading`、`exposure` 等 | object |
+| preview.enableFullscreen | `Content` 预览是否显示全屏按钮 | boolean | `true` |
+| toolbar | 编辑器内浮动工具栏项（已有） | array |
+
+### Markdown 模式说明
+
+`isMarkdown={true}` 时：
+
+- 追加 CKEditor `Markdown` 插件，输出 Markdown 源码
+- 不注册 `Model3dPlugin`、`VideoPlugin`、`LiveComponentPlugin`
+- 从 `config` 中剥离 `model3d`、`modelUpload`、`videoUpload`、`mediaVideo`
+- 自定义 `plugins` 传入上述插件时会被过滤
+
+预览 Markdown 请配合 `@kne/markdown-components-render`（见 `doc/markdown.js`）。
+
+### 包导出工具函数
+
+| 名称 | 说明 |
+| --- | --- |
+| formatToolbarDropdownMaxWidth | 将数字或字符串格式化为 CSS 宽度值 |
+| getToolbarDropdownMaxWidthStyle | 生成含 `--ck-toolbar-dropdown-max-width` 的 style 对象 |
+| useToolbarDropdownMaxWidth | 对容器 ref 做 ResizeObserver，返回当前可用最大宽度 |

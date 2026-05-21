@@ -5,6 +5,8 @@
 
 .ck-editor__editable {
   --ck-image-style-spacing: 1.5em;
+  --ck-media-frame-bg: #fafafa;
+  --ck-media-frame-border: #e8e8e8;
 
   figure.ck-model3d,
   figure.image.ck-model3d {
@@ -15,6 +17,9 @@
     height: var(--model3d-height);
     box-sizing: border-box;
     clear: both;
+    background: var(--ck-media-frame-bg);
+    border: 1px solid var(--ck-media-frame-border);
+    border-radius: var(--radius-default, 2px);
 
     &.image_resized {
       max-width: 100%;
@@ -89,6 +94,17 @@
         display: none !important;
       }
     }
+
+    &.ck-model3d-uploading {
+      background: var(--ck-media-frame-bg);
+      border: 1px dashed var(--ck-media-frame-border);
+      pointer-events: none;
+
+      .ck-model3d-viewer,
+      model-viewer {
+        display: none !important;
+      }
+    }
   }
 
   figure.ck-video {
@@ -99,7 +115,9 @@
     height: var(--video-height);
     box-sizing: border-box;
     clear: both;
-    background: #000;
+    background: var(--ck-media-frame-bg);
+    border: 1px solid var(--ck-media-frame-border);
+    border-radius: var(--radius-default, 2px);
 
     &.image_resized {
       max-width: 100%;
@@ -145,6 +163,7 @@
       max-height: none !important;
       vertical-align: top;
       background: #000;
+      object-fit: contain;
     }
 
     &.ck-widget_with-resizer {
@@ -158,6 +177,71 @@
         display: none !important;
       }
     }
+
+    &.ck-video-uploading {
+      background: var(--ck-media-frame-bg);
+      border: 1px dashed var(--ck-media-frame-border);
+      pointer-events: none;
+
+      video {
+        display: none !important;
+      }
+    }
+  }
+
+  .ck-media-upload-placeholder-host,
+  .ck-media-upload-placeholder {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+    min-height: 120px;
+    box-sizing: border-box;
+    color: var(--font-color-grey-5, #8c8c8c);
+    user-select: none;
+  }
+
+  .ck-media-upload-placeholder-inner {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .ck-media-upload-placeholder-spinner {
+    display: inline-block;
+    width: 28px;
+    height: 28px;
+    border: 2px solid var(--font-color-grey-3, #d9d9d9);
+    border-top-color: var(--primary-color, #1677ff);
+    border-radius: 50%;
+    animation: ck-media-upload-spin 0.8s linear infinite;
+  }
+
+  .ck-media-upload-placeholder-text {
+    font-size: 14px;
+    line-height: 1.5;
+    color: var(--font-color-grey-6, #595959);
+  }
+
+  .ck-media-upload-placeholder-name {
+    font-size: 12px;
+    line-height: 1.4;
+    color: var(--font-color-grey-5, #8c8c8c);
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+@keyframes ck-media-upload-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 
@@ -205,6 +289,9 @@
 }
 
 .ck.ck-content {
+  --ck-media-frame-bg: #fafafa;
+  --ck-media-frame-border: #e8e8e8;
+
   figure.image img, p img {
     max-width: 100%;
     height: auto;
@@ -219,7 +306,8 @@
     width: 100%;
     margin: 1em 0;
     border-radius: var(--radius-default, 2px);
-    background: var(--font-color-grey-4, #f5f5f5);
+    background: var(--ck-media-frame-bg);
+    border: 1px solid var(--ck-media-frame-border);
     box-sizing: border-box;
 
     .ck-model3d-fullscreen-btn {
@@ -325,13 +413,21 @@
     background: #000;
   }
 
+  figure.ck-model3d:active .ck-model3d-fullscreen-btn {
+    opacity: 0.88;
+    visibility: visible;
+    pointer-events: auto;
+  }
+
   figure.ck-video {
     display: block;
     margin: 1em 0;
     max-width: 100%;
     box-sizing: border-box;
     clear: both;
-    background: #000;
+    background: var(--ck-media-frame-bg, #fafafa);
+    border: 1px solid var(--ck-media-frame-border, #e8e8e8);
+    border-radius: var(--radius-default, 2px);
 
     &.image_resized {
       max-width: 100%;
@@ -374,6 +470,7 @@
       max-width: 100%;
       vertical-align: top;
       background: #000;
+      object-fit: contain;
     }
   }
 
@@ -438,5 +535,77 @@
     border-radius: 10px;
     margin: 1.5em 2em;
     box-shadow: 5px 5px 0 var(--primary-color-1);
+  }
+}
+
+// 移动端等环境固定层全屏（挂到 body，需全局样式）
+.ck-model3d-fullscreen-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  touch-action: manipulation;
+
+  .ck-model3d-fullscreen-overlay-viewer {
+    flex: 1;
+    width: 100%;
+    min-height: 0;
+    overflow: hidden;
+
+    model-viewer {
+      display: block;
+      width: 100% !important;
+      height: 100% !important;
+      min-height: 0 !important;
+      max-height: none !important;
+      background: #000;
+    }
+  }
+
+  .ck-model3d-fullscreen-overlay-close {
+    position: absolute;
+    top: max(12px, env(safe-area-inset-top));
+    right: max(12px, env(safe-area-inset-right));
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    padding: 0;
+    border: none;
+    border-radius: var(--radius-default, 2px);
+    background: rgba(255, 255, 255, 0.2);
+    color: #fff;
+    cursor: pointer;
+    touch-action: manipulation;
+
+    svg {
+      display: block;
+      width: 20px;
+      height: 20px;
+      pointer-events: none;
+    }
+  }
+}
+
+body.ck-model3d-overlay-open,
+html.ck-model3d-overlay-open {
+  overflow: hidden;
+}
+
+.ck-editor__editable section.ck-live-component,
+.ck.ck-content section.ck-live-component {
+  display: block;
+  margin: 1em 0;
+  min-height: 200px;
+  box-sizing: border-box;
+
+  .ck-live-component-viewer {
+    display: block;
+    width: 100%;
+    min-height: 200px;
   }
 }

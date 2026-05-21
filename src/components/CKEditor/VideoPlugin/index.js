@@ -13,6 +13,13 @@ import {
   resolveVideoHeight,
   syncFigureSizeStyles
 } from './utils';
+import {
+  createMediaUploadPlaceholderFigure,
+  finalizeMediaUploadPlaceholder,
+  insertMediaUploadPlaceholder,
+  isMediaUploading,
+  removeMediaUploadPlaceholder
+} from '../shared/mediaUploadPlaceholder';
 
 const readVideoAttributes = viewVideo => {
   const src = viewVideo.getAttribute('src');
@@ -77,7 +84,22 @@ const figureHasImage = viewFigure => {
   return false;
 };
 
-const createVideoFigureView = (modelElement, { writer, asWidget }) => {
+const createVideoFigureView = (modelElement, { writer, asWidget, videoConfig = {} }) => {
+  if (isMediaUploading(modelElement)) {
+    const i18n = videoConfig.i18n || {};
+    const placeholderLabel = i18n.videoUploading || '视频上传中...';
+
+    return createMediaUploadPlaceholderFigure(modelElement, writer, {
+      figureClasses: getFigureClasses(modelElement).concat('ck-video-uploading'),
+      widgetLabel: i18n.videoWidgetLabel || '视频',
+      placeholderLabel,
+      defaultHeight: VIDEO_DEFAULT_HEIGHT,
+      resolveHeight: resolveVideoHeight,
+      asWidget,
+      showFileName: false
+    });
+  }
+
   const figure = writer.createContainerElement('figure', {
     class: getFigureClasses(modelElement).join(' ')
   });
@@ -90,19 +112,12 @@ const createVideoFigureView = (modelElement, { writer, asWidget }) => {
 
   writer.setStyle('height', videoHeight, figure);
 
-  const videoAttrs = {
+  const video = writer.createEmptyElement('video', {
     src: modelElement.getAttribute('src'),
     controls: 'controls',
     playsinline: 'playsinline',
-    preload: 'metadata'
-  };
-  const alt = modelElement.getAttribute('alt');
-
-  if (alt) {
-    videoAttrs.title = alt;
-  }
-
-  const video = writer.createEmptyElement('video', videoAttrs);
+    preload: 'auto'
+  });
 
   writer.setStyle('height', videoHeight, video);
   writer.insert(writer.createPositionAt(figure, 0), video);
@@ -139,7 +154,7 @@ class VideoEditing extends Plugin {
 
     editor.model.schema.register('mediaVideo', {
       inheritAllFrom: '$blockObject',
-      allowAttributes: ['src', 'alt', 'mediaVideoStyle', 'resizedWidth', 'resizedHeight']
+      allowAttributes: ['src', 'alt', 'mediaVideoStyle', 'resizedWidth', 'resizedHeight', 'uploadStatus']
     });
     editor.model.schema.setAttributeProperties('mediaVideoStyle', { isFormatting: true });
     editor.model.schema.setAttributeProperties('resizedWidth', { isFormatting: true });
@@ -233,10 +248,18 @@ class VideoEditing extends Plugin {
       });
     });
 
-    const downcastFigure = (modelElement, conversionApi, asWidget) => {
-      const viewFigure = createVideoFigureView(modelElement, { writer: conversionApi.writer, asWidget });
+    const getVideoConfig = () => ({
+      i18n: editor.config.get('ckeditorI18n') || {}
+    });
 
-      if (asWidget) {
+    const downcastFigure = (modelElement, conversionApi, asWidget) => {
+      const viewFigure = createVideoFigureView(modelElement, {
+        writer: conversionApi.writer,
+        asWidget,
+        videoConfig: getVideoConfig()
+      });
+
+      if (asWidget && !isMediaUploading(modelElement)) {
         syncFigureSizeStyles(conversionApi.writer, viewFigure, modelElement);
       }
 
@@ -246,9 +269,15 @@ class VideoEditing extends Plugin {
     editor.conversion.for('dataDowncast').elementToElement({
       model: 'mediaVideo',
       view: (modelElement, conversionApi) => {
-        const viewFigure = createVideoFigureView(modelElement, { writer: conversionApi.writer, asWidget: false });
+        const viewFigure = createVideoFigureView(modelElement, {
+          writer: conversionApi.writer,
+          asWidget: false,
+          videoConfig: getVideoConfig()
+        });
 
-        syncFigureSizeStyles(conversionApi.writer, viewFigure, modelElement);
+        if (!isMediaUploading(modelElement)) {
+          syncFigureSizeStyles(conversionApi.writer, viewFigure, modelElement);
+        }
 
         return viewFigure;
       }
@@ -259,7 +288,9 @@ class VideoEditing extends Plugin {
       view: (modelElement, conversionApi) => {
         const viewFigure = downcastFigure(modelElement, conversionApi, true);
 
-        applyVideoHeightToDom(editor, modelElement);
+        if (!isMediaUploading(modelElement)) {
+          applyVideoHeightToDom(editor, modelElement);
+        }
 
         return viewFigure;
       }
@@ -279,9 +310,10 @@ class VideoUI extends Plugin {
 
     editor.ui.componentFactory.add('videoUpload', locale => {
       const button = new ButtonView(locale);
+      const i18n = editor.config.get('ckeditorI18n') || {};
 
       button.set({
-        label: '视频',
+        label: i18n.videoLabel || '视频',
         icon: videoIcon,
         tooltip: true
       });
@@ -320,25 +352,34 @@ class VideoUI extends Plugin {
           return;
         }
 
+        const i18n = editor.config.get('ckeditorI18n') || {};
+
         if (!isVideoFile(file)) {
-          options.message?.error?.('仅支持上传常见视频格式（如 mp4、webm、mov 等）');
+          options.message?.error?.(i18n.videoUploadFormatError || '仅支持上传常见视频格式（如 mp4、webm、mov 等）');
           return;
         }
 
-        const loadingClose = options.message?.loading?.('视频上传中...', { duration: 0 }) ?? (() => {});
+        const placeholder = insertMediaUploadPlaceholder(editor, 'mediaVideo');
 
         try {
           const src = await uploadFile(file, {
             ...options,
-            base64Warning: '当前视频为 base64 模式，正式环境请配置 videoUpload.upload 或 uploadAdapter.upload'
+            uploadFailedMessage: i18n.uploadFailed,
+            base64Warning:
+              i18n.videoBase64Warning ||
+              '当前视频为 base64 模式，正式环境请配置 videoUpload.upload 或 uploadAdapter.upload'
           });
 
-          editor.execute('insertMediaVideo', { src, alt: file.name });
-          options.message?.success?.(`${file.name} 上传成功`);
+          finalizeMediaUploadPlaceholder(editor, placeholder, { src });
+          options.message?.success?.(
+            typeof i18n.videoUploadSuccess === 'function'
+              ? i18n.videoUploadSuccess(file.name)
+              : `${file.name} 上传成功`
+          );
         } catch (error) {
+          removeMediaUploadPlaceholder(editor, placeholder);
+          options.message?.error?.(i18n.uploadFailed || '上传失败');
           console.error('视频上传失败', error);
-        } finally {
-          loadingClose();
         }
       },
       { once: true }

@@ -77,6 +77,33 @@
         {
           "name": "antd",
           "packageName": "antd"
+        },
+        {
+          "name": "remoteLoader",
+          "packageName": "@kne/remote-loader"
+        }
+      ]
+    },
+    {
+      "title": "交互组件",
+      "description": "弹窗使用 LiveComponentEditor 编辑，以 section 特殊标签插入，LiveComponentView 渲染",
+      "code": "./liveComponent.js",
+      "scope": [
+        {
+          "name": "_CKEditor",
+          "packageName": "@components/CKEditor"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        },
+        {
+          "name": "lodash",
+          "packageName": "lodash"
+        },
+        {
+          "name": "dayjs",
+          "packageName": "dayjs"
         }
       ]
     },

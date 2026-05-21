@@ -1,7 +1,7 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { encode, decode } from 'plantuml-encoder';
-import { Tabs, Flex, Alert, Segmented, Splitter, Collapse } from 'antd';
-import { MenuOutlined, SplitCellsOutlined, EyeOutlined } from '@ant-design/icons';
+import { App, Tabs, Flex, Alert, Segmented, Splitter, Collapse, Button, Space } from 'antd';
+import { MenuOutlined, SplitCellsOutlined, EyeOutlined, CopyOutlined, SnippetsOutlined } from '@ant-design/icons';
 import CodeEditor from '@components/CodeEditor';
 import LiveComponentView from '@components/LiveComponentView';
 import useRefCallback from '@kne/use-ref-callback';
@@ -13,51 +13,96 @@ import isEmpty from 'lodash/isEmpty';
 import get from 'lodash/get';
 import { useState, useRef, useEffect, useMemo, useImperativeHandle, forwardRef } from 'react';
 import { createRoot } from 'react-dom/client';
+import { useIntl } from '@kne/react-intl';
+import withLocale from './withLocale';
 import style from './style.module.scss';
+
+/** 解析 PlantUML 编码或 JSON 字符串为组件配置对象 */
+export const decodeLiveComponentValue = value => {
+  if (!value?.trim()) {
+    return null;
+  }
+
+  const trimmed = value.trim();
+
+  try {
+    return JSON.parse(decode(trimmed));
+  } catch {
+    try {
+      return JSON.parse(trimmed);
+    } catch {
+      return null;
+    }
+  }
+};
 
 const SafeRender = createWithRemoteLoader({
   modules: ['components-core:Global@useGlobalContext', 'components-core:Global@PureGlobal']
 })(({ remoteModules, children }) => {
   const [useGlobalContext, PureGlobal] = remoteModules;
   const { global } = useGlobalContext();
-  const ref = useRef(null);
-  const [renderComponent] = useState(() =>
-    debounce((children, locale, themeToken) => {
-      ref.current.innerHTML = '';
-      const dom = document.createElement('div');
-      ref.current.appendChild(dom);
-      const app = createRoot(dom);
-      app.render(
-        <PureGlobal preset={{ locale }} themeToken={themeToken}>
-          {children}
-        </PureGlobal>
-      );
-    }, 1000)
+  const containerRef = useRef(null);
+  const rootRef = useRef(null);
+
+  const renderComponent = useMemo(
+    () =>
+      debounce((nextChildren, locale, themeToken) => {
+        const container = containerRef.current;
+        if (!container) {
+          return;
+        }
+
+        if (rootRef.current) {
+          rootRef.current.unmount();
+          rootRef.current = null;
+        }
+
+        container.innerHTML = '';
+        const dom = document.createElement('div');
+        container.appendChild(dom);
+        const root = createRoot(dom);
+        rootRef.current = root;
+        root.render(
+          <PureGlobal preset={{ locale }} themeToken={themeToken}>
+            {nextChildren}
+          </PureGlobal>
+        );
+      }, 1000),
+    [PureGlobal]
   );
+
   useEffect(() => {
     renderComponent(children, global.locale, global.themeToken);
+    return () => {
+      renderComponent.cancel();
+      if (rootRef.current) {
+        rootRef.current.unmount();
+        rootRef.current = null;
+      }
+    };
   }, [children, global.locale, global.themeToken, renderComponent]);
-  return <div ref={ref} />;
+
+  return <div ref={containerRef} />;
 });
 
-const LiveComponentEditor = createWithRemoteLoader({
+const LiveComponentEditorCore = createWithRemoteLoader({
   modules: ['components-core:FormInfo', 'components-core:InfoPage', 'components-core:InfoPage@CentralContent', 'components-core:Common@SimpleBar']
 })(
-  forwardRef(({ remoteModules, defaultValue, defaultMod = 'mix', height = 500, libs = { lodash, dayjs }, onChange }, ref) => {
+  withLocale(
+    forwardRef(({ remoteModules, defaultValue, defaultMod = 'mix', height = 500, libs = { lodash, dayjs }, onChange }, ref) => {
+    const { formatMessage } = useIntl();
+    const { message } = App.useApp();
     const [FormInfo, InfoPage, CentralContent, SimpleBar] = remoteModules;
     const { Form, TableList } = FormInfo;
     const { Input, Select } = FormInfo.fields;
     const codeEditorRef = useRef(null);
-    const [params, setParams] = useState(() => {
-      if (!defaultValue) {
-        return {};
-      }
-      try {
-        return JSON.parse(decode(defaultValue));
-      } catch (e) {
-        console.error(e);
-        return {};
-      }
+    const [params, setParams] = useState(() => decodeLiveComponentValue(defaultValue) || {});
+
+    const applyParams = useRefCallback(nextParams => {
+      const merged = Object.assign({}, { content: '', props: {}, scope: {} }, nextParams);
+
+      setParams(merged);
+      codeEditorRef.current?.setValue(merged.content || '');
     });
     const defaultValueRef = useRef(defaultValue);
     const outputContent = useMemo(() => {
@@ -77,14 +122,8 @@ const LiveComponentEditor = createWithRemoteLoader({
     if (!setValueDebouncedRef.current) {
       setValueDebouncedRef.current = debounce(
         (value, codeEditorRef) => {
-          const newParams = (() => {
-            try {
-              return JSON.parse(decode(value));
-            } catch (e) {
-              console.error(e);
-              return {};
-            }
-          })();
+          const newParams = decodeLiveComponentValue(value) || {};
+
           setParams(newParams);
           codeEditorRef.current && codeEditorRef.current.setValue(newParams.content || '');
         },
@@ -121,6 +160,44 @@ const LiveComponentEditor = createWithRemoteLoader({
     const propsFormRef = useRef(null);
     const scopeFormRef = useRef(null);
 
+    const handleCopy = useRefCallback(async () => {
+      if (!outputContent) {
+        message.warning(formatMessage({ id: 'MsgNoCopyContent' }));
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(outputContent);
+        message.success(formatMessage({ id: 'MsgCopySuccess' }));
+      } catch (error) {
+        console.error(error);
+        message.error(formatMessage({ id: 'MsgCopyFail' }));
+      }
+    });
+
+    const handleImportFromClipboard = useRefCallback(async () => {
+      if (!navigator.clipboard?.readText) {
+        message.error(formatMessage({ id: 'MsgClipboardUnsupported' }));
+        return;
+      }
+
+      try {
+        const text = await navigator.clipboard.readText();
+        const parsed = decodeLiveComponentValue(text);
+
+        if (!parsed) {
+          message.error(formatMessage({ id: 'MsgInvalidConfig' }));
+          return;
+        }
+
+        applyParams(parsed);
+        message.success(formatMessage({ id: 'MsgImportSuccess' }));
+      } catch (error) {
+        console.error(error);
+        message.error(formatMessage({ id: 'MsgClipboardReadFail' }));
+      }
+    });
+
     const editor = (
       <div className={style['code-editor']}>
         <CodeEditor
@@ -156,34 +233,47 @@ const LiveComponentEditor = createWithRemoteLoader({
           scopeFormRef.current && scopeFormRef.current.submit();
         }}
         tabBarExtraContent={
-          activeKey === 'content' && (
-            <Segmented
-              value={mod}
-              onChange={setMod}
-              options={[
-                {
-                  label: '编辑器',
-                  value: 'editor',
-                  icon: <MenuOutlined />
-                },
-                {
-                  label: '混合',
-                  value: 'mix',
-                  icon: <SplitCellsOutlined />
-                },
-                {
-                  label: '预览',
-                  value: 'preview',
-                  icon: <EyeOutlined />
-                }
-              ]}
-            />
-          )
+          <div className={style['toolbar-extra']}>
+            <Space size={8} align="center">
+              <Space.Compact>
+                <Button icon={<CopyOutlined />} onClick={handleCopy}>
+                  {formatMessage({ id: 'Copy' })}
+                </Button>
+                <Button icon={<SnippetsOutlined />} onClick={handleImportFromClipboard}>
+                  {formatMessage({ id: 'ImportFromClipboard' })}
+                </Button>
+              </Space.Compact>
+              {activeKey === 'content' && (
+                <Segmented
+                  className={style['view-mode-segmented']}
+                  value={mod}
+                  onChange={setMod}
+                  options={[
+                    {
+                      label: formatMessage({ id: 'ModeEditor' }),
+                      value: 'editor',
+                      icon: <MenuOutlined />
+                    },
+                    {
+                      label: formatMessage({ id: 'ModeMix' }),
+                      value: 'mix',
+                      icon: <SplitCellsOutlined />
+                    },
+                    {
+                      label: formatMessage({ id: 'ModePreview' }),
+                      value: 'preview',
+                      icon: <EyeOutlined />
+                    }
+                  ]}
+                />
+              )}
+            </Space>
+          </div>
         }
         items={[
           {
             key: 'props',
-            label: '组件参数',
+            label: formatMessage({ id: 'TabProps' }),
             children: (
               <Form
                 ref={propsFormRef}
@@ -224,22 +314,22 @@ const LiveComponentEditor = createWithRemoteLoader({
                   });
                 }}>
                 <TableList
-                  title="参数列表"
+                  title={formatMessage({ id: 'ParamListTitle' })}
                   name="props"
                   list={[
-                    <Input name="name" label="变量名" rule="REQ LEN-0-100" />,
+                    <Input name="name" label={formatMessage({ id: 'VarName' })} rule="REQ LEN-0-100" />,
                     <Select
                       name="type"
-                      label="类型"
+                      label={formatMessage({ id: 'Type' })}
                       rule="REQ"
                       defaultValue="string"
                       options={[
-                        { label: '字符串', value: 'string' },
-                        { label: '数字', value: 'number' },
-                        { label: '布尔值', value: 'boolean' },
-                        { label: '数组', value: 'array' },
-                        { label: '对象', value: 'object' },
-                        { label: '函数', value: 'function' }
+                        { label: formatMessage({ id: 'TypeString' }), value: 'string' },
+                        { label: formatMessage({ id: 'TypeNumber' }), value: 'number' },
+                        { label: formatMessage({ id: 'TypeBoolean' }), value: 'boolean' },
+                        { label: formatMessage({ id: 'TypeArray' }), value: 'array' },
+                        { label: formatMessage({ id: 'TypeObject' }), value: 'object' },
+                        { label: formatMessage({ id: 'TypeFunction' }), value: 'function' }
                       ]}
                       onChange={(value, item, { openApi, groupArgs }) => {
                         setTimeout(() => {
@@ -254,7 +344,7 @@ const LiveComponentEditor = createWithRemoteLoader({
                     />,
                     <Input
                       name="defaultValue"
-                      label="默认值"
+                      label={formatMessage({ id: 'DefaultValue' })}
                       rule="REQ LEN-0-500"
                       display={({ formData, groupArgs }) => {
                         return get(formData.props, `${groupArgs[0].index}.type`) !== 'function';
@@ -263,7 +353,7 @@ const LiveComponentEditor = createWithRemoteLoader({
                     <div
                       className={style['function-default-value']}
                       name="defaultValue"
-                      label="默认值"
+                      label={formatMessage({ id: 'DefaultValue' })}
                       display={({ formData, groupArgs }) => {
                         return get(formData.props, `${groupArgs[0].index}.type`) === 'function';
                       }}>
@@ -276,7 +366,7 @@ const LiveComponentEditor = createWithRemoteLoader({
           },
           {
             key: 'scope',
-            label: '组件域',
+            label: formatMessage({ id: 'TabScope' }),
             children: (
               <Form
                 ref={scopeFormRef}
@@ -303,16 +393,19 @@ const LiveComponentEditor = createWithRemoteLoader({
                   });
                 }}>
                 <TableList
-                  title="域列表"
+                  title={formatMessage({ id: 'ScopeListTitle' })}
                   name="scope"
-                  list={[<Input name="name" label="变量名" rule="REQ LEN-0-100" />, <Input name="token" label="Token" rule="REQ LEN-0-100" />]}
+                  list={[
+                    <Input name="name" label={formatMessage({ id: 'VarName' })} rule="REQ LEN-0-100" />,
+                    <Input name="token" label={formatMessage({ id: 'Token' })} rule="REQ LEN-0-100" />
+                  ]}
                 />
               </Form>
             )
           },
           {
             key: 'content',
-            label: '组件内容',
+            label: formatMessage({ id: 'TabContent' }),
             children: (
               <Flex vertical gap={12}>
                 <Collapse
@@ -320,7 +413,7 @@ const LiveComponentEditor = createWithRemoteLoader({
                   items={[
                     {
                       key: 'refer',
-                      label: '引用参考',
+                      label: formatMessage({ id: 'RefLabel' }),
                       children: (
                         <Alert
                           message={
@@ -331,7 +424,7 @@ const LiveComponentEditor = createWithRemoteLoader({
                                 columns={[
                                   {
                                     name: 'props',
-                                    title: '可使用参数',
+                                    title: formatMessage({ id: 'RefAvailableProps' }),
                                     getValueOf: item => {
                                       return Object.keys(item.props)
                                         .map(str => `props.${str}`)
@@ -340,14 +433,14 @@ const LiveComponentEditor = createWithRemoteLoader({
                                   },
                                   {
                                     name: 'scope',
-                                    title: '可使用组件',
+                                    title: formatMessage({ id: 'RefAvailableComponents' }),
                                     getValueOf: item => {
                                       return ['Antd', ...Object.keys(item.scope)].join(',');
                                     }
                                   },
                                   {
                                     name: 'lib',
-                                    title: '可使用库',
+                                    title: formatMessage({ id: 'RefAvailableLibs' }),
                                     getValueOf: () => {
                                       return Object.keys(libs).join(',');
                                     }
@@ -376,6 +469,13 @@ const LiveComponentEditor = createWithRemoteLoader({
       />
     );
   })
+  )
 );
+
+const LiveComponentEditor = forwardRef((props, ref) => (
+  <App>
+    <LiveComponentEditorCore ref={ref} {...props} />
+  </App>
+));
 
 export default LiveComponentEditor;

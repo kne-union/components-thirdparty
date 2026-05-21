@@ -1,4 +1,5 @@
 import whenModelViewerReady from './loadModelViewer';
+import { applyModelViewerOptions } from './modelViewerOptions';
 
 export const getModel3dHeightFromDom = host => {
   if (!host) {
@@ -69,7 +70,7 @@ const bindModelViewerLayoutEvents = (host, modelViewer) => {
 /**
  * 在 CKEditor RawElement 等容器中挂载 model-viewer（仅挂载一次，等自定义元素就绪）
  */
-export const mountModelViewerInHost = async (host, { src, alt, height, loading = 'eager' } = {}) => {
+export const mountModelViewerInHost = async (host, { src, alt, height, loading = 'eager', viewer = {} } = {}) => {
   if (!host || !src) {
     return null;
   }
@@ -87,11 +88,16 @@ export const mountModelViewerInHost = async (host, { src, alt, height, loading =
   host.replaceChildren();
   modelViewer = document.createElement('model-viewer');
   modelViewer.setAttribute('src', src);
-  modelViewer.setAttribute('alt', alt || '3D model');
-  modelViewer.setAttribute('camera-controls', '');
-  modelViewer.setAttribute('auto-rotate', '');
+  modelViewer.setAttribute('alt', alt || viewer.alt || '3D model');
   modelViewer.setAttribute('interaction-prompt', 'none');
-  modelViewer.setAttribute('loading', loading);
+  modelViewer.setAttribute('loading', viewer.loading ?? loading);
+
+  applyModelViewerOptions(modelViewer, {
+    cameraControls: true,
+    autoRotate: true,
+    ...viewer,
+    alt: alt || viewer.alt || '3D model'
+  });
 
   modelViewer.addEventListener('focus', () => {
     modelViewer.blur();

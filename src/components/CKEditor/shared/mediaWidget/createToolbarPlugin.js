@@ -28,8 +28,16 @@ export const createToolbarPlugin = ({
         return;
       }
 
+      const i18n = editor.config.get('ckeditorI18n') || {};
+      const resolvedAriaLabel =
+        figureClass === 'ck-model3d'
+          ? i18n.model3dToolbarAria || ariaLabel
+          : figureClass === 'ck-video'
+            ? i18n.videoToolbarAria || ariaLabel
+            : ariaLabel;
+
       widgetToolbarRepository.register(widgetName, {
-        ariaLabel,
+        ariaLabel: resolvedAriaLabel,
         items: toolbarItems,
         getRelatedElement: viewSelection => {
           const fromView = getWidgetFromViewSelection(viewSelection);

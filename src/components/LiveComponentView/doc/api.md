@@ -1,64 +1,54 @@
-### API 文档
+### LiveComponentView
 
-#### 组件属性
+根据编码配置动态编译并渲染 React 组件，默认导出组件已外包一层 `ErrorBoundary`。
 
-| 属性名 | 类型 | 默认值 | 说明 |
-|--------|------|--------|------|
-| content | string | - | 组件配置（PlantUML 编码，必需） |
-| props | object | - | 注入到组件的属性 |
-| libs | object | - | 可用库集合，在组件运行环境中使用 |
+#### 属性说明
 
-#### 输入格式 (content)
+| 属性名 | 说明 | 类型 | 默认值 |
+| --- | --- | --- | --- |
+| content | 组件配置字符串，经 `plantuml-encoder` 解码后为 JSON（必填） | string | - |
+| props | 运行时属性，与配置内 `props` 解析后的默认值合并，同名以本属性为准 | object | - |
+| libs | 注入运行环境的库，键名为 JSX 中使用的标识符，值为模块实例 | object | - |
 
-content 需要通过 PlantUML 编码，解码后的对象结构：
+#### content 解码结构
 
-```javascript
-{
-  content: "React组件代码",     // 要渲染的 JSX 代码
-  props: {                     // 组件默认属性
-    propName: {
-      type: "string|number|boolean|array|object|function",
-      defaultValue: "默认值"
-    }
-  },
-  scope: {                     // 可用组件模块
-    componentName: "moduleToken"
-  }
-}
-```
+解码后对象字段：
 
-#### 内置可用库
+| 字段 | 说明 |
+| --- | --- |
+| content | 组件 JSX 源码字符串，内部以 `render(...)` 包裹后由 Babel（es2015 + react）编译 |
+| props | 参数定义：`{ name: { type, defaultValue } }`，`type` 支持 string、number、boolean、array、object、function |
+| scope | 远程模块映射：`{ 变量名: 'moduleToken' }`，如 `{ FormInfo: 'components-core:FormInfo' }` |
 
-组件运行环境中内置了以下库：
+`content` 为空或解码失败时展示错误文案；`scope` 模块未加载完成前显示 `Spin`。
 
-| 库名称 | 用途 | 导入方式 |
-|--------|------|----------|
-| React | React 核心 | 内置可用 |
-| Antd | UI 组件库 | 全局可用 |
-| lodash | 工具函数 | 全局可用 |
-| dayjs | 日期处理 | 全局可用 |
+使用 `components-core:FormInfo` 时，JSX 须写在 `<FormInfo.Form data={{...}}>` 内（或 `scope` 含 `FormInfo` 且内容出现 `<FormInfo` 时，组件会自动外包一层 `FormInfo.Form`，避免缺少 Form 上下文导致 `useCacheRemove` 报错）。
+
+#### 运行环境内置标识
+
+| 标识 | 说明 |
+| --- | --- |
+| React | React 核心 |
+| Antd | antd 全量导出 |
+| props | 合并后的组件属性 |
+| scope 中的变量名 | 远程加载的模块（另含 `PureGlobal`） |
+
+`libs` 中声明的键（如 `lodash`、`dayjs`）会作为额外参数传入编译后的函数，须在 JSX 中按同名使用。
+
+#### props.type 与 defaultValue
+
+| type | defaultValue 处理 |
+| --- | --- |
+| string | 原样字符串 |
+| number / boolean / array / object | `JSON.parse(defaultValue)` |
+| function | 固定为 `() => null` |
 
 #### 错误处理
 
-当组件执行出错时，会显示错误信息：
+编译错误、运行时异常、`JSON.parse(decode(...))` 失败均通过 `ErrorComponent` 展示；`Error` 对象会格式化为 `message` 或 `stack` 文本。
 
-```javascript
-const ErrorComponent = ({ error }) => {
-  return (
-    <div className="error-message">
-      <pre>{error}</pre>
-    </div>
-  );
-};
-```
+#### 典型用法
 
-#### 远程模块加载
-
-支持通过 scope 配置加载远程模块，模块会在组件执行前动态加载并注入到运行环境中。
-
-#### 安全特性
-
-- 代码在 ErrorBoundary 保护下执行
-- 支持主题和上下文隔离
-- 渲染结束后自动清理 DOM
-- 支持组件卸载时的资源清理
+- 只读展示：`<LiveComponentView content={encoded} libs={{ lodash, dayjs }} />`
+- 覆盖标题：`<LiveComponentView content={encoded} props={{ title: '自定义标题' }} />`
+- 配置来源：与 `LiveComponentEditor` 输出、`CKEditor` `data-live-component` 属性相同

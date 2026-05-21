@@ -1,6 +1,6 @@
 {
   "name": "@kne-components/components-thirdparty",
-  "version": "0.1.21",
+  "version": "0.1.22",
   "description": "用于封装一些体积较大的需要使用时再加载的第三方库",
   "scripts": {
     "init": "husky",
@@ -100,6 +100,7 @@
     "@kne/json-view": "^0.1.2",
     "@kne/markdown-components-render": "^0.1.10",
     "@kne/react-error-boundary": "^0.1.1",
+    "@kne/react-intl": "^0.1.12",
     "@kne/use-control-value": "^0.1.9",
     "@kne/use-ref-callback": "^0.1.2",
     "@kne/use-resize": "^0.1.1",

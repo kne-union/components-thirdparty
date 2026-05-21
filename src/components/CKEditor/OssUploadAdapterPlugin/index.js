@@ -48,7 +48,10 @@ function OssUploadAdapterPlugin(editor) {
       return;
     }
     data.content = editor.data.htmlProcessor.toView('');
-    const loadingClose = message ? message.loading('粘贴内容中含有图片，正在进行图片上传...', { duration: 0 }) : () => {};
+    const i18n = editor.config.get('ckeditorI18n') || {};
+    const loadingClose = message
+      ? message.loading(i18n.pasteImageUploading || '粘贴内容中含有图片，正在进行图片上传...', { duration: 0 })
+      : () => {};
     Promise.all(
       [].slice.call(domDocument.querySelectorAll('img'), 0).map(async img => {
         if (typeof options.uploadUrl !== 'function') {
