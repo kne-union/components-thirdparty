@@ -81,6 +81,21 @@
       ]
     },
     {
+      "title": "视频上传",
+      "description": "上传 mp4、webm、mov 等视频并在编辑器中插入 HTML5 video，未配置上传 API 时自动使用 base64",
+      "code": "./video.js",
+      "scope": [
+        {
+          "name": "_CKEditor",
+          "packageName": "@components/CKEditor"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        }
+      ]
+    },
+    {
       "title": "在Form中使用",
       "description": "展示如何在Form中使用编辑器",
       "code": "./form.js",

@@ -17,7 +17,8 @@ export const uploadFile = async (file, options = {}) => {
   const { upload, message, base64Warning } = options;
   if (typeof upload !== 'function') {
     console.warn(
-      base64Warning || '当前为 base64 模式，正式环境请在 preset apis 设置 file.upload，或给 CKEditor 传入 uploadAdapter.upload / modelUpload.upload'
+      base64Warning ||
+      '当前为 base64 模式，正式环境请在 preset apis 设置 file.upload，或给 CKEditor 传入 uploadAdapter.upload / modelUpload.upload / videoUpload.upload'
     );
     return readFileAsDataURL(file);
   }

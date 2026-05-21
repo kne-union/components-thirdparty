@@ -20,9 +20,6 @@ const calcWidthPercents = (widthPx, editor) => {
   return Math.min(Math.round((widthPx / contentWidth) * 10000) / 100, 100);
 };
 
-/**
- * 按手柄与锚点计算自由宽高（不锁比例）
- */
 const proposeFreeSize = (state, domEventData, isCentered) => {
   const current = extractCoordinates(domEventData);
   const ref = state._referenceCoordinates;
@@ -58,37 +55,19 @@ const proposeFreeSize = (state, domEventData, isCentered) => {
   };
 };
 
-const applyDomResize = (domFigure, domHandleHost, widthPx, heightPx) => {
-  const width = `${widthPx}px`;
-  const height = `${heightPx}px`;
+export const getResizeCommitPayload = (resizer, widthValue) => {
+  const heightPx = resizer.state.proposedHeight ?? resizer.state.proposedHandleHostHeight;
 
-  if (domFigure) {
-    domFigure.style.width = width;
-    domFigure.style.maxWidth = '100%';
-    domFigure.style.height = height;
-    domFigure.style.minHeight = 'unset';
-    domFigure.style.setProperty('--model3d-height', height);
-  }
-
-  if (domHandleHost) {
-    domHandleHost.style.width = width;
-    domHandleHost.style.height = height;
-    domHandleHost.style.minHeight = 'unset';
-
-    const modelViewer = domHandleHost.querySelector('model-viewer');
-
-    if (modelViewer) {
-      modelViewer.style.setProperty('width', '100%', 'important');
-      modelViewer.style.setProperty('height', '100%', 'important');
-      modelViewer.style.setProperty('min-height', 'unset', 'important');
-    }
-  }
+  return {
+    width: widthValue,
+    height: heightPx ? `${Math.round(heightPx)}px` : undefined
+  };
 };
 
 /**
  * 覆盖 WidgetResizer：自由宽高 + 拖拽仅改 DOM，松手再写入 model
  */
-export const patchModel3dResizer = resizer => {
+export const patchMediaWidgetResizer = (resizer, { applyDomResize }) => {
   resizer._proposeNewSize = function (domEventData) {
     const isCentered = this._options.isCentered?.(this) ?? false;
     const { width, height } = proposeFreeSize(this.state, domEventData, isCentered);
@@ -116,11 +95,26 @@ export const patchModel3dResizer = resizer => {
   };
 };
 
-export const getResizeCommitPayload = (resizer, widthValue) => {
-  const heightPx = resizer.state.proposedHeight ?? resizer.state.proposedHandleHostHeight;
+export const createDefaultDomResizeApplier =
+  ({ cssVarName } = {}) =>
+  (domFigure, domHandleHost, widthPx, heightPx) => {
+    const width = `${widthPx}px`;
+    const height = `${heightPx}px`;
 
-  return {
-    width: widthValue,
-    height: heightPx ? `${Math.round(heightPx)}px` : undefined
+    if (domFigure) {
+      domFigure.style.width = width;
+      domFigure.style.maxWidth = '100%';
+      domFigure.style.height = height;
+      domFigure.style.minHeight = 'unset';
+
+      if (cssVarName) {
+        domFigure.style.setProperty(cssVarName, height);
+      }
+    }
+
+    if (domHandleHost) {
+      domHandleHost.style.width = width;
+      domHandleHost.style.height = height;
+      domHandleHost.style.minHeight = 'unset';
+    }
   };
-};

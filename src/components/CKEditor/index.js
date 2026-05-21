@@ -66,6 +66,9 @@ import 'ckeditor5/ckeditor5.css';
 import classnames from 'classnames';
 import OssUploadAdapterPlugin from './OssUploadAdapterPlugin';
 import Model3dPlugin from './Model3dPlugin';
+import VideoPlugin from './VideoPlugin';
+import { syncContentVideoLayout } from './VideoPlugin/utils';
+import { createDefaultMediaToolbar } from './shared/mediaWidget/constants';
 import whenModelViewerReady from '../../common/loadModelViewer';
 import { useToolbarDropdownMaxWidth } from './toolbarDropdownMaxWidth';
 import { syncModelViewerLayout } from '../../common/modelViewerMount';
@@ -133,7 +136,7 @@ const defaultPlugins = [
   OssUploadAdapterPlugin
 ];
 
-const richTextPlugins = [...defaultPlugins, Model3dPlugin];
+const richTextPlugins = [...defaultPlugins, Model3dPlugin, VideoPlugin];
 
 const defaultConfig = {
   toolbar: {
@@ -167,6 +170,7 @@ const defaultConfig = {
       '|',
       'imageUpload',
       'model3dUpload',
+      'videoUpload',
       'blockQuote',
       'insertTable',
       'codeBlock',
@@ -255,6 +259,18 @@ const defaultConfig = {
         classes: true
       },
       {
+        name: 'figure',
+        classes: ['ck-video'],
+        styles: true,
+        attributes: true
+      },
+      {
+        name: 'video',
+        attributes: ['src', 'controls', 'playsinline', 'preload', 'title', 'width', 'height'],
+        styles: true,
+        classes: true
+      },
+      {
         name: 'section',
         classes: ['component-box'],
         styles: true,
@@ -263,27 +279,18 @@ const defaultConfig = {
     ]
   },
   modelUpload: {},
+  videoUpload: {},
   model3d: {
-    toolbar: [
-      'model3dStyle:block',
-      'model3dStyle:side',
-      'model3dStyle:alignLeft',
-      'model3dStyle:alignRight',
-      'model3dStyle:alignCenter',
-      'model3dStyle:alignBlockLeft',
-      'model3dStyle:alignBlockRight',
-      '|',
-      'resizeModel3d:25',
-      'resizeModel3d:50',
-      'resizeModel3d:75',
-      'resizeModel3d:original',
-      '|',
-      'resizeModel3dHeight:300',
-      'resizeModel3dHeight:400',
-      'resizeModel3dHeight:500',
-      'resizeModel3dHeight:600',
-      'resizeModel3dHeight:original'
-    ]
+    toolbar: createDefaultMediaToolbar({
+      stylePrefix: 'model3dStyle',
+      resizePrefix: 'resizeModel3d'
+    })
+  },
+  mediaVideo: {
+    toolbar: createDefaultMediaToolbar({
+      stylePrefix: 'mediaVideoStyle',
+      resizePrefix: 'resizeMediaVideo'
+    })
   }
 };
 
@@ -307,7 +314,9 @@ const CKEditorField = ({
     const basePlugins = isMarkdown ? defaultPlugins : richTextPlugins;
     const list = [
       ...basePlugins,
-      ...customPlugins.filter(plugin => !isMarkdown || plugin !== Model3dPlugin)
+      ...customPlugins.filter(
+        plugin => !isMarkdown || (plugin !== Model3dPlugin && plugin !== VideoPlugin)
+      )
     ];
 
     if (isMarkdown) {
@@ -325,9 +334,9 @@ const CKEditorField = ({
     }
 
     const toolbarItems = (merged.toolbar?.items ?? defaultConfig.toolbar.items).filter(
-      item => item !== 'model3dUpload'
+      item => item !== 'model3dUpload' && item !== 'videoUpload'
     );
-    const { model3d: _model3d, modelUpload: _modelUpload, ...rest } = merged;
+    const { model3d: _model3d, modelUpload: _modelUpload, videoUpload: _videoUpload, mediaVideo: _mediaVideo, ...rest } = merged;
 
     return {
       ...rest,
@@ -376,6 +385,14 @@ const CKEditorField = ({
                   },
                   uploadAdapter,
                   config?.modelUpload
+                ),
+                videoUpload: Object.assign(
+                  {},
+                  {
+                    upload: apis?.file?.upload
+                  },
+                  uploadAdapter,
+                  config?.videoUpload
                 )
               })
         })}
@@ -404,7 +421,14 @@ const CKContent = ({ className, children }) => {
 
   useEffect(() => {
     const container = ref.current;
-    if (!container?.querySelector('model-viewer')) {
+
+    if (!container) {
+      return;
+    }
+
+    container.querySelectorAll('figure.ck-video').forEach(syncContentVideoLayout);
+
+    if (!container.querySelector('model-viewer')) {
       return;
     }
 

@@ -90,6 +90,73 @@
       }
     }
   }
+
+  figure.ck-video {
+    --video-height: 400px;
+    display: block;
+    margin: 1em 0;
+    max-width: 100%;
+    height: var(--video-height);
+    box-sizing: border-box;
+    clear: both;
+
+    &.image_resized {
+      max-width: 100%;
+    }
+
+    &.image-style-side {
+      float: right;
+      margin-left: var(--ck-image-style-spacing);
+      max-width: 50%;
+    }
+
+    &.image-style-align-left {
+      float: left;
+      margin-right: var(--ck-image-style-spacing);
+    }
+
+    &.image-style-align-right {
+      float: right;
+      margin-left: var(--ck-image-style-spacing);
+    }
+
+    &.image-style-align-center {
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    &.image-style-block-align-left {
+      margin-left: 0;
+      margin-right: auto;
+    }
+
+    &.image-style-block-align-right {
+      margin-right: 0;
+      margin-left: auto;
+    }
+
+    video {
+      display: block;
+      width: 100%;
+      max-width: 100%;
+      height: var(--video-height);
+      min-height: 0 !important;
+      max-height: none !important;
+      vertical-align: top;
+    }
+
+    &.ck-widget_with-resizer {
+      .ck-widget__resizer {
+        outline: none;
+        border: none;
+        box-shadow: none;
+      }
+
+      .ck-size-view {
+        display: none !important;
+      }
+    }
+  }
 }
 
 .ck {
@@ -199,6 +266,56 @@
       width: 100% !important;
       height: 100% !important;
       min-height: 0 !important;
+      vertical-align: top;
+    }
+  }
+
+  figure.ck-video {
+    display: block;
+    margin: 1em 0;
+    max-width: 100%;
+    box-sizing: border-box;
+    clear: both;
+
+    &.image_resized {
+      max-width: 100%;
+    }
+
+    &.image-style-side {
+      float: right;
+      margin-left: 1.5em;
+      max-width: 50%;
+    }
+
+    &.image-style-align-left {
+      float: left;
+      margin-right: 1.5em;
+    }
+
+    &.image-style-align-right {
+      float: right;
+      margin-left: 1.5em;
+    }
+
+    &.image-style-align-center {
+      margin-left: auto;
+      margin-right: auto;
+    }
+
+    &.image-style-block-align-left {
+      margin-left: 0;
+      margin-right: auto;
+    }
+
+    &.image-style-block-align-right {
+      margin-right: 0;
+      margin-left: auto;
+    }
+
+    video {
+      display: block;
+      width: 100%;
+      max-width: 100%;
       vertical-align: top;
     }
   }

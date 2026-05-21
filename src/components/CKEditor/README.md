@@ -331,6 +331,50 @@ render(<BaseExample />);
 
 ```
 
+- 视频上传
+- 上传 mp4、webm、mov 等视频并在编辑器中插入 HTML5 video，未配置上传 API 时自动使用 base64
+- _CKEditor(@components/CKEditor),antd(antd)
+
+```jsx
+const { default: CKEditor } = _CKEditor;
+const { Flex, Card, Space, Typography, Divider, message } = antd;
+const { useState } = React;
+const { Title, Paragraph } = Typography;
+
+const initData = &#96;<h2>视频上传示例</h2><p>点击工具栏中的<span style="color: #1677ff;">视频按钮</span>，选择 <strong>mp4 / webm / mov</strong> 等文件即可插入编辑器。</p><p>未配置上传接口时，视频会以 base64 嵌入内容；配置 <code>videoUpload.upload</code> 或 <code>uploadAdapter.upload</code> 后走服务端上传。</p>&#96;;
+
+const BaseExample = () => {
+  const [content, setContent] = useState(initData);
+  const [messageApi, contextHolder] = message.useMessage();
+
+  return (
+    <Flex vertical gap={16}>
+      {contextHolder}
+      <Card>
+        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+          <div>
+            <Title level={4}>视频上传</Title>
+            <Paragraph type="secondary">点击工具栏中的视频按钮上传视频文件，编辑器与预览均使用 HTML5 video 播放</Paragraph>
+          </div>
+          <CKEditor.Field
+            value={content}
+            onChange={setContent}
+            config={{
+              message: messageApi
+            }}
+          />
+          <Divider orientation="left">内容预览</Divider>
+          <CKEditor.Content>{content}</CKEditor.Content>
+        </Space>
+      </Card>
+    </Flex>
+  );
+};
+
+render(<BaseExample />);
+
+```
+
 - 在Form中使用
 - 展示如何在Form中使用编辑器
 - _CKEditor(@components/CKEditor),antd(antd),remoteLoader(@kne/remote-loader)
@@ -369,7 +413,7 @@ render(<BaseExample />);
 |属性名|说明|类型|默认值|
 |  ---  | --- | --- | --- |
 |className|自定义类名|string|-
-|isMarkdown|是否启用 Markdown 模式（不含 3D 模型上传与 `Model3dPlugin`）|boolean|false
+|isMarkdown|是否启用 Markdown 模式（不含 3D 模型、视频上传及相关插件）|boolean|false
 |config|编辑器配置对象，可自定义工具栏和插件配置|object|详见下方配置
 |plugins|自定义插件数组|array|[]
 |value|编辑器内容|string|-
@@ -385,4 +429,6 @@ render(<BaseExample />);
 - `htmlSupport`: HTML支持配置，允许的标签和属性
 - `uploadAdapter`: 图片上传配置，`upload` 上传文件，`uploadUrl` 粘贴图片转存
 - `modelUpload`: 3D 模型上传配置（仅支持 `.glb`，**仅富文本模式**），默认合并 `uploadAdapter`；`upload` 与图片相同，返回 `{ code, data, msg }`，`data` 为模型 URL。未配置 `upload` 时模型文件转为 base64 嵌入
-- `model3d.toolbar`: 选中 3D 模型时显示的工具栏（**仅富文本模式**），支持 `model3dStyle:*` 对齐/环绕样式与 `resizeModel3d:*` 尺寸（25%/50%/75%/原始），可拖拽边角调整宽度
+- `videoUpload`: 视频上传配置（**仅富文本模式**），默认合并 `uploadAdapter`；`upload` 与图片相同。支持 mp4、webm、ogg、mov 等常见格式。未配置 `upload` 时视频转为 base64 嵌入
+- `model3d.toolbar`: 3D 模型浮动工具栏（**仅富文本模式**），默认含 `model3dStyle:*`、`resizeModel3d:*`、`resizeModel3dHeight:*`，可拖拽边角自由缩放
+- `mediaVideo.toolbar`: 视频浮动工具栏（**仅富文本模式**），默认含 `mediaVideoStyle:*`、`resizeMediaVideo:*`、`resizeMediaVideoHeight:*`，行为与 3D 模型一致
