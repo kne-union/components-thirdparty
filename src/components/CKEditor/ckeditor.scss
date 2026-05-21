@@ -65,10 +65,16 @@
     model-viewer {
       display: block;
       width: 100% !important;
-      height: var(--model3d-height) !important;
+      height: 100% !important;
       min-height: 0 !important;
       max-height: none !important;
       vertical-align: top;
+      // 避免抢焦点导致浮动工具栏无法点击；双击 widget 进入 .ck-model3d-interact 后可操作模型
+      pointer-events: none;
+    }
+
+    &.ck-model3d-interact model-viewer {
+      pointer-events: auto;
     }
 
     // 缩放时仅隐藏多余尺寸浮层与 resizer 外框，保留紫色 widget 选中描边
@@ -117,6 +123,12 @@
   --ck-border-radius: var(--radius-default, 2px);
   --ck-color-widget-hover-border: var(--primary-color);
   --ck-color-widget-type-around-button-hover: var(--primary-color);
+}
+
+.ck.ck-toolbar__grouped-dropdown.ck-toolbar-dropdown > .ck-dropdown__panel,
+.ck.ck-toolbar-dropdown > .ck-dropdown__panel {
+  max-width: var(--ck-toolbar-dropdown-max-width, 60vw);
+  box-sizing: border-box;
 }
 
 .ck.ck-sticky-panel .ck-sticky-panel__content_sticky {
@@ -177,11 +189,15 @@
       line-height: 0;
     }
 
+    .ck-model3d-viewer {
+      height: var(--model3d-height);
+    }
+
     model-viewer,
     .ck-model3d-viewer model-viewer {
       display: block;
       width: 100% !important;
-      height: var(--model3d-height) !important;
+      height: 100% !important;
       min-height: 0 !important;
       vertical-align: top;
     }

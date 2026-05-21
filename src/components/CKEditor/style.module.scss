@@ -1,9 +1,29 @@
 .editor {
   --min-height: 300px;
+  width: 100%;
 
   :global {
+    .ck.ck-editor {
+      width: 100%;
+      max-width: 100%;
+    }
+
+    .ck.ck-editor__top,
+    .ck.ck-sticky-panel,
+    .ck.ck-sticky-panel__content {
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+
     .ck.ck-toolbar {
       border-color: transparent;
+    }
+
+    .ck.ck-toolbar__grouped-dropdown.ck-toolbar-dropdown > .ck-dropdown__panel,
+    .ck.ck-toolbar-dropdown > .ck-dropdown__panel {
+      max-width: var(--ck-toolbar-dropdown-max-width, 60vw);
+      box-sizing: border-box;
     }
 
     .ck.ck-editor__main > .ck-editor__editable:not(.ck-focused) {
@@ -18,4 +38,5 @@
 
   border: solid 1px var(--font-color-grey-3);
   border-radius: var(--radius-default, 2px);
+  overflow: visible;
 }

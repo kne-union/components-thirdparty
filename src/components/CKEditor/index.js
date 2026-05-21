@@ -67,6 +67,7 @@ import classnames from 'classnames';
 import OssUploadAdapterPlugin from './OssUploadAdapterPlugin';
 import Model3dPlugin from './Model3dPlugin';
 import whenModelViewerReady from '../../common/loadModelViewer';
+import { useToolbarDropdownMaxWidth } from './toolbarDropdownMaxWidth';
 import { syncModelViewerLayout } from '../../common/modelViewerMount';
 import useControlValue from '@kne/use-control-value';
 import merge from 'lodash/merge';
@@ -129,9 +130,10 @@ const defaultPlugins = [
   GeneralHtmlSupport,
   Style,
   SelectAll,
-  OssUploadAdapterPlugin,
-  Model3dPlugin
+  OssUploadAdapterPlugin
 ];
+
+const richTextPlugins = [...defaultPlugins, Model3dPlugin];
 
 const defaultConfig = {
   toolbar: {
@@ -285,24 +287,74 @@ const defaultConfig = {
   }
 };
 
-const CKEditorField = ({ className, isMarkdown, config, plugins: customPlugins = [], locale: customLocale, uploadAdapter, ...props }) => {
+const CKEditorField = ({
+  className,
+  style: customStyle,
+  isMarkdown,
+  config,
+  plugins: customPlugins = [],
+  locale: customLocale,
+  uploadAdapter,
+  ...props
+}) => {
   const [value, onChange] = useControlValue(props);
+  const wrapperRef = useRef(null);
+  const measuredToolbarDropdownMaxWidth = useToolbarDropdownMaxWidth(wrapperRef);
   const contextLocale = useGlobalValue('locale');
   const { apis } = usePreset();
   const locale = customLocale || contextLocale;
   const plugins = useMemo(() => {
-    const plugins = [...defaultPlugins, ...customPlugins];
+    const basePlugins = isMarkdown ? defaultPlugins : richTextPlugins;
+    const list = [
+      ...basePlugins,
+      ...customPlugins.filter(plugin => !isMarkdown || plugin !== Model3dPlugin)
+    ];
+
     if (isMarkdown) {
-      plugins.push(Markdown);
+      list.push(Markdown);
     }
-    return plugins;
+
+    return list;
   }, [isMarkdown, customPlugins]);
+
+  const editorConfig = useMemo(() => {
+    const merged = merge({}, defaultConfig, config);
+
+    if (!isMarkdown) {
+      return merged;
+    }
+
+    const toolbarItems = (merged.toolbar?.items ?? defaultConfig.toolbar.items).filter(
+      item => item !== 'model3dUpload'
+    );
+    const { model3d: _model3d, modelUpload: _modelUpload, ...rest } = merged;
+
+    return {
+      ...rest,
+      toolbar: {
+        ...merged.toolbar,
+        items: toolbarItems
+      }
+    };
+  }, [isMarkdown, config]);
+
+  const wrapperStyle = useMemo(() => {
+    if (!measuredToolbarDropdownMaxWidth) {
+      return customStyle || undefined;
+    }
+
+    return {
+      ...(customStyle || {}),
+      '--ck-toolbar-dropdown-max-width': measuredToolbarDropdownMaxWidth
+    };
+  }, [customStyle, measuredToolbarDropdownMaxWidth]);
+
   return (
-    <div className={classnames(className, style['editor'])}>
+    <div ref={wrapperRef} className={classnames(className, style['editor'])} style={wrapperStyle}>
       <CKEditor5
         editor={ClassicEditor}
         data={value}
-        config={merge({}, defaultConfig, config, {
+        config={merge({}, editorConfig, {
           licenseKey: 'GPL',
           plugins,
           translations: [locale === 'zh-CN' ? coreTranslationsZh : coreTranslationsEn],
@@ -314,14 +366,18 @@ const CKEditorField = ({ className, isMarkdown, config, plugins: customPlugins =
             },
             uploadAdapter
           ),
-          modelUpload: Object.assign(
-            {},
-            {
-              upload: apis?.file?.upload
-            },
-            uploadAdapter,
-            config?.modelUpload
-          )
+          ...(isMarkdown
+            ? {}
+            : {
+                modelUpload: Object.assign(
+                  {},
+                  {
+                    upload: apis?.file?.upload
+                  },
+                  uploadAdapter,
+                  config?.modelUpload
+                )
+              })
         })}
         onChange={(event, editor) => {
           const data = editor.getData();
@@ -378,15 +434,11 @@ const CKContent = ({ className, children }) => {
     });
   }, [children]);
 
-  return (
-    <div
-      ref={ref}
-      className={classnames('ck ck-content', className)}
-      dangerouslySetInnerHTML={{ __html: children }}
-    />
-  );
+  return <div ref={ref} className={classnames('ck ck-content', className)} dangerouslySetInnerHTML={{ __html: children }} />;
 };
 
 CKEditor.Content = CKContent;
+
+export { formatToolbarDropdownMaxWidth, getToolbarDropdownMaxWidthStyle, useToolbarDropdownMaxWidth } from './toolbarDropdownMaxWidth';
 
 export default CKEditor;

@@ -65,14 +65,13 @@ class ResizeModel3dCommand extends Command {
       editor.editing.view.change(writer => {
         syncFigureSizeStyles(writer, viewFigure, element);
       });
-      clearModel3dInlineResizeStyles(editor, element);
     }
 
-    if (height !== undefined) {
-      applyViewerHeightToDom(editor, element, height || MODEL3D_DEFAULT_HEIGHT);
-    } else if (width !== undefined) {
-      applyViewerHeightToDom(editor, element, resolveModel3dHeight(element));
-    }
+    const resolvedHeight =
+      height !== undefined ? height || MODEL3D_DEFAULT_HEIGHT : resolveModel3dHeight(element);
+
+    clearModel3dInlineResizeStyles(editor, element);
+    applyViewerHeightToDom(editor, element, resolvedHeight);
   }
 }
 
@@ -86,6 +85,10 @@ const registerSizeConverters = (editor, pipeline) => {
       }
 
       syncFigureSizeStyles(conversionApi.writer, viewFigure, data.item);
+
+      if (pipeline === 'editingDowncast') {
+        applyViewerHeightToDom(editor, data.item);
+      }
     });
 
     dispatcher.on('attribute:resizedHeight:model3d', (evt, data, conversionApi) => {
@@ -158,7 +161,10 @@ export class Model3dResizeEditing extends Plugin {
           return model3dStyle === 'alignCenter' || !model3dStyle || model3dStyle === 'block';
         },
         onCommit(newValue) {
-          editor.execute('resizeModel3d', getResizeCommitPayload(resizer, newValue));
+          const payload = getResizeCommitPayload(resizer, newValue);
+
+          editor.execute('resizeModel3d', payload);
+          applyViewerHeightToDom(editor, modelElement, payload.height || resolveModel3dHeight(modelElement));
         }
       });
 
