@@ -2,19 +2,20 @@ import { Plugin, ButtonView, Command, Widget, toWidget } from 'ckeditor5';
 import whenModelViewerReady from '../../../common/loadModelViewer';
 import { mountModelViewerInHost } from '../../../common/modelViewerMount';
 import { uploadFile } from '../uploadFile';
-import { isGlbModelFile, MODEL3D_ACCEPT, MODEL3D_DEFAULT_HEIGHT, MODEL3D_STYLES } from './constants';
+import { isGlbModelFile, MODEL3D_ACCEPT, MODEL3D_DEFAULT_HEIGHT } from './constants';
 import {
   applyViewerHeightToDom,
+  consumeModel3dStyleClasses,
   findCkModel3dContainer,
   findModelViewer,
   getFigureClasses,
+  readModel3dStyleFromFigure,
   resolveModel3dHeight
 } from './utils';
 import { Model3dStyleEditing, Model3dStyleUI } from './style';
 import { Model3dResizeEditing, Model3dResizeUI } from './resize';
 import { Model3dToolbar } from './toolbar';
-
-const model3dIcon = `<svg viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg"><path d="M10 2L3 6.5v7L10 18l7-4.5v-7L10 2zm0 2.2l4.8 3.1-4.8 3.1-4.8-3.1L10 4.2zM5 8.3l4.2 2.7v5.4L5 13.7V8.3zm10 0v5.4l-4.2 2.7v-5.4L15 8.3z"/></svg>`;
+import model3dIcon from './icon';
 
 const createModel3dFigureView = (modelElement, writer, { renderViewer }) => {
   const figure = writer.createContainerElement('figure', {
@@ -72,7 +73,7 @@ const readModel3dAttributes = (viewContainer, viewFigure) => {
   };
 
   if (viewFigure) {
-    const imageStyle = MODEL3D_STYLES.find(style => style.className && viewFigure.hasClass(style.className))?.name;
+    const imageStyle = readModel3dStyleFromFigure(viewFigure);
 
     if (imageStyle) {
       attrs.model3dStyle = imageStyle;
@@ -95,7 +96,7 @@ const readModel3dAttributes = (viewContainer, viewFigure) => {
       attrs.resizedHeight = height;
     }
   } else {
-    const imageStyle = MODEL3D_STYLES.find(style => style.className && viewContainer.hasClass(style.className))?.name;
+    const imageStyle = readModel3dStyleFromFigure(viewContainer);
 
     if (imageStyle) {
       attrs.model3dStyle = imageStyle;
@@ -103,22 +104,6 @@ const readModel3dAttributes = (viewContainer, viewFigure) => {
   }
 
   return attrs;
-};
-
-const consumeModel3dStyleClasses = (viewFigure, conversionApi) => {
-  if (viewFigure.hasClass('image')) {
-    conversionApi.consumable.consume(viewFigure, { classes: 'image' });
-  }
-
-  MODEL3D_STYLES.forEach(style => {
-    if (style.className) {
-      conversionApi.consumable.consume(viewFigure, { classes: style.className });
-    }
-  });
-
-  if (viewFigure.hasClass('image_resized')) {
-    conversionApi.consumable.consume(viewFigure, { classes: 'image_resized' });
-  }
 };
 
 class InsertModel3dCommand extends Command {
