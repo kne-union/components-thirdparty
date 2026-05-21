@@ -42,6 +42,7 @@ export const clearModel3dInlineResizeStyles = (editor, modelElement) => {
   const viewer = domFigure.querySelector('.ck-model3d-viewer');
 
   if (viewer) {
+    delete viewer.dataset.model3dHeight;
     viewer.style.width = '';
     viewer.style.height = '';
     viewer.style.minHeight = '';
@@ -211,17 +212,18 @@ export const applyViewerHeightToDom = (editor, modelElement, height) => {
 
   if (viewer && modelViewer) {
     syncModelViewerLayout(viewer, modelViewer, resolvedHeight);
-  } else {
-    domFigure.style.setProperty('--model3d-height', resolvedHeight);
-    domFigure.style.height = resolvedHeight;
-    domFigure.style.minHeight = 'unset';
+    return;
+  }
 
-    if (modelViewer) {
-      modelViewer.style.setProperty('width', '100%', 'important');
-      modelViewer.style.setProperty('height', resolvedHeight, 'important');
-      modelViewer.style.setProperty('min-height', '0', 'important');
-      modelViewer.style.setProperty('max-height', 'none', 'important');
-    }
+  domFigure.style.setProperty('--model3d-height', resolvedHeight);
+  domFigure.style.height = resolvedHeight;
+  domFigure.style.minHeight = 'unset';
+
+  if (modelViewer) {
+    modelViewer.style.setProperty('width', '100%', 'important');
+    modelViewer.style.setProperty('height', resolvedHeight, 'important');
+    modelViewer.style.setProperty('min-height', '0', 'important');
+    modelViewer.style.setProperty('max-height', 'none', 'important');
   }
 };
 
