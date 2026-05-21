@@ -72,6 +72,7 @@ import { createDefaultMediaToolbar } from './shared/mediaWidget/constants';
 import whenModelViewerReady from '../../common/loadModelViewer';
 import { useToolbarDropdownMaxWidth } from './toolbarDropdownMaxWidth';
 import { syncModelViewerLayout } from '../../common/modelViewerMount';
+import { enhanceModel3dContentPreview, teardownModel3dContentPreview } from './model3dContentPreview';
 import useControlValue from '@kne/use-control-value';
 import merge from 'lodash/merge';
 import style from './style.module.scss';
@@ -426,13 +427,15 @@ const CKContent = ({ className, children }) => {
       return;
     }
 
+    let cancelled = false;
+
     container.querySelectorAll('figure.ck-video').forEach(syncContentVideoLayout);
 
-    if (!container.querySelector('model-viewer')) {
-      return;
-    }
+    const setupModel3dPreview = () => {
+      if (cancelled) {
+        return;
+      }
 
-    whenModelViewerReady().then(() => {
       container.querySelectorAll('figure.ck-model3d, .ck-model3d').forEach(figure => {
         const modelViewer = figure.querySelector('model-viewer');
 
@@ -455,7 +458,18 @@ const CKContent = ({ className, children }) => {
 
         syncModelViewerLayout(host, modelViewer, height);
       });
-    });
+
+      enhanceModel3dContentPreview(container);
+    };
+
+    if (container.querySelector('model-viewer')) {
+      whenModelViewerReady().then(setupModel3dPreview);
+    }
+
+    return () => {
+      cancelled = true;
+      teardownModel3dContentPreview(container);
+    };
   }, [children]);
 
   return <div ref={ref} className={classnames('ck ck-content', className)} dangerouslySetInnerHTML={{ __html: children }} />;
