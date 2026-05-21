@@ -14,11 +14,12 @@ const readFileAsDataURL = file => {
  * @returns {Promise<string>} 文件可访问地址（URL 或 data URL）
  */
 export const uploadFile = async (file, options = {}) => {
-  const { upload, message, base64Warning } = options;
+  const { upload, message, base64Warning, uploadFailedMessage, uploadBase64Warning } = options;
   if (typeof upload !== 'function') {
     console.warn(
       base64Warning ||
-      '当前为 base64 模式，正式环境请在 preset apis 设置 file.upload，或给 CKEditor 传入 uploadAdapter.upload / modelUpload.upload / videoUpload.upload'
+        uploadBase64Warning ||
+        '当前为 base64 模式，正式环境请在 preset apis 设置 file.upload，或给 CKEditor 传入 uploadAdapter.upload / modelUpload.upload / videoUpload.upload'
     );
     return readFileAsDataURL(file);
   }
@@ -26,7 +27,7 @@ export const uploadFile = async (file, options = {}) => {
   const { data: resData } = await upload({ file });
   if (resData.code !== 0) {
     message?.error?.(resData.msg);
-    throw new Error(resData.msg || '上传失败');
+    throw new Error(resData.msg || options.uploadFailedMessage || '上传失败');
   }
   return resData.data;
 };

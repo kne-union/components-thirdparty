@@ -5,6 +5,7 @@ import {
   IconObjectSizeMedium,
   IconObjectSizeSmall
 } from 'ckeditor5';
+import { isMediaUploading } from '../mediaUploadPlaceholder';
 import { getResizeCommitPayload, patchMediaWidgetResizer } from './widgetResizer';
 
 const RESIZE_ICONS = {
@@ -37,7 +38,7 @@ export const createResizePlugins = ({
   class ResizeCommand extends Command {
     refresh() {
       const element = getSelected(this.editor.model.document.selection);
-      this.isEnabled = !!element;
+      this.isEnabled = !!element && !isMediaUploading(element);
       this.value = {
         width: element?.getAttribute('resizedWidth') || null,
         height: element?.getAttribute('resizedHeight') || null
@@ -190,8 +191,21 @@ export const createResizePlugins = ({
     init() {
       const editor = this.editor;
       const command = editor.commands.get(commandName);
+      const i18n = editor.config.get('ckeditorI18n');
+      const resolvedWidthOptions =
+        commandName === 'resizeModel3d'
+          ? i18n?.model3dResizeOptions ?? widthOptions
+          : commandName === 'resizeMediaVideo'
+            ? i18n?.videoResizeOptions ?? widthOptions
+            : widthOptions;
+      const resolvedHeightOptions =
+        commandName === 'resizeModel3d'
+          ? i18n?.model3dHeightOptions ?? heightOptions
+          : commandName === 'resizeMediaVideo'
+            ? i18n?.videoHeightOptions ?? heightOptions
+            : heightOptions;
 
-      widthOptions.forEach(option => {
+      resolvedWidthOptions.forEach(option => {
         editor.ui.componentFactory.add(option.name, locale => {
           const button = new ButtonView(locale);
           const iconKey = option.name.split(':')[1];
@@ -217,7 +231,7 @@ export const createResizePlugins = ({
         });
       });
 
-      heightOptions.forEach(option => {
+      resolvedHeightOptions.forEach(option => {
         editor.ui.componentFactory.add(option.name, locale => {
           const button = new ButtonView(locale);
 

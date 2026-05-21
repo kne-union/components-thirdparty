@@ -1,3 +1,17 @@
+.toolbar-extra {
+  display: inline-flex;
+  align-items: center;
+  :global {
+    .ant-space {
+      flex-wrap: nowrap;
+    }
+  }
+}
+
+.view-mode-segmented {
+  height: var(--ant-control-height);
+}
+
 .code-editor {
   border-radius: 8px;
   overflow: hidden;

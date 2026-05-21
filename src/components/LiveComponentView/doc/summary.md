@@ -1,18 +1,15 @@
-### 组件概述
-
-LiveComponentView 是一个动态组件渲染器，能够实时渲染和执行用户提供的 React 组件代码。该组件通过 Babel 转译器将代码转换为可执行的 JavaScript，并在沙箱环境中安全运行。
+动态 React 组件渲染器：解析 `LiveComponentEditor` 导出的 `content` 配置，经 Babel 转译后在运行环境中执行 JSX，用于内容预览、文档演示及 CKEditor 交互组件阅读态。
 
 ### 主要特性
 
-- 实时渲染 React 组件代码
-- 支持 ES6+ 语法转译
-- 错误边界保护和错误显示
-- 支持自定义组件容器
-- 集成主题和国际化
-- 支持组件参数注入
-- 沙箱环境安全执行
-- 支持多个远程模块加载
+- **配置驱动**：`content` 为 PlantUML 编码的 JSON，含组件源码、`props` 默认值、`scope` 远程模块
+- **运行时注入**：支持通过 `props` 覆盖配置内默认值；通过 `libs` 注入 lodash、dayjs 等库名与实例
+- **远程组件**：`scope` 声明 `components-core:FormInfo` 等模块 token，加载完成后渲染
+- **错误隔离**：编译/运行错误与 `ErrorBoundary` 统一展示可读堆栈，避免 `[object Error]`
+- **与编辑器配套**：与 `LiveComponentEditor` 编辑、`CKEditor` `insertLiveComponent` 插入链路一致
 
 ### 使用场景
 
-适用于代码演示平台、在线编程环境、组件文档展示、教学系统等需要动态执行和渲染 React 代码的场景。
+- 富文本中 `section.ck-live-component` 区块的阅读态渲染
+- 组件文档站、运营后台预览可配置表单/卡片
+- 在线搭建平台将用户保存的配置直接展示

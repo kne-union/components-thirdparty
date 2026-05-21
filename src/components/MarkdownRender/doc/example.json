@@ -2,13 +2,28 @@
   "isFull": false,
   "list": [
     {
-      "title": "这里填写示例标题",
-      "description": "这里填写示例说明",
+      "title": "基础使用",
+      "description": "加载 example.md，注册 Card/Button 与 variables",
       "code": "./base.js",
       "scope": [
         {
           "name": "_MarkdownRender",
           "packageName": "@components/MarkdownRender"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        },
+        {
+          "name": "_ReactFetch",
+          "packageName": "@kne/react-fetch"
+        },
+        {
+          "name": "md",
+          "packageName": "./doc/example.md"
+        },
+        {
+          "packageName": "@kne/markdown-components-render/dist/index.css"
         }
       ]
     }

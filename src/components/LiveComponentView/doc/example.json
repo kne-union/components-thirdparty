@@ -2,13 +2,78 @@
   "isFull": false,
   "list": [
     {
-      "title": "这里填写示例标题",
-      "description": "这里填写示例说明",
+      "title": "信息采集表单",
+      "description": "渲染 LiveComponentEditor 默认 Demo：FormInfo 表单 + 列表，scope 加载 components-core:FormInfo",
       "code": "./base.js",
       "scope": [
         {
           "name": "_LiveComponentView",
           "packageName": "@components/LiveComponentView"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        },
+        {
+          "name": "lodash",
+          "packageName": "lodash"
+        },
+        {
+          "name": "dayjs",
+          "packageName": "dayjs"
+        }
+      ]
+    },
+    {
+      "title": "活动结果页",
+      "description": "仅依赖 Antd 的轻量 JSX，展示 content 内 props 默认值（标题、副标题、按钮文案）",
+      "code": "./simple.js",
+      "scope": [
+        {
+          "name": "_LiveComponentView",
+          "packageName": "@components/LiveComponentView"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        }
+      ]
+    },
+    {
+      "title": "覆盖组件参数",
+      "description": "通过 LiveComponentView 的 props 覆盖配置中的 headline、subTitle 等字段",
+      "code": "./props.js",
+      "scope": [
+        {
+          "name": "_LiveComponentView",
+          "packageName": "@components/LiveComponentView"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        }
+      ]
+    },
+    {
+      "title": "注入工具库",
+      "description": "通过 libs 传入 dayjs、lodash，在动态 JSX 中格式化时间与汇总数值",
+      "code": "./libs.js",
+      "scope": [
+        {
+          "name": "_LiveComponentView",
+          "packageName": "@components/LiveComponentView"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        },
+        {
+          "name": "lodash",
+          "packageName": "lodash"
+        },
+        {
+          "name": "dayjs",
+          "packageName": "dayjs"
         }
       ]
     }

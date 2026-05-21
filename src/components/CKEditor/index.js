@@ -67,14 +67,24 @@ import classnames from 'classnames';
 import OssUploadAdapterPlugin from './OssUploadAdapterPlugin';
 import Model3dPlugin from './Model3dPlugin';
 import VideoPlugin from './VideoPlugin';
+import LiveComponentPlugin from './LiveComponentPlugin';
 import { syncContentVideoLayout } from './VideoPlugin/utils';
 import { createDefaultMediaToolbar } from './shared/mediaWidget/constants';
 import whenModelViewerReady from '../../common/loadModelViewer';
 import { useToolbarDropdownMaxWidth } from './toolbarDropdownMaxWidth';
 import { syncModelViewerLayout } from '../../common/modelViewerMount';
 import { enhanceModel3dContentPreview, teardownModel3dContentPreview } from './model3dContentPreview';
+import {
+  enhanceLiveComponentContentPreview,
+  teardownLiveComponentContentPreview
+} from './LiveComponentPlugin/liveComponentContentPreview';
+import { resolveLiveComponentOptions, resolveModel3dOptions } from './mediaPreviewOptions';
+import { applyModelViewerOptions } from '../../common/modelViewerOptions';
 import useControlValue from '@kne/use-control-value';
+import { useIntl } from '@kne/react-intl';
 import merge from 'lodash/merge';
+import withLocale from './withLocale';
+import buildCKEditorI18n from './buildI18n';
 import style from './style.module.scss';
 import './ckeditor5-content.css';
 import './ckeditor.scss';
@@ -137,7 +147,7 @@ const defaultPlugins = [
   OssUploadAdapterPlugin
 ];
 
-const richTextPlugins = [...defaultPlugins, Model3dPlugin, VideoPlugin];
+const richTextPlugins = [...defaultPlugins, Model3dPlugin, VideoPlugin, LiveComponentPlugin];
 
 const defaultConfig = {
   toolbar: {
@@ -172,6 +182,7 @@ const defaultConfig = {
       'imageUpload',
       'model3dUpload',
       'videoUpload',
+      'insertLiveComponent',
       'blockQuote',
       'insertTable',
       'codeBlock',
@@ -273,19 +284,28 @@ const defaultConfig = {
       },
       {
         name: 'section',
-        classes: ['component-box'],
+        classes: ['component-box', 'ck-live-component'],
         styles: true,
-        attributes: true
+        attributes: ['data-live-component']
       }
     ]
   },
   modelUpload: {},
   videoUpload: {},
+  liveComponent: {},
   model3d: {
     toolbar: createDefaultMediaToolbar({
       stylePrefix: 'model3dStyle',
       resizePrefix: 'resizeModel3d'
-    })
+    }),
+    viewer: {
+      cameraControls: true,
+      autoRotate: true,
+      loading: 'lazy'
+    },
+    preview: {
+      enableFullscreen: true
+    }
   },
   mediaVideo: {
     toolbar: createDefaultMediaToolbar({
@@ -295,7 +315,7 @@ const defaultConfig = {
   }
 };
 
-const CKEditorField = ({
+const CKEditorField = withLocale(({
   className,
   style: customStyle,
   isMarkdown,
@@ -303,8 +323,12 @@ const CKEditorField = ({
   plugins: customPlugins = [],
   locale: customLocale,
   uploadAdapter,
+  liveComponent: liveComponentProp,
+  model3d: model3dProp,
   ...props
 }) => {
+  const { formatMessage } = useIntl();
+  const ckeditorI18n = useMemo(() => buildCKEditorI18n(formatMessage), [formatMessage]);
   const [value, onChange] = useControlValue(props);
   const wrapperRef = useRef(null);
   const measuredToolbarDropdownMaxWidth = useToolbarDropdownMaxWidth(wrapperRef);
@@ -316,7 +340,9 @@ const CKEditorField = ({
     const list = [
       ...basePlugins,
       ...customPlugins.filter(
-        plugin => !isMarkdown || (plugin !== Model3dPlugin && plugin !== VideoPlugin)
+        plugin =>
+          !isMarkdown ||
+          (plugin !== Model3dPlugin && plugin !== VideoPlugin && plugin !== LiveComponentPlugin)
       )
     ];
 
@@ -327,17 +353,45 @@ const CKEditorField = ({
     return list;
   }, [isMarkdown, customPlugins]);
 
+  const liveComponentConfig = useMemo(
+    () => resolveLiveComponentOptions(defaultConfig.liveComponent, config?.liveComponent, liveComponentProp),
+    [config?.liveComponent, liveComponentProp]
+  );
+
+  const model3dConfig = useMemo(
+    () =>
+      resolveModel3dOptions(defaultConfig.model3d, config?.model3d, {
+        ...model3dProp,
+        preview: {
+          ...(model3dProp?.preview || {}),
+          i18n: ckeditorI18n
+        }
+      }),
+    [config?.model3d, model3dProp, ckeditorI18n]
+  );
+
   const editorConfig = useMemo(() => {
-    const merged = merge({}, defaultConfig, config);
+    const merged = merge({}, defaultConfig, config, {
+      liveComponent: liveComponentConfig,
+      model3d: { ...model3dConfig, i18n: ckeditorI18n },
+      ckeditorI18n
+    });
 
     if (!isMarkdown) {
       return merged;
     }
 
     const toolbarItems = (merged.toolbar?.items ?? defaultConfig.toolbar.items).filter(
-      item => item !== 'model3dUpload' && item !== 'videoUpload'
+      item => item !== 'model3dUpload' && item !== 'videoUpload' && item !== 'insertLiveComponent'
     );
-    const { model3d: _model3d, modelUpload: _modelUpload, videoUpload: _videoUpload, mediaVideo: _mediaVideo, ...rest } = merged;
+    const {
+      model3d: _model3d,
+      modelUpload: _modelUpload,
+      videoUpload: _videoUpload,
+      mediaVideo: _mediaVideo,
+      liveComponent: _liveComponent,
+      ...rest
+    } = merged;
 
     return {
       ...rest,
@@ -346,7 +400,7 @@ const CKEditorField = ({
         items: toolbarItems
       }
     };
-  }, [isMarkdown, config]);
+  }, [isMarkdown, config, liveComponentConfig, model3dConfig, ckeditorI18n]);
 
   const wrapperStyle = useMemo(() => {
     if (!measuredToolbarDropdownMaxWidth) {
@@ -367,6 +421,7 @@ const CKEditorField = ({
         config={merge({}, editorConfig, {
           licenseKey: 'GPL',
           plugins,
+          ckeditorI18n,
           translations: [locale === 'zh-CN' ? coreTranslationsZh : coreTranslationsEn],
           uploadAdapter: Object.assign(
             {},
@@ -404,7 +459,7 @@ const CKEditorField = ({
       />
     </div>
   );
-};
+});
 
 const CKEditor = createWithRemoteLoader({
   modules: ['components-core:FormInfo@hooks']
@@ -417,8 +472,13 @@ const CKEditor = createWithRemoteLoader({
 
 CKEditor.Field = CKEditorField;
 
-const CKContent = ({ className, children }) => {
+const CKContent = ({ className, children, liveComponent: liveComponentProp, model3d: model3dProp }) => {
   const ref = useRef(null);
+  const liveComponentOptions = useMemo(
+    () => resolveLiveComponentOptions(liveComponentProp),
+    [liveComponentProp]
+  );
+  const model3dOptions = useMemo(() => resolveModel3dOptions(model3dProp), [model3dProp]);
 
   useEffect(() => {
     const container = ref.current;
@@ -430,6 +490,7 @@ const CKContent = ({ className, children }) => {
     let cancelled = false;
 
     container.querySelectorAll('figure.ck-video').forEach(syncContentVideoLayout);
+    enhanceLiveComponentContentPreview(container, liveComponentOptions);
 
     const setupModel3dPreview = () => {
       if (cancelled) {
@@ -444,6 +505,7 @@ const CKContent = ({ className, children }) => {
         }
 
         const height =
+          model3dOptions.height ||
           figure.style.height ||
           figure.querySelector('.ck-model3d-viewer')?.style.height ||
           figure.querySelector('.ck-model3d')?.style.height ||
@@ -456,10 +518,14 @@ const CKContent = ({ className, children }) => {
           customElements.upgrade(modelViewer);
         }
 
+        if (model3dOptions.viewer && Object.keys(model3dOptions.viewer).length > 0) {
+          applyModelViewerOptions(modelViewer, model3dOptions.viewer);
+        }
+
         syncModelViewerLayout(host, modelViewer, height);
       });
 
-      enhanceModel3dContentPreview(container);
+      enhanceModel3dContentPreview(container, model3dOptions);
     };
 
     if (container.querySelector('model-viewer')) {
@@ -469,8 +535,9 @@ const CKContent = ({ className, children }) => {
     return () => {
       cancelled = true;
       teardownModel3dContentPreview(container);
+      teardownLiveComponentContentPreview(container);
     };
-  }, [children]);
+  }, [children, liveComponentOptions, model3dOptions]);
 
   return <div ref={ref} className={classnames('ck ck-content', className)} dangerouslySetInnerHTML={{ __html: children }} />;
 };

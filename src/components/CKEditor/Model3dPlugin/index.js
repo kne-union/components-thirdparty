@@ -16,8 +16,30 @@ import { Model3dStyleEditing, Model3dStyleUI } from './style';
 import { Model3dResizeEditing, Model3dResizeUI } from './resize';
 import { Model3dToolbar } from './toolbar';
 import model3dIcon from './icon';
+import {
+  createMediaUploadPlaceholderFigure,
+  finalizeMediaUploadPlaceholder,
+  insertMediaUploadPlaceholder,
+  isMediaUploading,
+  removeMediaUploadPlaceholder
+} from '../shared/mediaUploadPlaceholder';
 
-const createModel3dFigureView = (modelElement, writer, { renderViewer }) => {
+const createModel3dFigureView = (modelElement, writer, { renderViewer, model3dConfig, asWidget } = {}) => {
+  if (isMediaUploading(modelElement)) {
+    const i18n = model3dConfig?.i18n || {};
+    const placeholderLabel = i18n.model3dUploading || '3D模型上传中...';
+
+    return createMediaUploadPlaceholderFigure(modelElement, writer, {
+      figureClasses: getFigureClasses(modelElement).concat('ck-model3d-uploading'),
+      widgetLabel: i18n.model3dWidgetLabel || '3D model',
+      placeholderLabel,
+      defaultHeight: MODEL3D_DEFAULT_HEIGHT,
+      resolveHeight: resolveModel3dHeight,
+      asWidget,
+      showFileName: false
+    });
+  }
+
   const figure = writer.createContainerElement('figure', {
     class: getFigureClasses(modelElement).join(' ')
   });
@@ -34,7 +56,13 @@ const createModel3dFigureView = (modelElement, writer, { renderViewer }) => {
     const src = modelElement.getAttribute('src');
     const alt = modelElement.getAttribute('alt') || '3D model';
     const viewerHost = writer.createRawElement('div', { class: 'ck-model3d-viewer' }, domElement => {
-      mountModelViewerInHost(domElement, { src, alt, height: viewerHeight });
+      mountModelViewerInHost(domElement, {
+        src,
+        alt,
+        height: viewerHeight,
+        viewer: model3dConfig?.viewer,
+        loading: model3dConfig?.viewer?.loading ?? 'eager'
+      });
     });
     writer.insert(writer.createPositionAt(figure, 0), viewerHost);
     return toWidget(figure, writer, { label: '3D model' });
@@ -136,7 +164,7 @@ class Model3dEditing extends Plugin {
 
     schema.register('model3d', {
       inheritAllFrom: '$blockObject',
-      allowAttributes: ['src', 'alt', 'model3dStyle', 'resizedWidth', 'resizedHeight']
+      allowAttributes: ['src', 'alt', 'model3dStyle', 'resizedWidth', 'resizedHeight', 'uploadStatus']
     });
     schema.setAttributeProperties('model3dStyle', { isFormatting: true });
     schema.setAttributeProperties('resizedWidth', { isFormatting: true });
@@ -237,12 +265,22 @@ class Model3dEditing extends Plugin {
 
     editor.conversion.for('dataDowncast').elementToElement({
       model: 'model3d',
-      view: (modelElement, { writer }) => createModel3dFigureView(modelElement, writer, { renderViewer: false })
+      view: (modelElement, { writer }) =>
+        createModel3dFigureView(modelElement, writer, {
+          renderViewer: false,
+          model3dConfig: editor.config.get('model3d') || {},
+          asWidget: false
+        })
     });
 
     editor.conversion.for('editingDowncast').elementToElement({
       model: 'model3d',
-      view: (modelElement, { writer }) => createModel3dFigureView(modelElement, writer, { renderViewer: true })
+      view: (modelElement, { writer }) =>
+        createModel3dFigureView(modelElement, writer, {
+          renderViewer: true,
+          model3dConfig: editor.config.get('model3d') || {},
+          asWidget: true
+        })
     });
   }
 }
@@ -259,9 +297,10 @@ class Model3dUI extends Plugin {
 
     editor.ui.componentFactory.add('model3dUpload', locale => {
       const button = new ButtonView(locale);
+      const i18n = editor.config.get('ckeditorI18n') || {};
 
       button.set({
-        label: '3D模型',
+        label: i18n.model3dLabel || '3D模型',
         icon: model3dIcon,
         tooltip: true
       });
@@ -299,25 +338,34 @@ class Model3dUI extends Plugin {
 
         const options = this._getUploadOptions();
 
+        const i18n = editor.config.get('ckeditorI18n') || {};
+
         if (!isGlbModelFile(file)) {
-          options.message?.error?.('仅支持上传 .glb 格式的 3D 模型');
+          options.message?.error?.(i18n.model3dUploadFormatError || '仅支持上传 .glb 格式的 3D 模型');
           return;
         }
 
-        const loadingClose = options.message?.loading?.('3D模型上传中...', { duration: 0 }) ?? (() => {});
+        const placeholder = insertMediaUploadPlaceholder(editor, 'model3d');
 
         try {
           const src = await uploadFile(file, {
             ...options,
-            base64Warning: '当前 3D 模型为 base64 模式，正式环境请配置 modelUpload.upload 或 uploadAdapter.upload'
+            uploadFailedMessage: i18n.uploadFailed,
+            base64Warning:
+              i18n.model3dBase64Warning ||
+              '当前 3D 模型为 base64 模式，正式环境请配置 modelUpload.upload 或 uploadAdapter.upload'
           });
           await whenModelViewerReady();
-          editor.execute('insertModel3d', { src, alt: file.name });
-          options.message?.success?.(`${file.name} 上传成功`);
+          finalizeMediaUploadPlaceholder(editor, placeholder, { src, alt: file.name });
+          options.message?.success?.(
+            typeof i18n.model3dUploadSuccess === 'function'
+              ? i18n.model3dUploadSuccess(file.name)
+              : `${file.name} 上传成功`
+          );
         } catch (error) {
+          removeMediaUploadPlaceholder(editor, placeholder);
+          options.message?.error?.(i18n.uploadFailed || '上传失败');
           console.error('3D模型上传失败', error);
-        } finally {
-          loadingClose();
         }
       },
       { once: true }

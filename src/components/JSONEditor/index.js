@@ -1,4 +1,4 @@
-import { Segmented, Flex } from 'antd';
+import { Segmented, Flex, Typography } from 'antd';
 import { useState, useMemo, useEffect } from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import CodeEditor from '@components/CodeEditor';
@@ -6,21 +6,37 @@ import classnames from 'classnames';
 import JSONView from '@kne/json-view';
 import style from './style.module.scss';
 import '@kne/json-view/dist/index.css';
+import { useIntl } from '@kne/react-intl';
+import withLocale from './withLocale';
 
-const JSONEditorField = ({ value, onChange, className }) => {
+const JSONEditorField = withLocale(({ value, onChange, className }) => {
+  const { formatMessage } = useIntl();
   const [type, setType] = useState('code');
   const [editor, setEditor] = useState();
-  const data = useMemo(() => {
+  const { previewData, parseError } = useMemo(() => {
+    const text = value ?? '';
+    const trimmed = String(text).trim();
+
+    if (!trimmed) {
+      return { previewData: {}, parseError: false };
+    }
+
     try {
-      return JSON.parse(value);
-    } catch (e) {
-      return value;
+      return { previewData: JSON.parse(trimmed), parseError: false };
+    } catch {
+      return { previewData: null, parseError: true };
     }
   }, [value]);
 
   useEffect(() => {
-    if (editor && value && value !== editor.getValue()) {
-      editor.setValue(value || '');
+    if (!editor) {
+      return;
+    }
+
+    const next = value ?? '';
+
+    if (next !== editor.getValue()) {
+      editor.setValue(next);
     }
   }, [value, editor]);
 
@@ -29,15 +45,15 @@ const JSONEditorField = ({ value, onChange, className }) => {
       <Segmented
         value={type}
         options={[
-          { value: 'code', label: '代码' },
-          { value: 'preview', label: '预览' }
+          { value: 'code', label: formatMessage({ id: 'ModeCode' }) },
+          { value: 'preview', label: formatMessage({ id: 'ModePreview' }) }
         ]}
         onChange={setType}
       />
       {type === 'code' && (
         <CodeEditor
           className={style['code-editor']}
-          defaultValue={value}
+          defaultValue={value ?? ''}
           onChange={onChange}
           language="json"
           onMount={({ editor }) => {
@@ -45,10 +61,15 @@ const JSONEditorField = ({ value, onChange, className }) => {
           }}
         />
       )}
-      {type === 'preview' && <JSONView data={data} theme="light" />}
+      {type === 'preview' &&
+        (parseError ? (
+          <Typography.Text type="danger">{formatMessage({ id: 'InvalidJson' })}</Typography.Text>
+        ) : (
+          <JSONView data={previewData} theme="light" />
+        ))}
     </Flex>
   );
-};
+});
 
 const JSONEditor = createWithRemoteLoader({
   modules: ['components-core:FormInfo@hooks']

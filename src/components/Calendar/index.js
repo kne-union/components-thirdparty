@@ -8,12 +8,16 @@ import interactionPlugin from '@fullcalendar/interaction';
 import timeGridPlugin from '@fullcalendar/timegrid';
 import scrollGridPlugin from '@fullcalendar/scrollgrid';
 import useResize from '@kne/use-resize';
+import { useIntl } from '@kne/react-intl';
+import withLocale from './withLocale';
 import style from './style.module.scss';
 
 const Calendar = createWithRemoteLoader({
   modules: ['components-core:Tooltip']
 })(
-  forwardRef(({ remoteModules, className, ...p }, apiRef) => {
+  withLocale(
+    forwardRef(({ remoteModules, className, ...p }, apiRef) => {
+    const { formatMessage } = useIntl();
     const [Tooltip] = remoteModules;
     const calendarRef = useRef();
     const ref = useResize(() => {
@@ -42,10 +46,10 @@ const Calendar = createWithRemoteLoader({
           right: 'dayGridMonth,timeGridWeek,timeGridDay,listWeek'
         },
         buttonText: {
-          today: '今天',
-          month: '月',
-          week: '周',
-          day: '天'
+          today: formatMessage({ id: 'Today' }),
+          month: formatMessage({ id: 'Month' }),
+          week: formatMessage({ id: 'Week' }),
+          day: formatMessage({ id: 'Day' })
         },
         dayMinWidth: 100,
         locale: 'zh-cn',
@@ -70,6 +74,7 @@ const Calendar = createWithRemoteLoader({
       </div>
     );
   })
+  )
 );
 
 export default Calendar;

@@ -7,22 +7,65 @@ import transform from 'lodash/transform';
 import debounce from 'lodash/debounce';
 import * as Antd from 'antd';
 import { Flex, Spin } from 'antd';
+import { useIntl } from '@kne/react-intl';
+import withLocale from './withLocale';
 import style from './style.module.scss';
+
+const formatErrorMessage = error => {
+  if (error == null) {
+    return '';
+  }
+
+  if (typeof error === 'string') {
+    return error;
+  }
+
+  if (error instanceof Error) {
+    return error.stack || error.message;
+  }
+
+  try {
+    return JSON.stringify(error, null, 2);
+  } catch {
+    return String(error);
+  }
+};
 
 const ErrorComponent = memo(({ error }) => {
   return (
     <div className={style['error-message']}>
-      <pre>{error}</pre>
+      <pre>{formatErrorMessage(error)}</pre>
     </div>
   );
 });
+
+const FORM_INFO_SCOPE_TOKEN = 'components-core:FormInfo';
+
+/** FormInfo 字段/列表依赖 Form 上下文，LiveComponentView 独立渲染时需外包 FormInfo.Form */
+const ensureFormInfoFormWrapper = (jsxContent, scope = {}) => {
+  const text = (jsxContent || '').trim();
+
+  if (!text) {
+    return text;
+  }
+
+  const usesFormInfo =
+    Object.values(scope).includes(FORM_INFO_SCOPE_TOKEN) || /<FormInfo[\s.>/]/.test(text);
+
+  if (!usesFormInfo || /<FormInfo\.Form[\s>]/.test(text)) {
+    return text;
+  }
+
+  return `<FormInfo.Form data={{}}>\n${text}\n</FormInfo.Form>`;
+};
 
 const LiveComponent = withRemoteLoader(({ remoteModules, children, props, libs = {} }) => {
   const [error, setError] = useState(null);
   const [renderJsx, setRenderJsx] = useState(null);
   const [compiledCode, setCompiledCode] = useState(null);
-  
+
   const { content, moduleNames } = children;
+  const moduleNamesKey = useMemo(() => moduleNames.join('\0'), [moduleNames]);
   const scope = useMemo(() => {
     return transform(
       remoteModules,
@@ -31,11 +74,12 @@ const LiveComponent = withRemoteLoader(({ remoteModules, children, props, libs =
       },
       {}
     );
-  }, [remoteModules, moduleNames]);
+  }, [remoteModules, moduleNamesKey]);
 
-  // 预计算 libs keys 和 values
-  const libKeys = useMemo(() => Object.keys(libs), [libs]);
-  const libValues = useMemo(() => Object.values(libs), [libs]);
+  const libKeysKey = useMemo(() => Object.keys(libs).sort().join('\0'), [Object.keys(libs).sort().join('\0')]);
+  const libKeys = useMemo(() => (libKeysKey ? libKeysKey.split('\0') : []), [libKeysKey]);
+  const libValues = useMemo(() => libKeys.map(key => libs[key]), [libKeysKey]);
+  const propsKey = useMemo(() => JSON.stringify(props), [JSON.stringify(props)]);
 
   // 拆分 useEffect: 1) 编译代码 (content 变化时)
   useEffect(() => {
@@ -67,29 +111,31 @@ const LiveComponent = withRemoteLoader(({ remoteModules, children, props, libs =
     } catch (e) {
       setError(e);
     }
-  }, [compiledCode, scope, moduleNames, props, libKeys, libValues]);
+  }, [compiledCode, scope, moduleNamesKey, propsKey, libKeysKey, libValues]);
 
   return (
     <Flex vertical>
       <ErrorBoundary errorComponent={ErrorComponent}>{moduleNames.length !== remoteModules.length ? <Spin /> : renderJsx}</ErrorBoundary>
-      {error && <ErrorComponent error={error.message} />}
+      {error && <ErrorComponent error={error} />}
     </Flex>
   );
 });
 
-const LiveComponentView = ({ content: inputStr, props: componentProps, libs }) => {
+const LiveComponentView = withLocale(({ content: inputStr, props: componentProps, libs }) => {
+  const { formatMessage, locale } = useIntl();
   const { content, props, scope, error } = useMemo(() => {
     try {
       if (!inputStr) {
         return { content: '', scope: {}, props: {}, error: null };
       }
       const { content, props, scope } = JSON.parse(decode(inputStr));
+      const resolvedScope = Object.assign({}, scope);
 
       return Object.assign(
         {},
         {
-          content: content || '',
-          scope: Object.assign({}, scope),
+          content: ensureFormInfoFormWrapper(content || '', resolvedScope),
+          scope: resolvedScope,
           props: Object.assign(
             {},
             props &&
@@ -115,28 +161,40 @@ const LiveComponentView = ({ content: inputStr, props: componentProps, libs }) =
         }
       );
     } catch (e) {
-      return { error: e.message || '参数无法解析' };
+      return { error: e.message || formatMessage({ id: 'ParseError' }) };
     }
-  }, [inputStr]);
-  
+    // locale 切换时需刷新解析错误文案；勿将 formatMessage 放入依赖（引用每轮会变）
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [inputStr, locale]);
+
   const targetProps = useMemo(() => {
     return Object.assign({}, props, componentProps);
   }, [componentProps, props]);
 
-  const { children, modules } = useMemo(() => {
-    const moduleNames = Object.keys(scope);
-    return {
-      modules: ['components-core:Global@PureGlobal'].concat(moduleNames.map(name => scope[name])),
-      children: { content, moduleNames: ['PureGlobal'].concat(moduleNames) }
-    };
-  }, [scope]); // 只依赖 scope，不需要依赖 content
+  const scopeKeysKey = useMemo(() => Object.keys(scope).sort().join('\0'), [Object.keys(scope).sort().join('\0')]);
+  const scopeModuleNames = useMemo(
+    () => (scopeKeysKey ? scopeKeysKey.split('\0') : []),
+    [scopeKeysKey]
+  );
+  const runtimeModuleNames = useMemo(
+    () => ['PureGlobal'].concat(scopeModuleNames),
+    [scopeModuleNames]
+  );
+
+  const { children, modules } = useMemo(
+    () => ({
+      modules: ['components-core:Global@PureGlobal'].concat(scopeModuleNames.map(name => scope[name])),
+      children: { content, moduleNames: runtimeModuleNames }
+    }),
+    [scopeKeysKey, content, runtimeModuleNames]
+  );
 
   if (error) {
     return <ErrorComponent error={error} />;
   }
 
   return <LiveComponent props={targetProps} libs={libs} modules={modules} children={children} />;
-};
+});
 
 const LiveComponentsViewCatch = memo(props => {
   return (

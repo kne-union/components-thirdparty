@@ -1,4 +1,5 @@
 import { Plugin, Command, ButtonView } from 'ckeditor5';
+import { isMediaUploading } from '../mediaUploadPlaceholder';
 import {
   IconObjectCenter,
   IconObjectFullWidth,
@@ -35,7 +36,7 @@ export const createStylePlugins = ({
   class StyleCommand extends Command {
     refresh() {
       const element = getSelected(this.editor.model.document.selection);
-      this.isEnabled = !!element;
+      this.isEnabled = !!element && !isMediaUploading(element);
       this.value = element?.getAttribute(styleAttribute) || 'block';
     }
 
@@ -110,8 +111,9 @@ export const createStylePlugins = ({
 
     init() {
       const editor = this.editor;
+      const resolvedStyles = editor.config.get('ckeditorI18n')?.mediaStyles ?? styles;
 
-      styles.forEach(style => {
+      resolvedStyles.forEach(style => {
         editor.ui.componentFactory.add(`${componentPrefix}:${style.name}`, locale => {
           const button = new ButtonView(locale);
           const command = editor.commands.get(commandName);
