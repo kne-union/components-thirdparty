@@ -99,6 +99,7 @@
     height: var(--video-height);
     box-sizing: border-box;
     clear: both;
+    background: #000;
 
     &.image_resized {
       max-width: 100%;
@@ -143,6 +144,7 @@
       min-height: 0 !important;
       max-height: none !important;
       vertical-align: top;
+      background: #000;
     }
 
     &.ck-widget_with-resizer {
@@ -208,15 +210,59 @@
     height: auto;
   }
 
+  figure.ck-model3d,
   figure.image.ck-model3d,
   .ck-model3d {
     --model3d-height: 400px;
+    position: relative;
     display: block;
     width: 100%;
     margin: 1em 0;
     border-radius: var(--radius-default, 2px);
     background: var(--font-color-grey-4, #f5f5f5);
     box-sizing: border-box;
+
+    .ck-model3d-fullscreen-btn {
+      position: absolute;
+      right: 8px;
+      bottom: 8px;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 32px;
+      height: 32px;
+      padding: 0;
+      border: none;
+      border-radius: var(--radius-default, 2px);
+      background: rgba(0, 0, 0, 0.55);
+      color: #fff;
+      cursor: pointer;
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.15s ease, visibility 0.15s ease, background 0.15s ease;
+
+      svg {
+        display: block;
+        width: 18px;
+        height: 18px;
+        pointer-events: none;
+      }
+    }
+
+    &:hover .ck-model3d-fullscreen-btn,
+    &:focus-within .ck-model3d-fullscreen-btn {
+      opacity: 0.88;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .ck-model3d-fullscreen-btn:hover,
+    .ck-model3d-fullscreen-btn:focus {
+      opacity: 1;
+      background: rgba(0, 0, 0, 0.75);
+    }
 
     &.image-style-side {
       float: right;
@@ -270,12 +316,22 @@
     }
   }
 
+  model-viewer.ck-model3d-fullscreen-active:fullscreen,
+  model-viewer:fullscreen {
+    width: 100vw !important;
+    height: 100vh !important;
+    max-width: none !important;
+    max-height: none !important;
+    background: #000;
+  }
+
   figure.ck-video {
     display: block;
     margin: 1em 0;
     max-width: 100%;
     box-sizing: border-box;
     clear: both;
+    background: #000;
 
     &.image_resized {
       max-width: 100%;
@@ -317,6 +373,7 @@
       width: 100%;
       max-width: 100%;
       vertical-align: top;
+      background: #000;
     }
   }
 
