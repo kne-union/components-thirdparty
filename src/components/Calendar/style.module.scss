@@ -8,10 +8,12 @@
   --fc-button-hover-border-color: var(--primary-color-8);
   --fc-button-active-bg-color: var(--primary-color-8);
   --fc-button-active-border-color: var(--primary-color-8);
-  --fc-border-color: #f0f0f0;
+  --fc-border-color: var(--font-color-grey-3, #f0f0f0);
 
   :global {
     .fc {
+      font-family: inherit;
+
       .fc-license-message {
         display: none;
       }
@@ -22,10 +24,20 @@
 
       .fc-event {
         overflow: hidden;
+        border-radius: var(--radius-default, 2px);
+        cursor: pointer;
+        transition: opacity 0.15s ease;
+
+        &:hover {
+          opacity: 0.85;
+        }
       }
 
       .fc-button {
         padding: 0 4px;
+        border-radius: var(--radius-default, 4px);
+        font-size: 14px;
+        transition: background-color 0.2s ease;
 
         &:active,
         &:focus {
@@ -39,6 +51,31 @@
 
       .fc-toolbar.fc-header-toolbar {
         margin-bottom: 10px;
+      }
+
+      .fc-day-today {
+        background: var(--primary-color-1) !important;
+      }
+
+      .fc-col-header-cell {
+        padding: 8px 0;
+        font-weight: 500;
+        color: var(--font-color-grey-7, #262626);
+      }
+
+      .fc-daygrid-day-number {
+        padding: 4px 8px;
+        color: var(--font-color-grey-8, #141414);
+        font-size: 14px;
+      }
+
+      .fc-scrollgrid {
+        border-color: var(--font-color-grey-3, #f0f0f0);
+      }
+
+      .fc-scrollgrid td,
+      .fc-scrollgrid th {
+        border-color: var(--font-color-grey-3, #f0f0f0);
       }
     }
   }

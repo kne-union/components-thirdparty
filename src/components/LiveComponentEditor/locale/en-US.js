@@ -1,4 +1,4 @@
-export default {
+const localeMessages = {
   Copy: 'Copy',
   ImportFromClipboard: 'Import from clipboard',
   ModeEditor: 'Editor',
@@ -29,5 +29,8 @@ export default {
   MsgClipboardUnsupported: 'Clipboard read is not supported',
   MsgInvalidConfig: 'Clipboard content is not a valid component config',
   MsgImportSuccess: 'Imported from clipboard',
-  MsgClipboardReadFail: 'Failed to read clipboard. Check permissions'
+  MsgClipboardReadFail: 'Failed to read clipboard. Check permissions',
+  EmptyContent: 'No content yet. Write code in the editor'
 };
+
+export default localeMessages;

@@ -9,6 +9,7 @@ import timeGridPlugin from '@fullcalendar/timegrid';
 import scrollGridPlugin from '@fullcalendar/scrollgrid';
 import useResize from '@kne/use-resize';
 import { useIntl } from '@kne/react-intl';
+import { useGlobalValue } from '@kne/global-context';
 import withLocale from './withLocale';
 import style from './style.module.scss';
 
@@ -18,7 +19,8 @@ const Calendar = createWithRemoteLoader({
   withLocale(
     forwardRef(({ remoteModules, className, ...p }, apiRef) => {
     const { formatMessage } = useIntl();
-    const [Tooltip] = remoteModules;
+      const contextLocale = useGlobalValue('locale');
+      const [Tooltip] = remoteModules;
     const calendarRef = useRef();
     const ref = useResize(() => {
       if (calendarRef.current) {
@@ -52,13 +54,13 @@ const Calendar = createWithRemoteLoader({
           day: formatMessage({ id: 'Day' })
         },
         dayMinWidth: 100,
-        locale: 'zh-cn',
+        locale: contextLocale === 'en-US' ? 'en' : 'zh-cn',
         height: 'auto',
         handleWindowResize: false,
         dateClick: () => {},
         eventClick: () => {},
         eventContent: ({ event }) => {
-          const startStr = event.start ? dayjs(event.start).format('HH:ss') : '',
+          const startStr = event.start ? dayjs(event.start).format('HH:mm') : '',
             endStr = event.end ? dayjs(event.end).format('HH:ss') : '';
           const content = `${!(startStr && endStr) ? `[${startStr}]` : startStr === endStr ? '' : `[${startStr}-${endStr}]`} ${event.title}`;
 

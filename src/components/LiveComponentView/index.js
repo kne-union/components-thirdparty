@@ -1,10 +1,9 @@
-import React, { useEffect, useMemo, memo, useCallback, useState, useRef } from 'react';
+import React, { useEffect, useMemo, memo, useState } from 'react';
 import { decode } from 'plantuml-encoder';
 import { withRemoteLoader } from '@kne/remote-loader';
 import ErrorBoundary from '@kne/react-error-boundary';
-import { transform as _transform } from '@babel/standalone';
+import { transform as babelTransform } from '@babel/standalone';
 import transform from 'lodash/transform';
-import debounce from 'lodash/debounce';
 import * as Antd from 'antd';
 import { Flex, Spin } from 'antd';
 import { useIntl } from '@kne/react-intl';
@@ -65,21 +64,30 @@ const LiveComponent = withRemoteLoader(({ remoteModules, children, props, libs =
   const [compiledCode, setCompiledCode] = useState(null);
 
   const { content, moduleNames } = children;
-  const moduleNamesKey = useMemo(() => moduleNames.join('\0'), [moduleNames]);
-  const scope = useMemo(() => {
-    return transform(
-      remoteModules,
-      (result, module, index) => {
-        result[moduleNames[index]] = module;
-      },
-      {}
-    );
-  }, [remoteModules, moduleNamesKey]);
+  const moduleNamesKey = moduleNames.join('\0');
+  const scope = useMemo(
+    () =>
+      transform(
+        remoteModules,
+        (result, module, index) => {
+          result[moduleNames[index]] = module;
+        },
+        {}
+      ),
+    // moduleNamesKey 已编码 moduleNames 内容
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [remoteModules, moduleNamesKey]
+  );
 
-  const libKeysKey = useMemo(() => Object.keys(libs).sort().join('\0'), [Object.keys(libs).sort().join('\0')]);
+  const libKeysKey = Object.keys(libs).sort().join('\0');
   const libKeys = useMemo(() => (libKeysKey ? libKeysKey.split('\0') : []), [libKeysKey]);
-  const libValues = useMemo(() => libKeys.map(key => libs[key]), [libKeysKey]);
-  const propsKey = useMemo(() => JSON.stringify(props), [JSON.stringify(props)]);
+  const libValues = useMemo(
+    () => libKeys.map(key => libs[key]),
+    // libKeysKey 为 libs 键的稳定签名，避免 libs 引用每轮变化导致重复计算
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [libKeysKey]
+  );
+  const propsKey = JSON.stringify(props);
 
   // 拆分 useEffect: 1) 编译代码 (content 变化时)
   useEffect(() => {
@@ -90,7 +98,7 @@ const LiveComponent = withRemoteLoader(({ remoteModules, children, props, libs =
     
     try {
       setError(null);
-      const code = _transform(`render(${content});`, { presets: ['es2015', 'react'] }).code;
+      const code = babelTransform(`render(${content});`, { presets: ['es2015', 'react'] }).code;
       setCompiledCode(code);
     } catch (e) {
       setError(e);
@@ -100,7 +108,10 @@ const LiveComponent = withRemoteLoader(({ remoteModules, children, props, libs =
 
   // 拆分 useEffect: 2) 渲染组件 (scope/moduleNames/libs 变化时，不需要重新编译)
   useEffect(() => {
-    if (!compiledCode) return;
+    if (!compiledCode) {
+      setRenderJsx(null);
+      return;
+    }
 
     try {
       setError(null);
@@ -111,6 +122,8 @@ const LiveComponent = withRemoteLoader(({ remoteModules, children, props, libs =
     } catch (e) {
       setError(e);
     }
+    // propsKey / libKeysKey 为序列化签名，避免 props、libs 引用变化导致重复执行
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [compiledCode, scope, moduleNamesKey, propsKey, libKeysKey, libValues]);
 
   return (
@@ -120,6 +133,21 @@ const LiveComponent = withRemoteLoader(({ remoteModules, children, props, libs =
     </Flex>
   );
 });
+
+/** 将配置中的 prop 定义解析为运行时值 */
+const resolvePropValue = (type, defaultValue) => {
+  if (type === 'function') {
+    return () => null;
+  }
+  if (['array', 'object', 'boolean', 'number'].includes(type)) {
+    try {
+      return JSON.parse(defaultValue);
+    } catch {
+      return defaultValue;
+    }
+  }
+  return defaultValue;
+};
 
 const LiveComponentView = withLocale(({ content: inputStr, props: componentProps, libs }) => {
   const { formatMessage, locale } = useIntl();
@@ -142,17 +170,7 @@ const LiveComponentView = withLocale(({ content: inputStr, props: componentProps
               transform(
                 props,
                 (result, value, name) => {
-                  result[name] = (() => {
-                    if (['array', 'object', 'boolean', 'number'].indexOf(value.type) > -1) {
-                      return JSON.parse(value.defaultValue);
-                    }
-                    if (value.type === 'string') {
-                      return value.defaultValue;
-                    }
-                    if (value.type === 'function') {
-                      return () => null;
-                    }
-                  })();
+                  result[name] = resolvePropValue(value.type, value.defaultValue);
                 },
                 {}
               )
@@ -171,7 +189,7 @@ const LiveComponentView = withLocale(({ content: inputStr, props: componentProps
     return Object.assign({}, props, componentProps);
   }, [componentProps, props]);
 
-  const scopeKeysKey = useMemo(() => Object.keys(scope).sort().join('\0'), [Object.keys(scope).sort().join('\0')]);
+  const scopeKeysKey = Object.keys(scope).sort().join('\0');
   const scopeModuleNames = useMemo(
     () => (scopeKeysKey ? scopeKeysKey.split('\0') : []),
     [scopeKeysKey]
@@ -186,7 +204,7 @@ const LiveComponentView = withLocale(({ content: inputStr, props: componentProps
       modules: ['components-core:Global@PureGlobal'].concat(scopeModuleNames.map(name => scope[name])),
       children: { content, moduleNames: runtimeModuleNames }
     }),
-    [scopeKeysKey, content, runtimeModuleNames]
+    [scope, scopeModuleNames, content, runtimeModuleNames]
   );
 
   if (error) {

@@ -87,7 +87,7 @@ const closeOverlayFullscreen = () => {
     return;
   }
 
-  const { overlay, modelViewer, figure, placeholder, button, host, i18n } = session;
+  const { overlay, modelViewer, figure, placeholder, button, host } = session;
 
   if (placeholder.parentNode) {
     placeholder.parentNode.insertBefore(modelViewer, placeholder);
@@ -309,9 +309,12 @@ export const teardownModel3dContentPreview = container => {
     return;
   }
 
-  container.querySelectorAll(`.${BTN_CLASS}`).forEach(button => {
+  [...container.querySelectorAll(`.${BTN_CLASS}`)].forEach(button => {
     button._model3dFullscreenCleanup?.();
-    button.remove();
+
+    if (button.parentNode) {
+      button.remove();
+    }
   });
 
   container.querySelectorAll(`figure.ck-model3d[${ENHANCED_ATTR}="true"]`).forEach(figure => {

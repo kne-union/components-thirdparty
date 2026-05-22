@@ -1,14 +1,7 @@
-import { createWithIntlProvider } from '@kne/react-intl';
+import createWithLocale from '../../common/createWithLocale';
 import zhCN from './locale/zh-CN';
 import enUS from './locale/en-US';
 
-const withLocale = createWithIntlProvider({
-  defaultLocale: 'zh-CN',
-  messages: {
-    'zh-CN': zhCN,
-    'en-US': enUS
-  },
-  namespace: 'components-thirdparty:JSONEditor'
-});
+const withLocale = createWithLocale('JSONEditor', enUS, zhCN);
 
 export default withLocale;

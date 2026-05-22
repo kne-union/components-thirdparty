@@ -37,7 +37,7 @@
     },
     {
       "title": "自定义配置",
-      "description": "展示如何通过 config 属性自定义编辑器的工具栏和功能配置",
+      "description": "通过 config.toolbar 分层：简单（文字样式与基础排版）、标准（日常最常用）、全部（与默认工具栏一致）",
       "code": "./custom.js",
       "scope": [
         {
@@ -104,6 +104,25 @@
         {
           "name": "dayjs",
           "packageName": "dayjs"
+        }
+      ]
+    },
+    {
+      "title": "ECharts 图表",
+      "description": "弹窗使用 JSONEditor 配置 ECharts option，插入后可拖拽调整大小，预览与编辑均使用 @components/Echart 渲染",
+      "code": "./echart.js",
+      "scope": [
+        {
+          "name": "_CKEditor",
+          "packageName": "@components/CKEditor"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        },
+        {
+          "name": "remoteLoader",
+          "packageName": "@kne/remote-loader"
         }
       ]
     },

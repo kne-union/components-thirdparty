@@ -1,6 +1,15 @@
 .editor {
   --min-height: 300px;
   width: 100%;
+  border: solid 1px var(--font-color-grey-3);
+  border-radius: var(--radius-default, 2px);
+  overflow: visible;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+
+  &:focus-within {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px var(--primary-color-1);
+  }
 
   :global {
     .ck.ck-editor {
@@ -35,8 +44,4 @@
       min-height: var(--min-height);
     }
   }
-
-  border: solid 1px var(--font-color-grey-3);
-  border-radius: var(--radius-default, 2px);
-  overflow: visible;
 }

@@ -1,4 +1,4 @@
-export default {
+const localeMessages = {
   Model3dLabel: '3D Model',
   Model3dWidgetLabel: '3D model',
   Model3dToolbarAria: '3D model toolbar',
@@ -13,6 +13,13 @@ export default {
   VideoUploading: 'Uploading video...',
   VideoBase64Warning: 'Video is embedded as base64. Configure videoUpload.upload or uploadAdapter.upload for production.',
   VideoUploadSuccess: '{name} uploaded',
+  EchartLabel: 'Chart',
+  EchartWidgetLabel: 'Chart',
+  EchartToolbarAria: 'Chart toolbar',
+  EchartInsertTitle: 'Insert chart',
+  EchartEditTitle: 'Edit chart',
+  EchartDialogTitle: 'ECharts option',
+  EchartOptionInvalid: 'Please enter a valid ECharts option JSON object',
   LiveComponentLabel: 'Live component',
   LiveComponentInsertTitle: 'Insert live component',
   LiveComponentEditTitle: 'Edit live component',
@@ -43,3 +50,5 @@ export default {
   MediaResizeHeight500: 'Height 500px',
   MediaResizeHeight600: 'Height 600px'
 };
+
+export default localeMessages;

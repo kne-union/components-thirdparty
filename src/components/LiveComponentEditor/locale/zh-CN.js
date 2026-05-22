@@ -1,4 +1,4 @@
-export default {
+const localeMessages = {
   Copy: '复制',
   ImportFromClipboard: '从剪贴板导入',
   ModeEditor: '编辑器',
@@ -29,5 +29,8 @@ export default {
   MsgClipboardUnsupported: '当前环境不支持读取剪贴板',
   MsgInvalidConfig: '剪贴板内容不是有效的组件配置',
   MsgImportSuccess: '已从剪贴板导入',
-  MsgClipboardReadFail: '读取剪贴板失败，请检查浏览器权限'
+  MsgClipboardReadFail: '读取剪贴板失败，请检查浏览器权限',
+  EmptyContent: '暂无组件内容，请在编辑器中编写代码'
 };
+
+export default localeMessages;
