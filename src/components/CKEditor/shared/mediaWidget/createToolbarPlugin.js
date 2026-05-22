@@ -34,7 +34,9 @@ export const createToolbarPlugin = ({
           ? i18n.model3dToolbarAria || ariaLabel
           : figureClass === 'ck-video'
             ? i18n.videoToolbarAria || ariaLabel
-            : ariaLabel;
+            : figureClass === 'ck-echart'
+              ? i18n.echartToolbarAria || ariaLabel
+              : ariaLabel;
 
       widgetToolbarRepository.register(widgetName, {
         ariaLabel: resolvedAriaLabel,

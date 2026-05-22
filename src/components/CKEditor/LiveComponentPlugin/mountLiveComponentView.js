@@ -1,4 +1,5 @@
 import { createRoot } from 'react-dom/client';
+import { flushSync } from 'react-dom';
 import LiveComponentView from '@components/LiveComponentView';
 import { LIVE_COMPONENT_DEFAULT_HEIGHT } from './constants';
 
@@ -38,11 +39,16 @@ export const unmountLiveComponentFromHost = host => {
   const root = roots.get(host);
 
   if (root) {
-    root.unmount();
+    try {
+      flushSync(() => {
+        root.unmount();
+      });
+    } catch {
+      // 宿主已从文档移除时忽略
+    }
     roots.delete(host);
   }
 
-  host.innerHTML = '';
   delete host.dataset.liveComponentContent;
 };
 

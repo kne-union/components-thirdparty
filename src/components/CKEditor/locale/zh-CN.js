@@ -1,4 +1,4 @@
-export default {
+const localeMessages = {
   Model3dLabel: '3D模型',
   Model3dWidgetLabel: '3D model',
   Model3dToolbarAria: '3D模型工具栏',
@@ -13,6 +13,13 @@ export default {
   VideoUploading: '视频上传中...',
   VideoBase64Warning: '当前视频为 base64 模式，正式环境请配置 videoUpload.upload 或 uploadAdapter.upload',
   VideoUploadSuccess: '{name} 上传成功',
+  EchartLabel: '图表',
+  EchartWidgetLabel: '图表',
+  EchartToolbarAria: '图表工具栏',
+  EchartInsertTitle: '插入图表',
+  EchartEditTitle: '编辑图表',
+  EchartDialogTitle: 'ECharts 配置',
+  EchartOptionInvalid: '请输入合法的 ECharts option JSON 对象',
   LiveComponentLabel: '交互组件',
   LiveComponentInsertTitle: '插入交互组件',
   LiveComponentEditTitle: '编辑交互组件',
@@ -43,3 +50,5 @@ export default {
   MediaResizeHeight500: '高度 500px',
   MediaResizeHeight600: '高度 600px'
 };
+
+export default localeMessages;

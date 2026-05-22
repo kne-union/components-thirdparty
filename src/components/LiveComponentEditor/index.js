@@ -1,16 +1,13 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { encode, decode } from 'plantuml-encoder';
-import { App, Tabs, Flex, Alert, Segmented, Splitter, Collapse, Button, Space } from 'antd';
+import { App, Tabs, Flex, Alert, Segmented, Splitter, Collapse, Button, Space, Empty } from 'antd';
 import { MenuOutlined, SplitCellsOutlined, EyeOutlined, CopyOutlined, SnippetsOutlined } from '@ant-design/icons';
 import CodeEditor from '@components/CodeEditor';
 import LiveComponentView from '@components/LiveComponentView';
 import useRefCallback from '@kne/use-ref-callback';
 import lodash from 'lodash';
+import { transform, debounce, isEmpty, get } from 'lodash';
 import dayjs from 'dayjs';
-import transform from 'lodash/transform';
-import debounce from 'lodash/debounce';
-import isEmpty from 'lodash/isEmpty';
-import get from 'lodash/get';
 import { useState, useRef, useEffect, useMemo, useImperativeHandle, forwardRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useIntl } from '@kne/react-intl';
@@ -44,43 +41,31 @@ const SafeRender = createWithRemoteLoader({
   const containerRef = useRef(null);
   const rootRef = useRef(null);
 
-  const renderComponent = useMemo(
-    () =>
-      debounce((nextChildren, locale, themeToken) => {
-        const container = containerRef.current;
-        if (!container) {
-          return;
-        }
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
 
-        if (rootRef.current) {
-          rootRef.current.unmount();
-          rootRef.current = null;
-        }
+    if (!rootRef.current) {
+      const dom = document.createElement('div');
+      container.appendChild(dom);
+      rootRef.current = createRoot(dom);
+    }
 
-        container.innerHTML = '';
-        const dom = document.createElement('div');
-        container.appendChild(dom);
-        const root = createRoot(dom);
-        rootRef.current = root;
-        root.render(
-          <PureGlobal preset={{ locale }} themeToken={themeToken}>
-            {nextChildren}
-          </PureGlobal>
-        );
-      }, 1000),
-    [PureGlobal]
-  );
+    rootRef.current.render(
+      <PureGlobal preset={{ locale: global.locale }} themeToken={global.themeToken}>
+        {children}
+      </PureGlobal>
+    );
+  }, [children, global.locale, global.themeToken, PureGlobal]);
 
   useEffect(() => {
-    renderComponent(children, global.locale, global.themeToken);
     return () => {
-      renderComponent.cancel();
       if (rootRef.current) {
         rootRef.current.unmount();
         rootRef.current = null;
       }
     };
-  }, [children, global.locale, global.themeToken, renderComponent]);
+  }, []);
 
   return <div ref={containerRef} />;
 });
@@ -136,7 +121,7 @@ const LiveComponentEditorCore = createWithRemoteLoader({
     const updateContentDebouncedRef = useRef(null);
 
     if (!updateContentDebouncedRef.current) {
-      updateContentDebouncedRef.current = debounce((newContent, setParams, prevParams) => {
+      updateContentDebouncedRef.current = debounce((newContent, setParams) => {
         setParams(prev => ({ ...prev, content: newContent }));
       }, 300);
     }
@@ -205,7 +190,7 @@ const LiveComponentEditorCore = createWithRemoteLoader({
           height={height}
           defaultValue={content}
           defaultLanguage="javascript"
-          onChange={value => updateContentDebouncedRef.current(value, setParams, params)}
+          onChange={value => updateContentDebouncedRef.current(value, setParams)}
         />
       </div>
     );
@@ -215,12 +200,16 @@ const LiveComponentEditorCore = createWithRemoteLoader({
         style={{
           maxHeight: `${height}px`
         }}>
-        <div className={style['preview']}>
-          <SafeRender>
-            <Form>
-              <LiveComponentView content={outputContent} libs={libs} />
-            </Form>
-          </SafeRender>
+        <div className={style['preview']} style={{ minHeight: `${height}px` }}>
+          {!content ? (
+            <Empty description={formatMessage({ id: 'EmptyContent' })} />
+          ) : (
+            <SafeRender>
+              <Form>
+                <LiveComponentView content={outputContent} libs={libs} />
+              </Form>
+            </SafeRender>
+          )}
         </div>
       </SimpleBar>
     );
@@ -294,17 +283,7 @@ const LiveComponentEditorCore = createWithRemoteLoader({
                         formData.props,
                         (result, value) => {
                           result[value.name] = {
-                            defaultValue: (() => {
-                              if (['array', 'object', 'boolean', 'number'].indexOf(value.type) > -1) {
-                                return value.defaultValue;
-                              }
-                              if (value.type === 'string') {
-                                return value.defaultValue;
-                              }
-                              if (value.type === 'function') {
-                                return '()=>null';
-                              }
-                            })(),
+                            defaultValue: value.type === 'function' ? '()=>null' : value.defaultValue,
                             type: value.type
                           };
                         },

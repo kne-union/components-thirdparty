@@ -14,7 +14,7 @@ const readFileAsDataURL = file => {
  * @returns {Promise<string>} 文件可访问地址（URL 或 data URL）
  */
 export const uploadFile = async (file, options = {}) => {
-  const { upload, message, base64Warning, uploadFailedMessage, uploadBase64Warning } = options;
+  const { upload, message, base64Warning, uploadBase64Warning } = options;
   if (typeof upload !== 'function') {
     console.warn(
       base64Warning ||

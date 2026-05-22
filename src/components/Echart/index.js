@@ -2,16 +2,21 @@ import { getOrLoadRemote, getPublicPath } from '@kne/remote-loader';
 import Fetch from '@kne/react-fetch';
 import { useRef, useEffect } from 'react';
 import useResize from '@kne/use-resize';
+import classNames from 'classnames';
+import style from './style.module.scss';
+
+export const loadEcharts = async () => {
+  await getOrLoadRemote('echarts', '', `${getPublicPath('components-thirdparty')}/echarts/echarts.js`);
+  return { echarts: window.echarts };
+};
 
 const loader = {
   loading: null,
-  loader: async () => {
-    await getOrLoadRemote('echarts', '', `${getPublicPath('components-thirdparty')}/echarts/echarts.js`);
-    return { echarts: window.echarts };
-  }
+  loader: loadEcharts
 };
 
-const EchartInner = ({ data, option, ...props }) => {
+export const EchartCanvas = ({ data, option, className, ...props }) => {
+  const instanceRef = useRef(null);
   const optionRef = useRef(option);
   optionRef.current = option;
   const ref = useResize(() => {
@@ -22,7 +27,6 @@ const EchartInner = ({ data, option, ...props }) => {
       }
     }
   });
-  const instanceRef = useRef(null);
   const { echarts } = data;
   useEffect(() => {
     if (!echarts || !ref.current) {
@@ -33,7 +37,7 @@ const EchartInner = ({ data, option, ...props }) => {
       instanceRef.current && instanceRef.current.dispose();
       instanceRef.current = null;
     };
-  }, [echarts]);
+  }, [echarts, ref]);
   useEffect(() => {
     if (!instanceRef.current) {
       return;
@@ -42,8 +46,8 @@ const EchartInner = ({ data, option, ...props }) => {
       return;
     }
     instanceRef.current.setOption(option);
-  }, [option]);
-  return <div {...props} ref={ref} />;
+  }, [option, ref]);
+  return <div className={classNames(style['echart-container'], className)} {...props} ref={ref} />;
 };
 
 const Echart = ({ loading, error, ...props }) => {
@@ -51,7 +55,7 @@ const Echart = ({ loading, error, ...props }) => {
     <Fetch
       {...Object.assign({}, loader, { loading, error })}
       render={({ data }) => {
-        return <EchartInner {...props} data={data} />;
+        return <EchartCanvas {...props} data={data} />;
       }}
     />
   );

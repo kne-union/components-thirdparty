@@ -12,7 +12,7 @@
 | --- | --- | --- | --- |
 | className | 外层容器类名 | string | - |
 | style | 外层容器样式；内部会合并 `--ck-toolbar-dropdown-max-width` | object | - |
-| isMarkdown | 是否 Markdown 模式。为 `true` 时不加载 3D、视频、交互组件插件，并从工具栏移除 `model3dUpload`、`videoUpload`、`insertLiveComponent` | boolean | false |
+| isMarkdown | 是否 Markdown 模式。为 `true` 时不加载 3D、视频、交互组件、图表插件，并从工具栏移除 `model3dUpload`、`videoUpload`、`insertLiveComponent`、`insertEchart` | boolean | false |
 | config | CKEditor 5 配置，与内置 `defaultConfig` 深合并 | object | 见下方 config |
 | plugins | 追加的 CKEditor 插件类 | array | [] |
 | locale | 界面语言，`zh-CN` 或 `en` 等；未传时使用 `@kne/global-context` 的 `locale` | string | 上下文 locale |
@@ -44,6 +44,7 @@
 - **视频**：对 `figure.ck-video` 同步内联宽高到内部 `video`
 - **3D 模型**：加载 `model-viewer` 后同步布局；支持全屏预览（桌面全屏 API，移动端固定层 overlay）
 - **交互组件**：对 `section.ck-live-component[data-live-component]` 挂载 `LiveComponentView`；卸载时清理
+- **图表**：对 `figure.ck-echart[data-echart-option]` 挂载 `@components/Echart` 渲染
 
 ### config 配置说明
 
@@ -51,16 +52,17 @@
 
 | 配置项 | 说明 |
 | --- | --- |
-| toolbar | 主工具栏。富文本默认含 `imageUpload`、`model3dUpload`、`videoUpload`、`insertLiveComponent` 等 |
+| toolbar | 主工具栏。传入 `toolbar.items` 时会**整体替换**默认项（非按索引合并）。富文本默认含 `imageUpload`、`model3dUpload`、`videoUpload`、`insertLiveComponent`、`insertEchart` 等 |
 | image | 图片浮动工具栏 |
 | table | 表格内容工具栏 |
-| htmlSupport | GeneralHtmlSupport 白名单；已允许 `model-viewer`、`figure.ck-video`、`section.ck-live-component` 等 |
+| htmlSupport | GeneralHtmlSupport 白名单；已允许 `model-viewer`、`figure.ck-video`、`figure.ck-echart`、`section.ck-live-component` 等 |
 | uploadAdapter | 图片上传：`upload(file)` 返回 URL 或 `{ code, data, msg }`；`uploadUrl` 粘贴外链转存；`base64MaxWidth` / `base64MaxHeight` 控制无 `upload` 时的 base64 缩放 |
 | modelUpload | **仅富文本**。3D 上传，默认合并 `uploadAdapter`；仅 `.glb`；无 `upload` 时 base64 嵌入 |
 | videoUpload | **仅富文本**。视频上传，默认合并 `uploadAdapter`；支持 mp4、webm、ogg、mov 等；无 `upload` 时 base64 嵌入 |
 | model3d.toolbar | **仅富文本**。3D 浮动工具栏，默认 `model3dStyle:*`、`resizeModel3d:*`、`resizeModel3dHeight:*`，可拖拽缩放 |
 | mediaVideo.toolbar | **仅富文本**。视频浮动工具栏，默认 `mediaVideoStyle:*`、`resizeMediaVideo:*`、`resizeMediaVideoHeight:*` |
 | liveComponent | **仅富文本**。交互组件渲染/编辑参数，见下表 |
+| echart.toolbar | **仅富文本**。图表浮动工具栏，默认 `echartStyle:*`、`resizeEchart:*`、`resizeEchartHeight:*`，可拖拽缩放 |
 | model3d | **仅富文本**。3D 模型 `model-viewer` 参数，见下表 |
 
 上传函数约定与图片相同：返回字符串 URL，或 `{ code: 0, data: 'url', msg }`（`code !== 0` 时展示失败占位图/提示）。
@@ -82,6 +84,12 @@
 - 工具栏：`insertLiveComponent`，弹窗内嵌 `LiveComponentEditor`
 - 存储：`<section class="component-box ck-live-component" data-live-component="PlantUML编码配置">`
 - 编辑区与 `CKEditor.Content` 均通过 `LiveComponentView` 渲染；双击已插入块可再次打开编辑
+
+#### ECharts 图表（EchartPlugin）
+
+- 工具栏：`insertEchart`，弹窗内嵌 `JSONEditor` 编辑 ECharts `option` JSON
+- 存储：`<figure class="ck-echart"><div class="ck-echart-inner" data-echart-option="..."></div></figure>`
+- 编辑区与 `CKEditor.Content` 均通过 `@components/Echart` 渲染；选中后可拖拽调整宽高，双击可再次编辑配置
 
 #### liveComponent 参数（Field / Content / config.liveComponent）
 

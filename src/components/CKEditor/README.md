@@ -145,47 +145,97 @@ render(<MarkdownExample />);
 ```
 
 - 自定义配置
-- 展示如何通过 config 属性自定义编辑器的工具栏和功能配置
+- 通过 config.toolbar 分层：简单（文字样式与基础排版）、标准（日常最常用）、全部（与默认工具栏一致）
 - _CKEditor(@components/CKEditor),antd(antd)
 
 ```jsx
 const { default: CKEditor } = _CKEditor;
-const { Flex, Card, Space, Typography, Radio, Divider } = antd;
+const { Flex, Card, Space, Typography, Radio, Divider, Alert } = antd;
 const { useState } = React;
 const { Title } = Typography;
 
-const CustomConfigExample = () => {
-  const [toolbarType, setToolbarType] = useState('full');
-  const [content, setContent] = useState(&#96;<h2>自定义配置示例</h2>\n<p>根据选择的工具栏类型，显示不同的编辑功能。</p>&#96;);
+/** 与 CKEditor.Field 默认 config.toolbar.items 一致，代表「全部」档位 */
+const FULL_TOOLBAR_ITEMS = [
+  'undo',
+  'redo',
+  '|',
+  'heading',
+  'style',
+  '|',
+  'bold',
+  'italic',
+  'underline',
+  'strikethrough',
+  'link',
+  'bulletedList',
+  'numberedList',
+  'todoList',
+  'fontBackgroundColor',
+  'fontColor',
+  'fontSize',
+  '|',
+  'alignment',
+  'pageBreak',
+  'outdent',
+  'indent',
+  '|',
+  'specialCharacters',
+  'subscript',
+  'superscript',
+  '|',
+  'imageUpload',
+  'model3dUpload',
+  'videoUpload',
+  'insertLiveComponent',
+  'insertEchart',
+  'blockQuote',
+  'insertTable',
+  'codeBlock',
+  'htmlEmbed',
+  'highlight',
+  'horizontalLine',
+  '|',
+  'selectAll',
+  'removeFormat',
+  'sourceEditing'
+];
 
-  const toolbarConfigs = {
-    simple: {
-      toolbar: {
-        items: ['bold', 'italic', 'underline', '|', 'bulletedList', 'numberedList', '|', 'undo', 'redo']
-      }
-    },
-    standard: {
+/**
+ * 简单：文字样式 + 基础排版（列表 / 对齐 / 缩进）
+ * 标准：日常最常用（结构、列表、链接、对齐、图片、表格、代码块等）
+ * 全部：组件默认工具栏全量能力
+ */
+const TOOLBAR_PRESETS = {
+  simple: {
+    label: '简单',
+    hint: '文字样式与基础排版：加粗/斜体/下划线、列表、对齐、缩进',
+    config: {
       toolbar: {
         items: [
           'undo',
           'redo',
           '|',
-          'heading',
-          '|',
           'bold',
           'italic',
           'underline',
+          'strikethrough',
           '|',
           'bulletedList',
           'numberedList',
           '|',
-          'link',
-          'blockQuote',
-          'codeBlock'
+          'alignment',
+          'outdent',
+          'indent',
+          '|',
+          'removeFormat'
         ]
       }
-    },
-    full: {
+    }
+  },
+  standard: {
+    label: '标准',
+    hint: '最常用：标题、文字样式与链接、列表、对齐、图片、引用、表格、代码块',
+    config: {
       toolbar: {
         items: [
           'undo',
@@ -198,49 +248,63 @@ const CustomConfigExample = () => {
           'underline',
           'strikethrough',
           'link',
+          '|',
           'bulletedList',
           'numberedList',
-          'todoList',
-          'fontBackgroundColor',
-          'fontColor',
-          'fontSize',
           '|',
           'alignment',
-          'pageBreak',
           'outdent',
           'indent',
-          '|',
-          'specialCharacters',
-          'subscript',
-          'superscript',
           '|',
           'imageUpload',
           'blockQuote',
           'insertTable',
           'codeBlock',
-          'htmlEmbed',
-          'highlight',
-          'horizontalLine',
           '|',
-          'selectAll',
-          'removeFormat',
-          'sourceEditing'
+          'removeFormat'
         ]
       }
     }
-  };
+  },
+  full: {
+    label: '全部',
+    hint: '开放默认工具栏全部功能（含预设样式、富媒体、源码编辑等）',
+    config: {
+      toolbar: {
+        items: FULL_TOOLBAR_ITEMS
+      }
+    }
+  }
+};
+
+const CustomConfigExample = () => {
+  const [toolbarType, setToolbarType] = useState('simple');
+  const [content, setContent] = useState(
+    &#96;<h2>自定义配置示例</h2>\n<p>切换下方档位，工具栏按钮数量会明显变化。</p>&#96;
+  );
+
+  const preset = TOOLBAR_PRESETS[toolbarType];
+  const toolbarItemCount = preset.config.toolbar.items.filter(item => item !== '|').length;
 
   return (
     <Flex vertical gap={16}>
       <Card>
         <Space direction="vertical" style={{ width: '100%' }} size="middle">
           <Title level={4}>自定义工具栏配置</Title>
-          <Radio.Group value={toolbarType} onChange={(e) => setToolbarType(e.target.value)} buttonStyle="solid">
-            <Radio.Button value="simple">简单</Radio.Button>
-            <Radio.Button value="standard">标准</Radio.Button>
-            <Radio.Button value="full">完整</Radio.Button>
+          <Radio.Group value={toolbarType} onChange={e => setToolbarType(e.target.value)} buttonStyle="solid">
+            {Object.entries(TOOLBAR_PRESETS).map(([key, { label }]) => (
+              <Radio.Button key={key} value={key}>
+                {label}
+              </Radio.Button>
+            ))}
           </Radio.Group>
-          <CKEditor.Field key={toolbarType} config={toolbarConfigs[toolbarType]} value={content} onChange={setContent} />
+          <Alert
+            type="info"
+            showIcon
+            message={&#96;当前：${preset.label}（${toolbarItemCount} 个工具按钮）&#96;}
+            description={preset.hint}
+          />
+          <CKEditor.Field key={toolbarType} config={preset.config} value={content} onChange={setContent} />
           <Divider orientation="left">内容预览</Divider>
           <CKEditor.Content key={&#96;preview-${toolbarType}&#96;}>{content}</CKEditor.Content>
         </Space>
@@ -429,6 +493,67 @@ render(<BaseExample />);
 
 ```
 
+- ECharts 图表
+- 弹窗使用 JSONEditor 配置 ECharts option，插入后可拖拽调整大小，预览与编辑均使用 @components/Echart 渲染
+- _CKEditor(@components/CKEditor),antd(antd),remoteLoader(@kne/remote-loader)
+
+```jsx
+const { default: CKEditor } = _CKEditor;
+const { Flex, Card, Space, Typography, Divider } = antd;
+const { useState } = React;
+const { Title, Paragraph } = Typography;
+
+const sampleOption = {
+  xAxis: {
+    type: 'category',
+    data: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']
+  },
+  yAxis: {
+    type: 'value'
+  },
+  series: [
+    {
+      data: [820, 932, 901, 934, 1290, 1330, 1320],
+      type: 'line',
+      smooth: true
+    }
+  ]
+};
+
+const encodedOption = encodeURIComponent(JSON.stringify(sampleOption));
+
+const initData = &#96;<h2>ECharts 图表示例</h2>
+<p>点击工具栏 <strong>图表</strong> 按钮，在弹窗中用 JSONEditor 编辑 ECharts <code>option</code> 后插入。选中图表可拖拽调整大小，双击可再次编辑配置。</p>
+<figure class="ck-echart" style="height:400px;">
+  <div class="ck-echart-inner" data-echart-option="${encodedOption}" style="height:400px;"></div>
+</figure>&#96;;
+
+const EchartExample = () => {
+  const [content, setContent] = useState(initData);
+
+  return (
+    <Flex vertical gap={16}>
+      <Card>
+        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+          <div>
+            <Title level={4}>插入 ECharts 图表</Title>
+            <Paragraph type="secondary">
+              编辑区与预览区均通过 @components/Echart 渲染；配置以 JSON 存入 <code>data-echart-option</code>
+            </Paragraph>
+          </div>
+          <CKEditor.Field value={content} onChange={setContent} />
+          <Divider orientation="left">内容预览</Divider>
+          <CKEditor.Content>{content}</CKEditor.Content>
+        </Space>
+      </Card>
+    </Flex>
+  );
+};
+
+render(<EchartExample />);
+
+```
+
 - 视频上传
 - 上传 mp4、webm、mov 等视频并在编辑器中插入 HTML5 video，未配置上传 API 时自动使用 base64
 - _CKEditor(@components/CKEditor),antd(antd)
@@ -522,7 +647,7 @@ render(<BaseExample />);
 | --- | --- | --- | --- |
 | className | 外层容器类名 | string | - |
 | style | 外层容器样式；内部会合并 `--ck-toolbar-dropdown-max-width` | object | - |
-| isMarkdown | 是否 Markdown 模式。为 `true` 时不加载 3D、视频、交互组件插件，并从工具栏移除 `model3dUpload`、`videoUpload`、`insertLiveComponent` | boolean | false |
+| isMarkdown | 是否 Markdown 模式。为 `true` 时不加载 3D、视频、交互组件、图表插件，并从工具栏移除 `model3dUpload`、`videoUpload`、`insertLiveComponent`、`insertEchart` | boolean | false |
 | config | CKEditor 5 配置，与内置 `defaultConfig` 深合并 | object | 见下方 config |
 | plugins | 追加的 CKEditor 插件类 | array | [] |
 | locale | 界面语言，`zh-CN` 或 `en` 等；未传时使用 `@kne/global-context` 的 `locale` | string | 上下文 locale |
@@ -554,6 +679,7 @@ render(<BaseExample />);
 - **视频**：对 `figure.ck-video` 同步内联宽高到内部 `video`
 - **3D 模型**：加载 `model-viewer` 后同步布局；支持全屏预览（桌面全屏 API，移动端固定层 overlay）
 - **交互组件**：对 `section.ck-live-component[data-live-component]` 挂载 `LiveComponentView`；卸载时清理
+- **图表**：对 `figure.ck-echart[data-echart-option]` 挂载 `@components/Echart` 渲染
 
 ### config 配置说明
 
@@ -561,16 +687,17 @@ render(<BaseExample />);
 
 | 配置项 | 说明 |
 | --- | --- |
-| toolbar | 主工具栏。富文本默认含 `imageUpload`、`model3dUpload`、`videoUpload`、`insertLiveComponent` 等 |
+| toolbar | 主工具栏。传入 `toolbar.items` 时会**整体替换**默认项（非按索引合并）。富文本默认含 `imageUpload`、`model3dUpload`、`videoUpload`、`insertLiveComponent`、`insertEchart` 等 |
 | image | 图片浮动工具栏 |
 | table | 表格内容工具栏 |
-| htmlSupport | GeneralHtmlSupport 白名单；已允许 `model-viewer`、`figure.ck-video`、`section.ck-live-component` 等 |
+| htmlSupport | GeneralHtmlSupport 白名单；已允许 `model-viewer`、`figure.ck-video`、`figure.ck-echart`、`section.ck-live-component` 等 |
 | uploadAdapter | 图片上传：`upload(file)` 返回 URL 或 `{ code, data, msg }`；`uploadUrl` 粘贴外链转存；`base64MaxWidth` / `base64MaxHeight` 控制无 `upload` 时的 base64 缩放 |
 | modelUpload | **仅富文本**。3D 上传，默认合并 `uploadAdapter`；仅 `.glb`；无 `upload` 时 base64 嵌入 |
 | videoUpload | **仅富文本**。视频上传，默认合并 `uploadAdapter`；支持 mp4、webm、ogg、mov 等；无 `upload` 时 base64 嵌入 |
 | model3d.toolbar | **仅富文本**。3D 浮动工具栏，默认 `model3dStyle:*`、`resizeModel3d:*`、`resizeModel3dHeight:*`，可拖拽缩放 |
 | mediaVideo.toolbar | **仅富文本**。视频浮动工具栏，默认 `mediaVideoStyle:*`、`resizeMediaVideo:*`、`resizeMediaVideoHeight:*` |
 | liveComponent | **仅富文本**。交互组件渲染/编辑参数，见下表 |
+| echart.toolbar | **仅富文本**。图表浮动工具栏，默认 `echartStyle:*`、`resizeEchart:*`、`resizeEchartHeight:*`，可拖拽缩放 |
 | model3d | **仅富文本**。3D 模型 `model-viewer` 参数，见下表 |
 
 上传函数约定与图片相同：返回字符串 URL，或 `{ code: 0, data: 'url', msg }`（`code !== 0` 时展示失败占位图/提示）。
@@ -592,6 +719,12 @@ render(<BaseExample />);
 - 工具栏：`insertLiveComponent`，弹窗内嵌 `LiveComponentEditor`
 - 存储：`<section class="component-box ck-live-component" data-live-component="PlantUML编码配置">`
 - 编辑区与 `CKEditor.Content` 均通过 `LiveComponentView` 渲染；双击已插入块可再次打开编辑
+
+#### ECharts 图表（EchartPlugin）
+
+- 工具栏：`insertEchart`，弹窗内嵌 `JSONEditor` 编辑 ECharts `option` JSON
+- 存储：`<figure class="ck-echart"><div class="ck-echart-inner" data-echart-option="..."></div></figure>`
+- 编辑区与 `CKEditor.Content` 均通过 `@components/Echart` 渲染；选中后可拖拽调整宽高，双击可再次编辑配置
 
 #### liveComponent 参数（Field / Content / config.liveComponent）
 

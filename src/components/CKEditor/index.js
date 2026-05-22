@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from 'react';
+import { useLayoutEffect, useMemo, useRef } from 'react';
 import { CKEditor as CKEditor5 } from '@ckeditor/ckeditor5-react';
 import { ClassicEditor } from 'ckeditor5';
 import { createWithRemoteLoader } from '@kne/remote-loader';
@@ -68,6 +68,7 @@ import OssUploadAdapterPlugin from './OssUploadAdapterPlugin';
 import Model3dPlugin from './Model3dPlugin';
 import VideoPlugin from './VideoPlugin';
 import LiveComponentPlugin from './LiveComponentPlugin';
+import EchartPlugin from './EchartPlugin';
 import { syncContentVideoLayout } from './VideoPlugin/utils';
 import { createDefaultMediaToolbar } from './shared/mediaWidget/constants';
 import whenModelViewerReady from '../../common/loadModelViewer';
@@ -78,6 +79,7 @@ import {
   enhanceLiveComponentContentPreview,
   teardownLiveComponentContentPreview
 } from './LiveComponentPlugin/liveComponentContentPreview';
+import { enhanceEchartContentPreview, teardownEchartContentPreview } from './echartContentPreview';
 import { resolveLiveComponentOptions, resolveModel3dOptions } from './mediaPreviewOptions';
 import { applyModelViewerOptions } from '../../common/modelViewerOptions';
 import useControlValue from '@kne/use-control-value';
@@ -147,7 +149,7 @@ const defaultPlugins = [
   OssUploadAdapterPlugin
 ];
 
-const richTextPlugins = [...defaultPlugins, Model3dPlugin, VideoPlugin, LiveComponentPlugin];
+const richTextPlugins = [...defaultPlugins, Model3dPlugin, VideoPlugin, LiveComponentPlugin, EchartPlugin];
 
 const defaultConfig = {
   toolbar: {
@@ -183,6 +185,7 @@ const defaultConfig = {
       'model3dUpload',
       'videoUpload',
       'insertLiveComponent',
+      'insertEchart',
       'blockQuote',
       'insertTable',
       'codeBlock',
@@ -204,6 +207,7 @@ const defaultConfig = {
   },
   style: {
     definitions: [
+      // ── 标题类 ──
       {
         name: 'Headings',
         element: 'h2',
@@ -215,10 +219,52 @@ const defaultConfig = {
         classes: ['part-title']
       },
       {
+        name: 'Section Title',
+        element: 'h2',
+        classes: ['section-title']
+      },
+      {
+        name: 'Underline Title',
+        element: 'h3',
+        classes: ['underline-title']
+      },
+      // ── 段落类 ──
+      {
         name: 'Paragraph',
         element: 'p',
         classes: ['part-content']
       },
+      {
+        name: 'Lead Paragraph',
+        element: 'p',
+        classes: ['lead-paragraph']
+      },
+      {
+        name: 'Small Text',
+        element: 'p',
+        classes: ['small-text']
+      },
+      {
+        name: 'Centered Text',
+        element: 'p',
+        classes: ['centered-text']
+      },
+      {
+        name: 'Right Aligned',
+        element: 'p',
+        classes: ['right-text']
+      },
+      {
+        name: 'Indented Paragraph',
+        element: 'p',
+        classes: ['indented-paragraph']
+      },
+      {
+        name: 'Drop Cap',
+        element: 'p',
+        classes: ['drop-cap']
+      },
+      // ── 卡片类 ──
       {
         name: 'Card',
         element: 'p',
@@ -230,9 +276,100 @@ const defaultConfig = {
         classes: ['primary-card']
       },
       {
+        name: 'Info Card',
+        element: 'p',
+        classes: ['info-card']
+      },
+      {
+        name: 'Warning Card',
+        element: 'p',
+        classes: ['warning-card']
+      },
+      {
+        name: 'Success Card',
+        element: 'p',
+        classes: ['success-card']
+      },
+      {
+        name: 'Danger Card',
+        element: 'p',
+        classes: ['danger-card']
+      },
+      // ── 行内类 ──
+      {
         name: 'Keywords',
         element: 'span',
         classes: ['key-word']
+      },
+      {
+        name: 'Highlight Mark',
+        element: 'span',
+        classes: ['highlight-mark']
+      },
+      {
+        name: 'Code Inline',
+        element: 'span',
+        classes: ['code-inline']
+      },
+      {
+        name: 'Tag Label',
+        element: 'span',
+        classes: ['tag-label']
+      },
+      {
+        name: 'Underline Accent',
+        element: 'span',
+        classes: ['underline-accent']
+      },
+      {
+        name: 'Strikethrough Dim',
+        element: 'span',
+        classes: ['strikethrough-dim']
+      },
+      // ── 引用类 ──
+      {
+        name: 'Block Quote Styled',
+        element: 'blockquote',
+        classes: ['styled-quote']
+      },
+      {
+        name: 'Large Quote',
+        element: 'blockquote',
+        classes: ['large-quote']
+      },
+      // ── 列表类 ──
+      {
+        name: 'Checklist Styled',
+        element: 'ul',
+        classes: ['checklist-styled']
+      },
+      {
+        name: 'Inline List',
+        element: 'ul',
+        classes: ['inline-list']
+      },
+      // ── 分隔线 ──
+      {
+        name: 'Thick Divider',
+        element: 'hr',
+        classes: ['thick-divider']
+      },
+      {
+        name: 'Dotted Divider',
+        element: 'hr',
+        classes: ['dotted-divider']
+      },
+      // ── 图片 ──
+      {
+        name: 'Image Frame',
+        element: 'figure',
+        classes: ['image-frame']
+      },
+      // ── 表格 ──
+      {
+        name: 'Striped Table',
+        element: 'figure',
+        classes: ['striped-table']
       }
     ]
   },
@@ -263,6 +400,18 @@ const defaultConfig = {
         classes: ['ck-model3d'],
         styles: true,
         attributes: true
+      },
+      {
+        name: 'figure',
+        classes: ['ck-echart'],
+        styles: true,
+        attributes: true
+      },
+      {
+        name: 'div',
+        classes: ['ck-echart-inner', 'ck-echart-viewer'],
+        styles: true,
+        attributes: ['data-echart-option']
       },
       {
         name: 'model-viewer',
@@ -312,6 +461,12 @@ const defaultConfig = {
       stylePrefix: 'mediaVideoStyle',
       resizePrefix: 'resizeMediaVideo'
     })
+  },
+  echart: {
+    toolbar: createDefaultMediaToolbar({
+      stylePrefix: 'echartStyle',
+      resizePrefix: 'resizeEchart'
+    })
   }
 };
 
@@ -342,7 +497,10 @@ const CKEditorField = withLocale(({
       ...customPlugins.filter(
         plugin =>
           !isMarkdown ||
-          (plugin !== Model3dPlugin && plugin !== VideoPlugin && plugin !== LiveComponentPlugin)
+          (plugin !== Model3dPlugin &&
+            plugin !== VideoPlugin &&
+            plugin !== LiveComponentPlugin &&
+            plugin !== EchartPlugin)
       )
     ];
 
@@ -377,12 +535,24 @@ const CKEditorField = withLocale(({
       ckeditorI18n
     });
 
+    // lodash.merge 会按索引合并数组，导致自定义 toolbar.items 无法整体替换默认项
+    if (Array.isArray(config?.toolbar?.items)) {
+      merged.toolbar = {
+        ...merged.toolbar,
+        items: config.toolbar.items
+      };
+    }
+
     if (!isMarkdown) {
       return merged;
     }
 
     const toolbarItems = (merged.toolbar?.items ?? defaultConfig.toolbar.items).filter(
-      item => item !== 'model3dUpload' && item !== 'videoUpload' && item !== 'insertLiveComponent'
+      item =>
+        item !== 'model3dUpload' &&
+        item !== 'videoUpload' &&
+        item !== 'insertLiveComponent' &&
+        item !== 'insertEchart'
     );
     const {
       model3d: _model3d,
@@ -480,7 +650,7 @@ const CKContent = ({ className, children, liveComponent: liveComponentProp, mode
   );
   const model3dOptions = useMemo(() => resolveModel3dOptions(model3dProp), [model3dProp]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const container = ref.current;
 
     if (!container) {
@@ -491,13 +661,20 @@ const CKContent = ({ className, children, liveComponent: liveComponentProp, mode
 
     container.querySelectorAll('figure.ck-video').forEach(syncContentVideoLayout);
     enhanceLiveComponentContentPreview(container, liveComponentOptions);
+    enhanceEchartContentPreview(container);
 
     const setupModel3dPreview = () => {
       if (cancelled) {
         return;
       }
 
-      container.querySelectorAll('figure.ck-model3d, .ck-model3d').forEach(figure => {
+      const liveContainer = ref.current;
+
+      if (!liveContainer) {
+        return;
+      }
+
+      liveContainer.querySelectorAll('figure.ck-model3d, .ck-model3d').forEach(figure => {
         const modelViewer = figure.querySelector('model-viewer');
 
         if (!modelViewer) {
@@ -525,7 +702,7 @@ const CKContent = ({ className, children, liveComponent: liveComponentProp, mode
         syncModelViewerLayout(host, modelViewer, height);
       });
 
-      enhanceModel3dContentPreview(container, model3dOptions);
+      enhanceModel3dContentPreview(liveContainer, model3dOptions);
     };
 
     if (container.querySelector('model-viewer')) {
@@ -536,6 +713,7 @@ const CKContent = ({ className, children, liveComponent: liveComponentProp, mode
       cancelled = true;
       teardownModel3dContentPreview(container);
       teardownLiveComponentContentPreview(container);
+      teardownEchartContentPreview(container);
     };
   }, [children, liveComponentOptions, model3dOptions]);
 

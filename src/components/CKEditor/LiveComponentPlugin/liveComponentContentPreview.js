@@ -44,8 +44,12 @@ export const teardownLiveComponentContentPreview = container => {
   container
     .querySelectorAll(`section.${LIVE_COMPONENT_CLASS}, section[${LIVE_COMPONENT_DATA_ATTR}]`)
     .forEach(section => {
-      section.querySelectorAll('.ck-live-component-viewer').forEach(host => {
+      [...section.querySelectorAll('.ck-live-component-viewer')].forEach(host => {
         unmountLiveComponentFromHost(host);
+
+        if (host.parentNode) {
+          host.remove();
+        }
       });
       section.removeAttribute(ENHANCED_ATTR);
     });

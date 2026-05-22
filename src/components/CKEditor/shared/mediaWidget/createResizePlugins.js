@@ -197,13 +197,17 @@ export const createResizePlugins = ({
           ? i18n?.model3dResizeOptions ?? widthOptions
           : commandName === 'resizeMediaVideo'
             ? i18n?.videoResizeOptions ?? widthOptions
-            : widthOptions;
+            : commandName === 'resizeEchart'
+              ? i18n?.echartResizeOptions ?? widthOptions
+              : widthOptions;
       const resolvedHeightOptions =
         commandName === 'resizeModel3d'
           ? i18n?.model3dHeightOptions ?? heightOptions
           : commandName === 'resizeMediaVideo'
             ? i18n?.videoHeightOptions ?? heightOptions
-            : heightOptions;
+            : commandName === 'resizeEchart'
+              ? i18n?.echartHeightOptions ?? heightOptions
+              : heightOptions;
 
       resolvedWidthOptions.forEach(option => {
         editor.ui.componentFactory.add(option.name, locale => {
