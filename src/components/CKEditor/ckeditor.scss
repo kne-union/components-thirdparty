@@ -368,6 +368,8 @@
   --ck-media-frame-bg: #fafafa;
   --ck-media-frame-border: #e8e8e8;
 
+  color: inherit !important;
+
   figure.image img, p img {
     max-width: 100%;
     height: auto;

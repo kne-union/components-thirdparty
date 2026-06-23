@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, memo, useState } from 'react';
-import { decode } from 'plantuml-encoder';
+import { decodeLiveComponentConfig } from './decodeConfig';
 import { withRemoteLoader } from '@kne/remote-loader';
 import ErrorBoundary from '@kne/react-error-boundary';
 import { transform as babelTransform } from '@babel/standalone';
@@ -156,30 +156,30 @@ const LiveComponentView = withLocale(({ content: inputStr, props: componentProps
       if (!inputStr) {
         return { content: '', scope: {}, props: {}, error: null };
       }
-      const { content, props, scope } = JSON.parse(decode(inputStr));
-      const resolvedScope = Object.assign({}, scope);
 
-      return Object.assign(
-        {},
-        {
-          content: ensureFormInfoFormWrapper(content || '', resolvedScope),
-          scope: resolvedScope,
-          props: Object.assign(
-            {},
-            props &&
-              transform(
-                props,
-                (result, value, name) => {
-                  result[name] = resolvePropValue(value.type, value.defaultValue);
-                },
-                {}
-              )
-          ),
-          error: null
-        }
-      );
+      const parsed = decodeLiveComponentConfig(inputStr);
+      if (!parsed) {
+        return { content: '', scope: {}, props: {}, error: formatMessage({ id: 'ParseError' }) };
+      }
+
+      const resolvedScope = parsed.scope;
+
+      return {
+        content: ensureFormInfoFormWrapper(parsed.content, resolvedScope),
+        scope: resolvedScope,
+        props: transform(
+          parsed.props || {},
+          (result, value, name) => {
+            if (value && typeof value === 'object' && value.type) {
+              result[name] = resolvePropValue(value.type, value.defaultValue);
+            }
+          },
+          {}
+        ),
+        error: null
+      };
     } catch (e) {
-      return { error: e.message || formatMessage({ id: 'ParseError' }) };
+      return { content: '', scope: {}, props: {}, error: e.message || formatMessage({ id: 'ParseError' }) };
     }
     // locale 切换时需刷新解析错误文案；勿将 formatMessage 放入依赖（引用每轮会变）
     // eslint-disable-next-line react-hooks/exhaustive-deps
