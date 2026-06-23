@@ -65,6 +65,7 @@
 
 #### 注意事项
 
+- 预览区通过外层 `usePreset()` 注入完整 `preset`（含 `apis.file.getUrl`），需将编辑器置于 `Global` / `PureGlobal` 上下文中使用
 - 函数类型参数仅支持占位符，无法编辑实际函数内容
 - 组件代码会自动包装在 ErrorBoundary 中进行错误保护
 - 支持使用 props.* 和 scope.* 中的变量和组件
