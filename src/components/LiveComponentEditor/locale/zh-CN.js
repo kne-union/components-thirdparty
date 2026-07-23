@@ -72,7 +72,9 @@ const localeMessages = {
   MsgNoCurrentFile: '请先从左侧打开一个文件',
   MsgDuplicateName: '同一目录下已存在同名文件或文件夹',
   CreateFileUnder: '在「{name}」下新建文件',
-  CreateFolderUnder: '在「{name}」下新建文件夹'
+  CreateFolderUnder: '在「{name}」下新建文件夹',
+  MsgLocatePreviewNotReady: '预览未就绪，无法定位',
+  MsgLocateNoSource: '此处无法对应到源码'
 };
 
 export default localeMessages;

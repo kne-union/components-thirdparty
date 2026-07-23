@@ -72,7 +72,9 @@ const localeMessages = {
   MsgNoCurrentFile: 'Open a file from the left panel first',
   MsgDuplicateName: 'A file or folder with the same name already exists in this directory',
   CreateFileUnder: 'New file under "{name}"',
-  CreateFolderUnder: 'New folder under "{name}"'
+  CreateFolderUnder: 'New folder under "{name}"',
+  MsgLocatePreviewNotReady: 'Preview is not ready; cannot locate source',
+  MsgLocateNoSource: 'Cannot map this area to source code'
 };
 
 export default localeMessages;

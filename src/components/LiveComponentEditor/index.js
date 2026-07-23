@@ -16,7 +16,7 @@ import CodeEditor from '@components/CodeEditor';
 import LiveComponentView from '@components/LiveComponentView';
 import useRefCallback from '@kne/use-ref-callback';
 import lodash from 'lodash';
-import { transform, debounce, get, isEqual } from 'lodash';
+import { transform, debounce, throttle, get, isEqual } from 'lodash';
 import dayjs from 'dayjs';
 import { useState, useRef, useEffect, useMemo, useImperativeHandle, forwardRef } from 'react';
 import { createRoot } from 'react-dom/client';
@@ -24,7 +24,15 @@ import { useIntl } from '@kne/react-intl';
 import withLocale from './withLocale';
 import SiteFilePanel, { SaveAsModal } from './SiteFilePanel';
 import { createSiteApi } from './siteApi';
-import { handlePreviewLocate } from './previewLocate';
+import {
+  HIGHLIGHT_DURATION_MS,
+  handlePreviewLocate,
+  measureHighlightRects,
+  rectsRelativeTo,
+  resolveElementsFromEditorPosition,
+  resolveSourceFromPoint,
+  findSameSourceElements
+} from './previewLocate';
 import style from './style.module.scss';
 
 /** @deprecated 使用 decodeLiveComponentConfig */
@@ -159,7 +167,8 @@ const LiveComponentEditorCore = createWithRemoteLoader({
           toolbarExtra,
           sites,
           onSitesChange,
-          siteActions = true
+          siteActions = true,
+          enableSourceLocate = true
         },
         ref
       ) => {
@@ -388,17 +397,199 @@ const LiveComponentEditorCore = createWithRemoteLoader({
           }
         });
 
-        const handlePreviewDoubleClick = useRefCallback(event => {
-          if (mod !== 'mix') {
-            return;
-          }
-          handlePreviewLocate(event, {
-            codeEditorRef,
-            highlightClassName: style['preview-locate-highlight']
-          });
+        const sourceLocateActive = enableSourceLocate && mod === 'mix';
+        const sourceLocateActiveRef = useRef(sourceLocateActive);
+        sourceLocateActiveRef.current = sourceLocateActive;
+
+        const previewPanelRef = useRef(null);
+        const previewRootRef = useRef(null);
+        const hoverElementsRef = useRef([]);
+        const cursorElementsRef = useRef([]);
+        const locateFromPreviewRef = useRef(false);
+        const flashTimerRef = useRef(null);
+        const cursorDisposableRef = useRef(null);
+        const [hoverRects, setHoverRects] = useState([]);
+        const [cursorRects, setCursorRects] = useState([]);
+        const [flashRects, setFlashRects] = useState([]);
+
+        const toPanelRects = useRefCallback(clientRects => {
+          return rectsRelativeTo(clientRects, previewPanelRef.current);
         });
 
+        const clearLocateOverlays = useRefCallback(() => {
+          hoverElementsRef.current = [];
+          cursorElementsRef.current = [];
+          setHoverRects([]);
+          setCursorRects([]);
+          setFlashRects([]);
+          if (flashTimerRef.current) {
+            window.clearTimeout(flashTimerRef.current);
+            flashTimerRef.current = null;
+          }
+        });
+
+        const remountLocateOverlays = useRefCallback(() => {
+          if (hoverElementsRef.current.length) {
+            setHoverRects(toPanelRects(measureHighlightRects(hoverElementsRef.current)));
+          }
+          if (cursorElementsRef.current.length) {
+            setCursorRects(toPanelRects(measureHighlightRects(cursorElementsRef.current)));
+          }
+        });
+
+        const syncCursorHighlight = useRefCallback((line, column) => {
+          if (!sourceLocateActiveRef.current || locateFromPreviewRef.current) {
+            return;
+          }
+          const els = resolveElementsFromEditorPosition(previewRootRef.current, line, column);
+          cursorElementsRef.current = els;
+          setCursorRects(toPanelRects(measureHighlightRects(els)));
+        });
+
+        const handlePreviewMouseMove = useMemo(
+          () =>
+            throttle(event => {
+              if (!sourceLocateActiveRef.current) {
+                return;
+              }
+              const resolved = resolveSourceFromPoint(event.clientX, event.clientY, previewRootRef.current);
+              if (!resolved) {
+                hoverElementsRef.current = [];
+                setHoverRects([]);
+                return;
+              }
+              let els = findSameSourceElements(previewRootRef.current, resolved.line, resolved.column);
+              if (!els.length) {
+                els = [resolved.element];
+              }
+              hoverElementsRef.current = els;
+              setHoverRects(toPanelRects(measureHighlightRects(els)));
+            }, 50),
+          [toPanelRects]
+        );
+
+        const handlePreviewMouseLeave = useRefCallback(() => {
+          handlePreviewMouseMove.cancel?.();
+          hoverElementsRef.current = [];
+          setHoverRects([]);
+        });
+
+        const handlePreviewDoubleClick = useRefCallback(event => {
+          if (!sourceLocateActiveRef.current) {
+            return;
+          }
+          const result = handlePreviewLocate(event, {
+            codeEditorRef,
+            previewRoot: previewRootRef.current
+          });
+          if (!result.ok) {
+            if (!String(content || '').trim()) {
+              return;
+            }
+            const hasMarkers = !!previewRootRef.current?.querySelector('[data-live-line]');
+            message.info(
+              formatMessage({
+                id: hasMarkers ? 'MsgLocateNoSource' : 'MsgLocatePreviewNotReady'
+              })
+            );
+            return;
+          }
+          locateFromPreviewRef.current = true;
+          window.setTimeout(() => {
+            locateFromPreviewRef.current = false;
+          }, 200);
+          cursorElementsRef.current = result.elements || [];
+          const panelRects = toPanelRects(result.rects || []);
+          setCursorRects(panelRects);
+          setFlashRects(panelRects);
+          if (flashTimerRef.current) {
+            window.clearTimeout(flashTimerRef.current);
+          }
+          flashTimerRef.current = window.setTimeout(() => {
+            setFlashRects([]);
+            flashTimerRef.current = null;
+          }, HIGHLIGHT_DURATION_MS);
+        });
+
+        const handleCodeEditorMount = useRefCallback(({ editor }) => {
+          cursorDisposableRef.current?.dispose?.();
+          if (!editor?.onDidChangeCursorPosition) {
+            return;
+          }
+          const onCursor = debounce(e => {
+            syncCursorHighlight(e.position.lineNumber, e.position.column);
+          }, 150);
+          const disposable = editor.onDidChangeCursorPosition(onCursor);
+          cursorDisposableRef.current = {
+            dispose: () => {
+              onCursor.cancel?.();
+              disposable?.dispose?.();
+            }
+          };
+          if (sourceLocateActiveRef.current) {
+            const pos = editor.getPosition?.();
+            if (pos) {
+              syncCursorHighlight(pos.lineNumber, pos.column);
+            }
+          }
+        });
+
+        useEffect(() => {
+          if (!sourceLocateActive) {
+            clearLocateOverlays();
+            return undefined;
+          }
+          const onScrollOrResize = () => {
+            remountLocateOverlays();
+          };
+          window.addEventListener('resize', onScrollOrResize);
+          document.addEventListener('scroll', onScrollOrResize, true);
+          return () => {
+            window.removeEventListener('resize', onScrollOrResize);
+            document.removeEventListener('scroll', onScrollOrResize, true);
+          };
+        }, [sourceLocateActive, clearLocateOverlays, remountLocateOverlays]);
+
+        useEffect(() => {
+          if (!sourceLocateActive) {
+            return undefined;
+          }
+          const editor = codeEditorRef.current?.getEditor?.();
+          const pos = editor?.getPosition?.();
+          if (!pos) {
+            return undefined;
+          }
+          const timer = window.setTimeout(() => {
+            syncCursorHighlight(pos.lineNumber, pos.column);
+          }, 120);
+          return () => window.clearTimeout(timer);
+        }, [outputContent, sourceLocateActive, syncCursorHighlight]);
+
+        useEffect(() => {
+          return () => {
+            cursorDisposableRef.current?.dispose?.();
+            handlePreviewMouseMove.cancel?.();
+            if (flashTimerRef.current) {
+              window.clearTimeout(flashTimerRef.current);
+            }
+          };
+        }, [handlePreviewMouseMove]);
+
         const canSaveCurrent = !!(currentFile && currentFile.permission === 'rw');
+
+        const renderLocateOverlays = (rects, className) =>
+          rects.map((rect, index) => (
+            <div
+              key={`${className}-${index}`}
+              className={className}
+              style={{
+                top: rect.top,
+                left: rect.left,
+                width: Math.max(rect.width, 2),
+                height: Math.max(rect.height, 2)
+              }}
+            />
+          ));
 
         const editor = (
           <div className={style['code-editor']}>
@@ -407,31 +598,51 @@ const LiveComponentEditorCore = createWithRemoteLoader({
               height={height}
               defaultValue={content}
               defaultLanguage="javascript"
+              onMount={handleCodeEditorMount}
               onChange={value => updateContentDebouncedRef.current(value, setParams)}
             />
           </div>
         );
 
         const preview = (
-          <SimpleBar
-            style={{
-              maxHeight: `${height}px`
-            }}>
-            <div
-              className={style['preview']}
-              style={{ minHeight: `${height}px` }}
-              onDoubleClick={handlePreviewDoubleClick}>
-              {!content ? (
-                <Empty description={formatMessage({ id: 'EmptyContent' })} />
-              ) : (
-                <SafeRender>
-                  <Form>
-                    <LiveComponentView content={outputContent} libs={libs} />
-                  </Form>
-                </SafeRender>
-              )}
-            </div>
-          </SimpleBar>
+          <div
+            ref={previewPanelRef}
+            className={style['preview-panel']}
+            style={{ height: `${height}px` }}
+            onMouseMove={sourceLocateActive ? handlePreviewMouseMove : undefined}
+            onMouseLeave={sourceLocateActive ? handlePreviewMouseLeave : undefined}>
+            <SimpleBar
+              style={{
+                maxHeight: `${height}px`
+              }}>
+              <div
+                ref={previewRootRef}
+                className={style['preview']}
+                style={{ minHeight: `${height}px` }}
+                onDoubleClick={sourceLocateActive ? handlePreviewDoubleClick : undefined}>
+                {!content ? (
+                  <Empty description={formatMessage({ id: 'EmptyContent' })} />
+                ) : (
+                  <SafeRender>
+                    <Form>
+                      <LiveComponentView
+                        content={outputContent}
+                        libs={libs}
+                        enableSourceLocate={enableSourceLocate}
+                      />
+                    </Form>
+                  </SafeRender>
+                )}
+              </div>
+            </SimpleBar>
+            {sourceLocateActive && (
+              <div className={style['preview-locate-layer']} aria-hidden>
+                {renderLocateOverlays(hoverRects, style['preview-locate-hover'])}
+                {renderLocateOverlays(cursorRects, style['preview-locate-cursor'])}
+                {renderLocateOverlays(flashRects, style['preview-locate-flash'])}
+              </div>
+            )}
+          </div>
         );
 
         const editorTabs = (

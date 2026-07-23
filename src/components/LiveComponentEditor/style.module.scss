@@ -68,10 +68,41 @@
   overflow: auto;
 }
 
-.preview-locate-highlight {
-  border: 2px solid var(--primary-color, #1677ff);
+.preview-panel {
+  position: relative;
+  overflow: hidden;
+}
+
+.preview-locate-layer {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 10;
+  overflow: hidden;
+}
+
+.preview-locate-hover {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px dashed var(--primary-color, #1677ff);
+  background: rgba(22, 119, 255, 0.06);
+  border-radius: 2px;
+}
+
+.preview-locate-cursor {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px solid var(--primary-color, #1677ff);
+  background: rgba(22, 119, 255, 0.08);
+  border-radius: 2px;
+}
+
+.preview-locate-flash {
+  position: absolute;
+  box-sizing: border-box;
+  border: 1px solid var(--primary-color, #1677ff);
   background: rgba(22, 119, 255, 0.12);
-  border-radius: 4px;
+  border-radius: 2px;
   animation: live-locate-fade 1s ease forwards;
 }
 

@@ -18,7 +18,7 @@ LiveComponentEditor 是一个实时的组件编辑器，允许用户在运行时
 - 支持 Antd 组件库集成
 - 可扩展工具栏（toolbarExtra）
 - 多站点文件管理（含 localStorage 适配）
-- 混合模式双击预览定位源码
+- 混合模式源码双向定位（预览 ↔ 编辑器，`enableSourceLocate` 可关）
 
 ### 使用场景
 
@@ -119,6 +119,7 @@ render(<SitesExample />);
 | sites | `{ host, name }[]` | - | 传入数组（可为 `[]`）时开启左侧多站点文件面板 |
 | onSitesChange | function | - | 站点列表变更回调（添加/编辑/删除站点后触发） |
 | siteActions | boolean | true | 是否显示站点操作（添加/编辑/删除站点） |
+| enableSourceLocate | boolean | true | 是否启用混合模式源码双向定位（预览↔编辑器） |
 
 #### 显示模式 (mod)
 
@@ -191,9 +192,15 @@ render(<SitesExample />);
 
 **localStorage 站点：** `host` 可传 `localStorage:KEY_NAME`，在本地 `localStorage` 完成同等读写语义。
 
-#### 混合模式双击定位
+#### 混合模式源码双向定位
 
-在 `mix` 模式下双击预览区：定位最近带源码标记的 DOM 元素，高亮约 1 秒，并在左侧 Monaco 跳转到对应行列。
+在 `mix` 且 `enableSourceLocate`（默认 `true`）时：
+
+- **预览 → 编辑器**：双击预览区，解析最近带源码标记的节点（无标记时几何就近），左侧 Monaco 跳到对应行列；悬停时外部 overlay 虚线框提示目标。
+- **编辑器 → 预览**：光标移动时，外部 overlay 实线框高亮预览中对应节点。
+- **高亮**：只读测量目标 `getBoundingClientRect`，在预览内容外渲染 overlay，不修改预览 DOM 结构/样式。
+- **关闭**：`enableSourceLocate={false}` 时关闭全部定位交互，且不注入 `data-live-*`。
+- **降级**：预览未就绪或无法映射时轻提示；空白内容不提示。
 
 #### 集成功能
 

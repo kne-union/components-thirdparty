@@ -64,7 +64,7 @@ const ensureFormInfoFormWrapper = (jsxContent, scope = {}) => {
   };
 };
 
-const LiveComponent = withRemoteLoader(({ remoteModules, children, props, libs = {} }) => {
+const LiveComponent = withRemoteLoader(({ remoteModules, children, props, libs = {}, enableSourceLocate = true }) => {
   const [error, setError] = useState(null);
   const [renderJsx, setRenderJsx] = useState(null);
   const [compiledCode, setCompiledCode] = useState(null);
@@ -104,16 +104,19 @@ const LiveComponent = withRemoteLoader(({ remoteModules, children, props, libs =
 
     try {
       setError(null);
+      const plugins = enableSourceLocate
+        ? [createJsxSourceLocatePlugin({ lineOffset, wrapPrefix: RENDER_WRAP_PREFIX })]
+        : [];
       const code = babelTransform(`${RENDER_WRAP_PREFIX}${content});`, {
         presets: ['es2015', 'react'],
-        plugins: [createJsxSourceLocatePlugin({ lineOffset, wrapPrefix: RENDER_WRAP_PREFIX })]
+        plugins
       }).code;
       setCompiledCode(code);
     } catch (e) {
       setError(e);
       setCompiledCode(null);
     }
-  }, [content, lineOffset]);
+  }, [content, lineOffset, enableSourceLocate]);
 
   // 拆分 useEffect: 2) 渲染组件 (scope/moduleNames/libs 变化时，不需要重新编译)
   useEffect(() => {
@@ -158,7 +161,7 @@ const resolvePropValue = (type, defaultValue) => {
   return defaultValue;
 };
 
-const LiveComponentView = withLocale(({ content: inputStr, props: componentProps, libs }) => {
+const LiveComponentView = withLocale(({ content: inputStr, props: componentProps, libs, enableSourceLocate = true }) => {
   const { formatMessage, locale } = useIntl();
   const { content, lineOffset, props, scope, error } = useMemo(() => {
     try {
@@ -222,7 +225,15 @@ const LiveComponentView = withLocale(({ content: inputStr, props: componentProps
     return <ErrorComponent error={error} />;
   }
 
-  return <LiveComponent props={targetProps} libs={libs} modules={modules} children={children} />;
+  return (
+    <LiveComponent
+      props={targetProps}
+      libs={libs}
+      modules={modules}
+      children={children}
+      enableSourceLocate={enableSourceLocate}
+    />
+  );
 });
 
 const LiveComponentsViewCatch = memo(props => {
