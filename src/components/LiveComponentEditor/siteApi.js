@@ -13,6 +13,45 @@ const unwrap = payload => {
 
 const joinUrl = (host, path) => `${String(host).replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
 
+/** 将站点相对路径补成可访问的绝对 URL */
+export const toAbsoluteUrl = pathOrUrl => {
+  if (!pathOrUrl) {
+    return null;
+  }
+  if (/^https?:\/\//i.test(pathOrUrl)) {
+    return pathOrUrl;
+  }
+  const origin = typeof window !== 'undefined' ? window.location?.origin : '';
+  const path = pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`;
+  return origin ? `${origin}${path}` : path;
+};
+
+/** 从站点 host 推导内容短链基址（去掉末尾站点 shorten） */
+export const getContentShareBase = host => {
+  if (!host || isLocalStorageHost(host)) {
+    return null;
+  }
+  const cleaned = String(host).replace(/\/$/, '');
+  const parts = cleaned.split('/');
+  if (parts.length < 2) {
+    return cleaned;
+  }
+  parts.pop();
+  return parts.join('/');
+};
+
+/** 远程站点内容短链地址：{origin}{prefix}/content/{shorten}（不含站点 shorten） */
+export const getRemoteContentUrl = (host, contentShorten) => {
+  if (!host || isLocalStorageHost(host) || !contentShorten) {
+    return null;
+  }
+  const base = getContentShareBase(host);
+  if (!base) {
+    return null;
+  }
+  return toAbsoluteUrl(joinUrl(base, `content/${encodeURIComponent(String(contentShorten).toUpperCase())}`));
+};
+
 const createId = () => `f_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
 
 const defaultStore = () => ({
@@ -324,7 +363,10 @@ const httpApi = host => {
     create: body => request('POST', 'create', { body }),
     save: body => request('POST', 'save', { body }),
     rename: body => request('POST', 'rename', { body }),
-    remove: body => request('POST', 'remove', { body })
+    remove: body => request('POST', 'remove', { body }),
+    createContentShare: body => request('POST', 'content-share/create', { body }),
+    listContentShare: id => request('GET', 'content-share/list', { query: { id } }),
+    removeContentShare: body => request('POST', 'content-share/remove', { body })
   };
 };
 

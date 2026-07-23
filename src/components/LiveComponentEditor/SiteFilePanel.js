@@ -13,7 +13,8 @@ import {
   DatabaseOutlined,
   CheckCircleFilled,
   DisconnectOutlined,
-  LoadingOutlined
+  LoadingOutlined,
+  LinkOutlined
 } from '@ant-design/icons';
 import FileSystemView from '@kne/file-system-view';
 import '@kne/file-system-view/dist/index.css';
@@ -34,6 +35,7 @@ import {
   toFileSystemViewData,
   writeUserSites
 } from './siteApi';
+import ContentShareModal from './ContentShareModal';
 import style from './style.module.scss';
 
 const { Text } = Typography;
@@ -113,6 +115,7 @@ const SiteFilePanel = ({
   const [createModal, setCreateModal] = useState(null);
   const [renameModal, setRenameModal] = useState(null);
   const [siteModal, setSiteModal] = useState(null);
+  const [contentShareModal, setContentShareModal] = useState(null);
   // host -> 'ok' | 'fail' | 'checking'
   const [siteStatus, setSiteStatus] = useState({});
 
@@ -392,6 +395,22 @@ const SiteFilePanel = ({
         onClick: data => openCreateModal('directory', data)
       },
       {
+        label: formatMessage({ id: 'CopyContentUrl' }),
+        icon: <LinkOutlined />,
+        // 仅远程站点文件可分享内容地址
+        disabled: data => isDirectoryData(data) || !activeHost || isLocalStorageHost(activeHost),
+        onClick: data => {
+          if (!data?.id || !activeHost || isLocalStorageHost(activeHost) || isDirectoryData(data)) {
+            return;
+          }
+          setContentShareModal({
+            siteHost: activeHost,
+            fileId: data.id,
+            fileName: data.name
+          });
+        }
+      },
+      {
         label: formatMessage({ id: 'MenuRename' }),
         icon: <EditOutlined />,
         disabled: data => data.permission === 'r',
@@ -405,7 +424,7 @@ const SiteFilePanel = ({
         onClick: (data, key) => handleRemove(data, key)
       }
     ],
-    [formatMessage, handleRemove, openCreateModal, openRenameModal]
+    [activeHost, formatMessage, handleRemove, openCreateModal, openRenameModal]
   );
 
   const openAddSiteModal = useCallback(() => {
@@ -702,6 +721,14 @@ const SiteFilePanel = ({
           />
         </Flex>
       </Modal>
+
+      <ContentShareModal
+        open={!!contentShareModal}
+        siteHost={contentShareModal?.siteHost}
+        fileId={contentShareModal?.fileId}
+        fileName={contentShareModal?.fileName}
+        onCancel={() => setContentShareModal(null)}
+      />
     </div>
   );
 };

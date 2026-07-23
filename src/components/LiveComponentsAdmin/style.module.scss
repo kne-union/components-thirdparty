@@ -1,0 +1,39 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
+.detail {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 100%;
+}
+
+.detail-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.detail-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.detail-host {
+  word-break: break-all;
+}
+
+.detail-editor {
+  flex: 1;
+  min-height: 0;
+}
+
+@include resp.mobile-container {
+  .detail-header {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

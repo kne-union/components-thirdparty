@@ -1,0 +1,22 @@
+export default {
+  ModuleTitle: 'Live Components Site',
+  SiteBizName: 'Site',
+  Name: 'Name',
+  Host: 'Host',
+  Shorten: 'Shorten',
+  Status: 'Status',
+  Open: 'Open',
+  Close: 'Closed',
+  DefaultPermission: 'Default Permission',
+  PermissionRw: 'Read & Write',
+  PermissionR: 'Read Only',
+  CreatedAt: 'Created At',
+  Keyword: 'Keyword',
+  ManageContent: 'Manage Content',
+  CopyHost: 'Copy Host',
+  CopySuccess: 'Copied',
+  BackToList: 'Back',
+  SiteNotFound: 'Site not found',
+  SiteClosedTip: 'Site is closed; public access is disabled',
+  SiteOpenTip: 'Site is open'
+};

@@ -90,6 +90,11 @@ export const globalInit = async () => {
         remote: 'components-iconfont',
         defaultVersion: '0.1.8'
       },
+      'components-admin': {
+        ...registry,
+        remote: 'components-admin',
+        defaultVersion: '1.1.69'
+      },
       'components-thirdparty':
         process.env.NODE_ENV === 'development'
           ? {

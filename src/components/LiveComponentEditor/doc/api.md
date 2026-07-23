@@ -62,6 +62,7 @@
 | 从剪贴板导入 | 读取剪贴板并解析为组件配置（支持编码字符串或 JSON），覆盖当前编辑内容 |
 | 保存 | 存在 `sites` 时可用；将当前配置保存到已打开且可写（`permission === 'rw'`）的文件 |
 | 另存为 | 存在 `sites` 时可用；选择站点/父目录/文件名后创建新文件 |
+| 复制内容地址 | 远程站点文件右键菜单 / 工具栏；弹窗创建带有效期的 `{prefix}/content/{shorten}`（不含站点 shorten）并管理已有链接 |
 | toolbarExtra | 通过 prop 扩展自定义按钮 |
 
 #### 多站点文件系统 (`sites`)
@@ -86,6 +87,10 @@
 |------|------|------|
 | GET | `{host}/getFolderTree` | 获取文件树 |
 | GET | `{host}/get?id=` | 按 id 读取文件内容 |
+| GET | `{prefix}/content/{contentShorten}` | 直出已保存 content（`text/plain`；不含站点 shorten） |
+| POST | `{host}/content-share/create` | body: `{ id, expiresIn? }` |
+| GET | `{host}/content-share/list?id=` | 列出未过期内容短链 |
+| POST | `{host}/content-share/remove` | body: `{ shorten }` |
 | POST | `{host}/createFolder` | body: `{ parentId, name }` |
 | POST | `{host}/create` | body: `{ parentId, name, content? }` |
 | POST | `{host}/save` | body: `{ id, content }` |
