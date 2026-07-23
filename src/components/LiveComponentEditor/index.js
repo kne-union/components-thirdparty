@@ -31,7 +31,8 @@ import {
   rectsRelativeTo,
   resolveElementsFromEditorPosition,
   resolveSourceFromPoint,
-  findSameSourceElements
+  findSameSourceElements,
+  scrollElementsIntoView
 } from './previewLocate';
 import style from './style.module.scss';
 
@@ -443,6 +444,16 @@ const LiveComponentEditorCore = createWithRemoteLoader({
           }
           const els = resolveElementsFromEditorPosition(previewRootRef.current, line, column);
           cursorElementsRef.current = els;
+          if (els.length) {
+            scrollElementsIntoView(els, { block: 'nearest', behavior: 'smooth' });
+            window.requestAnimationFrame(() => {
+              remountLocateOverlays();
+            });
+            // smooth 滚动过程中再对齐一次 overlay
+            window.setTimeout(() => {
+              remountLocateOverlays();
+            }, 320);
+          }
           setCursorRects(toPanelRects(measureHighlightRects(els)));
         });
 
