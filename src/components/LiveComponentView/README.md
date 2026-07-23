@@ -7,6 +7,8 @@
 ### 主要特性
 
 - **配置驱动**：`content` 为 PlantUML 编码的 JSON，含组件源码、`props` 默认值、`scope` 远程模块
+- **远程拉取**：`LiveComponentView.Fetch` 通过内容 url（或 loader）拉取配置后渲染
+- **全局 libs**：可通过 `preset({ libs })` 全局注入工具库（同 react-fetch）
 - **运行时注入**：支持通过 `props` 覆盖配置内默认值；通过 `libs` 注入 lodash、dayjs 等库名与实例
 - **远程组件**：`scope` 声明 `components-core:FormInfo` 等模块 token，加载完成后渲染
 - **错误隔离**：编译/运行错误与 `ErrorBoundary` 统一展示可读堆栈，避免 `[object Error]`
@@ -175,6 +177,43 @@ render(<LibsExample />);
 
 ```
 
+- 远程内容拉取
+- LiveComponentView.Fetch 通过内容 url / loader 拉取配置后渲染，业务 props（如 headline）直接写在组件上
+- _LiveComponentView(@components/LiveComponentView),antd(antd)
+
+```jsx
+const { default: LiveComponentView } = _LiveComponentView;
+const { Card, Space, Typography } = antd;
+const { Title, Paragraph, Text } = Typography;
+
+const RESULT_CONTENT =
+  'ZKzDIm9H5FqhmrsBqbOSeTQj8bhDvZc-Qc1wCyox3v9X88SIaG85gIWfN1X314bVXXR-cEOzTTLVYAS9BjtTUpxkEJS4ssD86K8U2fiCozaToeMB5ZCCZWG5DotWmhOfvnPe51rqgHdwWUVpx24bPTTXD9hhHMbtbLpkSv8UOq3CS96n9H0zPc35fwO5Vk0SaQ1YGV7VI6nqFBPDIjID2haLHp6oMAu86PZh81_2ie2UzJd80yV0OGUGWJBT9yB5FU8AZQktaMmagj6JpGjLRyh6FKGPM9PSvq2zbOwUvE15jJzalQ_YP79pcewxglhy-tKk1xtqkvCEXx9rBVirsKcC3IFzV5pWwgedQsVJQdloEb9nydCIw_2LHzV8duxRylPkzd0vwxv3fBlRdZQ4KVG7';
+
+const FetchExample = () => {
+  return (
+    <Space direction="vertical" size="middle" style={{ width: '100%', maxWidth: 560 }}>
+      <Card>
+        <Title level={4}>远程内容拉取</Title>
+        <Paragraph type="secondary">
+          <Text code>LiveComponentView.Fetch</Text> 基于 <Text code>@kne/react-fetch</Text>，传入内容短链{' '}
+          <Text code>url</Text>（如 <Text code>{'{prefix}/content/{code}'}</Text>
+          ）拉取配置后渲染；也可传 <Text code>loader</Text> 自行返回配置字符串。业务参数直接写在组件上（如{' '}
+          <Text code>headline</Text>），与 <Text code>libs</Text> 等并列。
+        </Paragraph>
+        <LiveComponentView.Fetch
+          loader={() => Promise.resolve(RESULT_CONTENT)}
+          headline="通过 Fetch 渲染"
+          subTitle="本示例用 loader 模拟内容短链返回的 text/plain 配置。"
+        />
+      </Card>
+    </Space>
+  );
+};
+
+render(<FetchExample />);
+
+```
+
 ### API
 
 ### LiveComponentView
@@ -187,7 +226,20 @@ render(<LibsExample />);
 | --- | --- | --- | --- |
 | content | 组件配置字符串，经 `plantuml-encoder` 解码后为 JSON（必填） | string | - |
 | props | 运行时属性，与配置内 `props` 解析后的默认值合并，同名以本属性为准 | object | - |
-| libs | 注入运行环境的库，键名为 JSX 中使用的标识符，值为模块实例 | object | - |
+| libs | 注入运行环境的库；与 `preset({ libs })` 合并，同名以本属性为准 | object | - |
+| enableSourceLocate | 是否注入 `data-live-line` / `data-live-column`（供编辑器预览定位源码） | boolean | false |
+
+#### preset
+
+用法同 `@kne/react-fetch` 的 `preset`，用于全局注入 `libs`（入口调用一次即可）：
+
+```js
+import { preset } from '@components/LiveComponentView';
+// 或 LiveComponentView.preset({ libs: { lodash, dayjs } })
+preset({ libs: { lodash, dayjs, _: lodash } });
+```
+
+之后组件可不传 `libs`，仍可在动态 JSX 中使用对应标识符；组件级 `libs` 会覆盖全局同名键。
 
 #### content 解码结构
 
@@ -231,3 +283,27 @@ render(<LibsExample />);
 - 只读展示：`<LiveComponentView content={encoded} libs={{ lodash, dayjs }} />`
 - 覆盖标题：`<LiveComponentView content={encoded} props={{ title: '自定义标题' }} />`
 - 配置来源：与 `LiveComponentEditor` 输出、`CKEditor` `data-live-component` 属性相同
+
+### LiveComponentView.Fetch
+
+基于 `@kne/react-fetch`：请求内容 url（如 live-components-site 的 `{prefix}/content/{contentShorten}`，`text/plain` 直出配置字符串）后交给 `LiveComponentView` 渲染。
+
+#### 属性说明
+
+| 属性名 | 说明 | 类型 | 默认值 |
+| --- | --- | --- | --- |
+| url | 内容地址（与 react-fetch 一致） | string | - |
+| loader | 自定义加载；存在时优先生效，返回值即为 content 字符串 | function | - |
+| libs | 同 LiveComponentView | object | - |
+| enableSourceLocate | 同 LiveComponentView | boolean | false |
+| 其他业务字段 | 直接作为运行时 props 传入（如 `headline="自定义"`），覆盖配置内同名默认值 | any | - |
+| 其他 | 透传给 react-fetch（method、cache、loading、error 等） | - | GET |
+
+内容接口非 `{code,data}` JSON，组件内已用专用 `transformResponse` 将响应体映射为 fetch 的 `results`。
+
+#### 典型用法
+
+```jsx
+<LiveComponentView.Fetch url={contentUrl} libs={{ lodash, dayjs }} />
+<LiveComponentView.Fetch url={contentUrl} libs={{ lodash, dayjs }} headline="自定义" />
+```

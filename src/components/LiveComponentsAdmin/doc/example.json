@@ -1,0 +1,35 @@
+{
+  "isFull": true,
+  "list": [
+    {
+      "title": "站点列表",
+      "description": "BizUnit 管理 Live 组件站点：创建、编辑、开启/关闭、删除；行操作可进入内容管理",
+      "code": "./base.js",
+      "scope": [
+        {
+          "name": "_LiveComponentsAdminList",
+          "packageName": "@components/LiveComponentsAdmin/List"
+        },
+        {
+          "name": "remoteLoader",
+          "packageName": "@kne/remote-loader"
+        }
+      ]
+    },
+    {
+      "title": "站点内容",
+      "description": "详情页展示站点信息，并用 LiveComponentEditor 管理该站点下的文件与组件配置（localStorage 演示）",
+      "code": "./detail.js",
+      "scope": [
+        {
+          "name": "_LiveComponentsAdminDetail",
+          "packageName": "@components/LiveComponentsAdmin/Detail"
+        },
+        {
+          "name": "remoteLoader",
+          "packageName": "@kne/remote-loader"
+        }
+      ]
+    }
+  ]
+}

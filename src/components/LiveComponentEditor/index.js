@@ -7,6 +7,7 @@ import {
   SplitCellsOutlined,
   EyeOutlined,
   CopyOutlined,
+  LinkOutlined,
   SnippetsOutlined,
   SaveOutlined,
   FormOutlined,
@@ -23,7 +24,14 @@ import { createRoot } from 'react-dom/client';
 import { useIntl } from '@kne/react-intl';
 import withLocale from './withLocale';
 import SiteFilePanel, { SaveAsModal } from './SiteFilePanel';
-import { createSiteApi, DEFAULT_USER_SITES_STORAGE_KEY, mergeSites, readUserSites } from './siteApi';
+import ContentShareModal from './ContentShareModal';
+import {
+  createSiteApi,
+  DEFAULT_USER_SITES_STORAGE_KEY,
+  isLocalStorageHost,
+  mergeSites,
+  readUserSites
+} from './siteApi';
 import {
   HIGHLIGHT_DURATION_MS,
   handlePreviewLocate,
@@ -64,8 +72,11 @@ const buildScopeFormData = scope => ({
 
 const normalizePropsFormData = formData =>
   transform(
-    formData.props,
+    formData.props || [],
     (result, value) => {
+      if (!value?.name) {
+        return;
+      }
       result[value.name] = {
         defaultValue: value.type === 'function' ? '()=>null' : value.defaultValue ?? '',
         type: value.type
@@ -76,8 +87,11 @@ const normalizePropsFormData = formData =>
 
 const normalizeScopeFormData = formData =>
   transform(
-    formData.scope,
+    formData.scope || [],
     (result, value) => {
+      if (!value?.name) {
+        return;
+      }
       result[value.name] = value.token;
     },
     {}
@@ -185,6 +199,7 @@ const LiveComponentEditorCore = createWithRemoteLoader({
         const enableSites = Array.isArray(sites);
         const [currentFile, setCurrentFile] = useState(null);
         const [saveAsOpen, setSaveAsOpen] = useState(false);
+        const [contentShareOpen, setContentShareOpen] = useState(false);
         const [treeRefreshToken, setTreeRefreshToken] = useState(0);
         const [sitesCollapsed, setSitesCollapsed] = useState(false);
         const resolvedUserSitesKey =
@@ -316,6 +331,14 @@ const LiveComponentEditorCore = createWithRemoteLoader({
             console.error(error);
             message.error(formatMessage({ id: 'MsgCopyFail' }));
           }
+        });
+
+        const handleCopyContentUrl = useRefCallback(() => {
+          if (!currentFile?.id || !currentFile?.siteHost || isLocalStorageHost(currentFile.siteHost)) {
+            message.warning(formatMessage({ id: 'MsgNoContentUrl' }));
+            return;
+          }
+          setContentShareOpen(true);
         });
 
         const handleImportFromClipboard = useRefCallback(async () => {
@@ -587,6 +610,11 @@ const LiveComponentEditorCore = createWithRemoteLoader({
         }, [handlePreviewMouseMove]);
 
         const canSaveCurrent = !!(currentFile && currentFile.permission === 'rw');
+        const canCopyContentUrl = !!(
+          currentFile?.id &&
+          currentFile?.siteHost &&
+          !isLocalStorageHost(currentFile.siteHost)
+        );
 
         const renderLocateOverlays = (rects, className) =>
           rects.map((rect, index) => (
@@ -688,6 +716,13 @@ const LiveComponentEditorCore = createWithRemoteLoader({
                       <Button icon={<FormOutlined />} disabled={!mergedSites.length} onClick={() => setSaveAsOpen(true)}>
                         {formatMessage({ id: 'SaveAs' })}
                       </Button>
+                      <Button
+                        icon={<LinkOutlined />}
+                        disabled={!canCopyContentUrl}
+                        onClick={handleCopyContentUrl}
+                      >
+                        {formatMessage({ id: 'CopyContentUrl' })}
+                      </Button>
                     </Space.Compact>
                   )}
                   {toolbarExtra}
@@ -739,6 +774,8 @@ const LiveComponentEditorCore = createWithRemoteLoader({
                     <TableList
                       title={formatMessage({ id: 'ParamListTitle' })}
                       name="props"
+                      defaultLength={0}
+                      minLength={0}
                       list={[
                         <Input name="name" label={formatMessage({ id: 'VarName' })} rule="REQ LEN-0-100" />,
                         <Select
@@ -807,6 +844,8 @@ const LiveComponentEditorCore = createWithRemoteLoader({
                     <TableList
                       title={formatMessage({ id: 'ScopeListTitle' })}
                       name="scope"
+                      defaultLength={0}
+                      minLength={0}
                       list={[
                         <Input name="name" label={formatMessage({ id: 'VarName' })} rule="REQ LEN-0-100" />,
                         <Input name="token" label={formatMessage({ id: 'Token' })} rule="REQ LEN-0-100" />
@@ -927,6 +966,15 @@ const LiveComponentEditorCore = createWithRemoteLoader({
                 defaultHost={currentFile?.siteHost || mergedSites[0]?.host}
                 onCancel={() => setSaveAsOpen(false)}
                 onOk={handleSaveAs}
+              />
+            )}
+            {enableSites && (
+              <ContentShareModal
+                open={contentShareOpen}
+                siteHost={currentFile?.siteHost}
+                fileId={currentFile?.id}
+                fileName={currentFile?.name}
+                onCancel={() => setContentShareOpen(false)}
               />
             )}
           </>

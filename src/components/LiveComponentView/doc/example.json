@@ -76,6 +76,21 @@
           "packageName": "dayjs"
         }
       ]
+    },
+    {
+      "title": "远程内容拉取",
+      "description": "LiveComponentView.Fetch 通过内容 url / loader 拉取配置后渲染，业务 props（如 headline）直接写在组件上",
+      "code": "./fetch.js",
+      "scope": [
+        {
+          "name": "_LiveComponentView",
+          "packageName": "@components/LiveComponentView"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        }
+      ]
     }
   ]
 }

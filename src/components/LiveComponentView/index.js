@@ -2,14 +2,19 @@ import React, { useEffect, useMemo, memo, useState } from 'react';
 import { decodeLiveComponentConfig } from './decodeConfig';
 import { withRemoteLoader } from '@kne/remote-loader';
 import ErrorBoundary from '@kne/react-error-boundary';
+import { createWithFetch } from '@kne/react-fetch';
 import { transform as babelTransform } from '@babel/standalone';
 import transform from 'lodash/transform';
+import omit from 'lodash/omit';
 import * as Antd from 'antd';
 import { Flex, Spin } from 'antd';
 import { useIntl } from '@kne/react-intl';
 import withLocale from './withLocale';
 import createJsxSourceLocatePlugin from './jsxSourceLocatePlugin';
 import style from './style.module.scss';
+import preset, { getLibs } from './preset';
+
+export { default as preset, getLibs } from './preset';
 
 const RENDER_WRAP_PREFIX = 'render(';
 
@@ -64,7 +69,7 @@ const ensureFormInfoFormWrapper = (jsxContent, scope = {}) => {
   };
 };
 
-const LiveComponent = withRemoteLoader(({ remoteModules, children, props, libs = {}, enableSourceLocate = true }) => {
+const LiveComponent = withRemoteLoader(({ remoteModules, children, props, libs = {}, enableSourceLocate = false }) => {
   const [error, setError] = useState(null);
   const [renderJsx, setRenderJsx] = useState(null);
   const [compiledCode, setCompiledCode] = useState(null);
@@ -161,7 +166,7 @@ const resolvePropValue = (type, defaultValue) => {
   return defaultValue;
 };
 
-const LiveComponentView = withLocale(({ content: inputStr, props: componentProps, libs, enableSourceLocate = true }) => {
+const LiveComponentView = withLocale(({ content: inputStr, props: componentProps, libs, enableSourceLocate = false }) => {
   const { formatMessage, locale } = useIntl();
   const { content, lineOffset, props, scope, error } = useMemo(() => {
     try {
@@ -203,6 +208,8 @@ const LiveComponentView = withLocale(({ content: inputStr, props: componentProps
     return Object.assign({}, props, componentProps);
   }, [componentProps, props]);
 
+  const targetLibs = useMemo(() => Object.assign({}, getLibs(), libs), [libs]);
+
   const scopeKeysKey = Object.keys(scope).sort().join('\0');
   const scopeModuleNames = useMemo(
     () => (scopeKeysKey ? scopeKeysKey.split('\0') : []),
@@ -228,7 +235,7 @@ const LiveComponentView = withLocale(({ content: inputStr, props: componentProps
   return (
     <LiveComponent
       props={targetProps}
-      libs={libs}
+      libs={targetLibs}
       modules={modules}
       children={children}
       enableSourceLocate={enableSourceLocate}
@@ -243,5 +250,58 @@ const LiveComponentsViewCatch = memo(props => {
     </ErrorBoundary>
   );
 });
+
+/** 内容短链等接口直出 text/plain（或字符串），需适配 react-fetch 的 code/results 约定 */
+const transformContentResponse = response => {
+  const status = response.status;
+  const ok = status === 200 || status === undefined;
+  const body = response.data;
+  const content =
+    typeof body === 'string'
+      ? body
+      : body && typeof body === 'object' && typeof body.data === 'string'
+        ? body.data
+        : body == null
+          ? ''
+          : String(body);
+
+  return {
+    data: {
+      code: ok ? 200 : status || 500,
+      msg: ok ? '' : (body && body.msg) || '加载内容失败',
+      results: content
+    }
+  };
+};
+
+const FETCH_RESULT_KEYS = [
+  'data',
+  'fetchProps',
+  'isComplete',
+  'refresh',
+  'reload',
+  'setData',
+  'loadMore',
+  'send',
+  'requestParams'
+];
+
+/**
+ * 通过内容 url（如 `{prefix}/content/{contentShorten}`）拉取配置后渲染。
+ * libs / enableSourceLocate 同 LiveComponentView；其余业务字段（如 headline）直接作为 props 传入。
+ */
+const LiveComponentViewFetch = createWithFetch({
+  method: 'GET',
+  transformResponse: transformContentResponse
+})(props => {
+  const { data, libs, enableSourceLocate, props: componentProps, ...rest } = props;
+  const runtimeProps = Object.assign({}, omit(rest, FETCH_RESULT_KEYS), componentProps);
+  return (
+    <LiveComponentsViewCatch content={data} libs={libs} enableSourceLocate={enableSourceLocate} props={runtimeProps} />
+  );
+});
+
+LiveComponentsViewCatch.Fetch = LiveComponentViewFetch;
+LiveComponentsViewCatch.preset = preset;
 
 export default LiveComponentsViewCatch;

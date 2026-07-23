@@ -1,0 +1,22 @@
+export default {
+  ModuleTitle: 'Live 组件站点',
+  SiteBizName: '站点',
+  Name: '名称',
+  Host: '访问地址',
+  Shorten: '短码',
+  Status: '状态',
+  Open: '开启',
+  Close: '关闭',
+  DefaultPermission: '默认权限',
+  PermissionRw: '可读写',
+  PermissionR: '只读',
+  CreatedAt: '创建时间',
+  Keyword: '关键字',
+  ManageContent: '管理内容',
+  CopyHost: '复制地址',
+  CopySuccess: '已复制',
+  BackToList: '返回列表',
+  SiteNotFound: '站点不存在',
+  SiteClosedTip: '站点已关闭，公开访问不可用',
+  SiteOpenTip: '站点已开启'
+};
