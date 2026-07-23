@@ -12,8 +12,9 @@
 | onChange | function | - | 配置变化回调函数 |
 | toolbarExtra | ReactNode | - | 扩展工具栏按钮（渲染在复制/导入之后） |
 | sites | `{ host, name }[]` | - | 传入数组（可为 `[]`）时开启左侧多站点文件面板 |
-| onSitesChange | function | - | 站点列表变更回调（添加/编辑/删除站点后触发） |
-| siteActions | boolean | true | 是否显示站点操作（添加/编辑/删除站点） |
+| onSitesChange | function | - | 合并后站点列表变更回调（props + 本地添加） |
+| siteActionsOpen | boolean | true | 开启后可添加站点；本地添加的站点可编辑/删除，`sites` 配置的不可改删 |
+| userSitesStorageKey | string | `live-component-editor:user-sites` | 用户自行添加站点在 `localStorage` 中的存储 key |
 | enableSourceLocate | boolean | true | 是否启用混合模式源码双向定位（预览↔编辑器） |
 
 #### 显示模式 (mod)
@@ -65,9 +66,21 @@
 
 #### 多站点文件系统 (`sites`)
 
-传入非空 `sites: [{ host, name }]` 后，左侧显示站点列表与文件树（基于 `@kne/file-system-view`）。
+传入 `sites: [{ host, name }]`（可为 `[]`）后，左侧显示站点列表与文件树（基于 `@kne/file-system-view`）。
 
-**站点 API（`host` 为 HTTP 基址）：**
+**站点来源与排序：**
+
+- `sites` prop 配置的站点排在前面，不可编辑/删除
+- `siteActionsOpen={true}`（默认）时，可通过面板自行添加站点；添加的站点保存在浏览器 `localStorage`（key 由 `userSitesStorageKey` 配置，默认 `live-component-editor:user-sites`），排在 prop 站点之后，可编辑/删除
+- 同 host 以 prop 为准；`onSitesChange` 回调拿到的是合并后的完整列表
+
+**站点类型图标：**
+
+- 本地站点（`host` 以 `localStorage:` 开头）：Database 图标
+- 远程站点（HTTP 基址）：CloudServer 图标
+- 远程连通状态：请求 `getFolderTree` 成功且返回合法树数组显示绿色已连通；请求失败或格式非法显示红色未连通
+
+**站点 API（`host` 为 HTTP 基址，与 localStorage 适配器方法一致）：**
 
 | 方法 | 路径 | 说明 |
 |------|------|------|

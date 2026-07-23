@@ -336,6 +336,89 @@ export const createSiteApi = host => {
   return httpApi(host);
 };
 
+const isValidTreeNode = node => {
+  if (!node || typeof node !== 'object') {
+    return false;
+  }
+  if (node.id == null || node.id === '' || !String(node.name || '').trim()) {
+    return false;
+  }
+  if (node.type != null && node.type !== 'file' && node.type !== 'directory') {
+    return false;
+  }
+  if (node.permission != null && node.permission !== 'r' && node.permission !== 'rw') {
+    return false;
+  }
+  if (node.children != null) {
+    if (!Array.isArray(node.children)) {
+      return false;
+    }
+    return node.children.every(isValidTreeNode);
+  }
+  return true;
+};
+
+/** 校验 getFolderTree 返回是否为合法树数组 */
+export const isValidFolderTree = data => Array.isArray(data) && data.every(isValidTreeNode);
+
+/** 探测站点连通性（请求 getFolderTree 并校验格式） */
+export const probeSiteConnection = async host => {
+  if (isLocalStorageHost(host)) {
+    return { ok: true, data: await createSiteApi(host).getFolderTree() };
+  }
+  try {
+    const data = await createSiteApi(host).getFolderTree();
+    if (!isValidFolderTree(data)) {
+      return { ok: false, reason: 'invalid' };
+    }
+    return { ok: true, data };
+  } catch (error) {
+    return { ok: false, reason: 'error', error };
+  }
+};
+
+/** 用户自行添加的站点列表（与 props.sites 分离，存 localStorage） */
+export const DEFAULT_USER_SITES_STORAGE_KEY = 'live-component-editor:user-sites';
+
+export const normalizeSite = site => ({
+  host: String(site?.host || '').trim(),
+  name: String(site?.name || '').trim() || String(site?.host || '').trim()
+});
+
+export const readUserSites = (storageKey = DEFAULT_USER_SITES_STORAGE_KEY) => {
+  const key = String(storageKey || '').trim() || DEFAULT_USER_SITES_STORAGE_KEY;
+  try {
+    const raw = localStorage.getItem(key);
+    if (!raw) {
+      return [];
+    }
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+    return parsed.map(normalizeSite).filter(item => item.host);
+  } catch {
+    return [];
+  }
+};
+
+export const writeUserSites = (sites, storageKey = DEFAULT_USER_SITES_STORAGE_KEY) => {
+  const key = String(storageKey || '').trim() || DEFAULT_USER_SITES_STORAGE_KEY;
+  const normalized = (Array.isArray(sites) ? sites : []).map(normalizeSite).filter(item => item.host);
+  localStorage.setItem(key, JSON.stringify(normalized));
+  return normalized;
+};
+
+/** props 站点在前，用户本地站点在后（同 host 以 props 为准） */
+export const mergeSites = (propSites = [], userSites = []) => {
+  const props = (Array.isArray(propSites) ? propSites : []).map(normalizeSite).filter(item => item.host);
+  const propHosts = new Set(props.map(item => item.host));
+  const locals = (Array.isArray(userSites) ? userSites : [])
+    .map(normalizeSite)
+    .filter(item => item.host && !propHosts.has(item.host));
+  return [...props, ...locals];
+};
+
 /** 将站点树转为 FileSystemView 可用的 data（保留 id/permission） */
 export const toFileSystemViewData = (nodes = []) =>
   (nodes || []).map(node => {

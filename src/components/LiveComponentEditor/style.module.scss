@@ -56,10 +56,71 @@
   overflow: hidden;
   height: 100%;
   box-sizing: border-box;
+
+  :global {
+    .ant-select-selection-item {
+      max-width: 100%;
+    }
+
+    .ant-select-item-option-content {
+      display: flex;
+      min-width: 0;
+    }
+  }
 }
 
 .site-host {
   font-size: 12px;
+  flex: 1;
+  min-width: 0;
+}
+
+.site-host-row {
+  width: 100%;
+  min-width: 0;
+}
+
+.site-option {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.site-option-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.site-type-icon {
+  flex: none;
+  color: var(--font-color-grey-1, rgba(0, 0, 0, 0.45));
+  font-size: 12px;
+}
+
+.site-conn {
+  flex: none;
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+}
+
+.site-conn-icon {
+  font-size: 12px;
+}
+
+.site-conn-ok {
+  color: #52c41a;
+}
+
+.site-conn-fail {
+  color: #ff4d4f;
+}
+
+.site-conn-checking {
+  color: var(--font-color-grey-1, rgba(0, 0, 0, 0.45));
 }
 
 .site-tree {

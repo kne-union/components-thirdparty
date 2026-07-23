@@ -23,7 +23,7 @@ import { createRoot } from 'react-dom/client';
 import { useIntl } from '@kne/react-intl';
 import withLocale from './withLocale';
 import SiteFilePanel, { SaveAsModal } from './SiteFilePanel';
-import { createSiteApi } from './siteApi';
+import { createSiteApi, DEFAULT_USER_SITES_STORAGE_KEY, mergeSites, readUserSites } from './siteApi';
 import {
   HIGHLIGHT_DURATION_MS,
   handlePreviewLocate,
@@ -167,7 +167,8 @@ const LiveComponentEditorCore = createWithRemoteLoader({
           toolbarExtra,
           sites,
           onSitesChange,
-          siteActions = true,
+          siteActionsOpen = true,
+          userSitesStorageKey = DEFAULT_USER_SITES_STORAGE_KEY,
           enableSourceLocate = true
         },
         ref
@@ -185,17 +186,16 @@ const LiveComponentEditorCore = createWithRemoteLoader({
         const [saveAsOpen, setSaveAsOpen] = useState(false);
         const [treeRefreshToken, setTreeRefreshToken] = useState(0);
         const [sitesCollapsed, setSitesCollapsed] = useState(false);
-        const [innerSites, setInnerSites] = useState(() => (Array.isArray(sites) ? sites : []));
+        const resolvedUserSitesKey =
+          String(userSitesStorageKey || '').trim() || DEFAULT_USER_SITES_STORAGE_KEY;
+        // 合并后的站点列表（props.sites 在前 + 用户本地添加的站点），由 SiteFilePanel 维护并回调
+        const [mergedSites, setMergedSites] = useState(() =>
+          Array.isArray(sites) ? mergeSites(sites, readUserSites(resolvedUserSitesKey)) : []
+        );
         const sitesPanelWidth = Number(width) > 0 ? Number(width) : 260;
 
-        useEffect(() => {
-          if (Array.isArray(sites)) {
-            setInnerSites(sites);
-          }
-        }, [sites]);
-
         const handleSitesChange = useRefCallback(next => {
-          setInnerSites(next);
+          setMergedSites(next);
           onSitesChange?.(next);
         });
 
@@ -674,7 +674,7 @@ const LiveComponentEditorCore = createWithRemoteLoader({
                       <Button icon={<SaveOutlined />} disabled={!canSaveCurrent} onClick={handleSave}>
                         {formatMessage({ id: 'Save' })}
                       </Button>
-                      <Button icon={<FormOutlined />} disabled={!innerSites.length} onClick={() => setSaveAsOpen(true)}>
+                      <Button icon={<FormOutlined />} disabled={!mergedSites.length} onClick={() => setSaveAsOpen(true)}>
                         {formatMessage({ id: 'SaveAs' })}
                       </Button>
                     </Space.Compact>
@@ -880,9 +880,10 @@ const LiveComponentEditorCore = createWithRemoteLoader({
                   {!sitesCollapsed ? (
                     <div className={style['sites-aside-body']}>
                       <SiteFilePanel
-                        sites={innerSites}
+                        sites={sites}
                         onSitesChange={handleSitesChange}
-                        siteActions={siteActions}
+                        siteActionsOpen={siteActionsOpen}
+                        userSitesStorageKey={resolvedUserSitesKey}
                         currentFile={currentFile}
                         onOpenFile={handleOpenFile}
                         onCurrentFileChange={setCurrentFile}
@@ -911,8 +912,8 @@ const LiveComponentEditorCore = createWithRemoteLoader({
             {enableSites && (
               <SaveAsModal
                 open={saveAsOpen}
-                sites={innerSites}
-                defaultHost={currentFile?.siteHost || innerSites[0]?.host}
+                sites={mergedSites}
+                defaultHost={currentFile?.siteHost || mergedSites[0]?.host}
                 onCancel={() => setSaveAsOpen(false)}
                 onOk={handleSaveAs}
               />

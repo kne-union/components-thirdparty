@@ -8,13 +8,32 @@ import {
   ReloadOutlined,
   PlusOutlined,
   MoreOutlined,
-  MenuFoldOutlined
+  MenuFoldOutlined,
+  CloudServerOutlined,
+  DatabaseOutlined,
+  CheckCircleFilled,
+  DisconnectOutlined,
+  LoadingOutlined
 } from '@ant-design/icons';
 import FileSystemView from '@kne/file-system-view';
 import '@kne/file-system-view/dist/index.css';
 import { useIntl } from '@kne/react-intl';
 import useRefCallback from '@kne/use-ref-callback';
-import { createSiteApi, findParentId, flattenDirectories, hasDuplicateName, toFileSystemViewData } from './siteApi';
+import {
+  createSiteApi,
+  DEFAULT_USER_SITES_STORAGE_KEY,
+  findParentId,
+  flattenDirectories,
+  hasDuplicateName,
+  isLocalStorageHost,
+  isValidFolderTree,
+  mergeSites,
+  normalizeSite,
+  probeSiteConnection,
+  readUserSites,
+  toFileSystemViewData,
+  writeUserSites
+} from './siteApi';
 import style from './style.module.scss';
 
 const { Text } = Typography;
@@ -31,15 +50,49 @@ const resolveErrorMessage = (error, formatMessage, fallbackId) => {
   return error?.message || formatMessage({ id: fallbackId });
 };
 
-const normalizeSite = site => ({
-  host: String(site?.host || '').trim(),
-  name: String(site?.name || '').trim() || String(site?.host || '').trim()
-});
+const SiteTypeIcon = ({ host, className, title }) => {
+  if (isLocalStorageHost(host)) {
+    return <DatabaseOutlined className={className} title={title} />;
+  }
+  return <CloudServerOutlined className={className} title={title} />;
+};
+
+/** 远程站点连通状态：绿=通，红=不通，灰转圈=检测中 */
+const SiteConnectionIcon = ({ status, formatMessage }) => {
+  let icon = null;
+  if (status === 'checking') {
+    icon = (
+      <LoadingOutlined
+        className={`${style['site-conn-icon']} ${style['site-conn-checking']}`}
+        title={formatMessage({ id: 'SiteStatusChecking' })}
+      />
+    );
+  } else if (status === 'ok') {
+    icon = (
+      <CheckCircleFilled
+        className={`${style['site-conn-icon']} ${style['site-conn-ok']}`}
+        title={formatMessage({ id: 'SiteStatusConnected' })}
+      />
+    );
+  } else if (status === 'fail') {
+    icon = (
+      <DisconnectOutlined
+        className={`${style['site-conn-icon']} ${style['site-conn-fail']}`}
+        title={formatMessage({ id: 'SiteStatusDisconnected' })}
+      />
+    );
+  }
+  if (!icon) {
+    return null;
+  }
+  return <span className={style['site-conn']}>{icon}</span>;
+};
 
 const SiteFilePanel = ({
   sites = [],
   onSitesChange,
-  siteActions = true,
+  siteActionsOpen = true,
+  userSitesStorageKey = DEFAULT_USER_SITES_STORAGE_KEY,
   currentFile,
   onOpenFile,
   onCurrentFileChange,
@@ -49,42 +102,106 @@ const SiteFilePanel = ({
 }) => {
   const { formatMessage } = useIntl();
   const { message, modal } = App.useApp();
-  const [innerSites, setInnerSites] = useState(() => (Array.isArray(sites) ? sites.map(normalizeSite) : []));
-  const [activeHost, setActiveHost] = useState(() => sites[0]?.host);
+  const storageKey = String(userSitesStorageKey || '').trim() || DEFAULT_USER_SITES_STORAGE_KEY;
+  const [userSites, setUserSites] = useState(() => readUserSites(storageKey));
+  const [activeHost, setActiveHost] = useState(() => {
+    const merged = mergeSites(sites, readUserSites(storageKey));
+    return merged[0]?.host;
+  });
   const [tree, setTree] = useState([]);
   const [loading, setLoading] = useState(false);
   const [createModal, setCreateModal] = useState(null);
   const [renameModal, setRenameModal] = useState(null);
   const [siteModal, setSiteModal] = useState(null);
+  // host -> 'ok' | 'fail' | 'checking'
+  const [siteStatus, setSiteStatus] = useState({});
 
-  useEffect(() => {
-    if (!Array.isArray(sites)) {
-      return;
-    }
-    setInnerSites(sites.map(normalizeSite));
-  }, [sites]);
+  const propSites = useMemo(
+    () => (Array.isArray(sites) ? sites.map(normalizeSite).filter(item => item.host) : []),
+    [sites]
+  );
+  const propHostSet = useMemo(() => new Set(propSites.map(item => item.host)), [propSites]);
+  const innerSites = useMemo(() => mergeSites(propSites, userSites), [propSites, userSites]);
+  const activeSite = innerSites.find(item => item.host === activeHost) || innerSites[0];
+  const canManageActiveSite = !!(activeSite && !propHostSet.has(activeSite.host));
+  const remoteHostsKey = useMemo(
+    () =>
+      innerSites
+        .filter(item => !isLocalStorageHost(item.host))
+        .map(item => item.host)
+        .join('\0'),
+    [innerSites]
+  );
 
-  const updateSites = useRefCallback(nextSites => {
-    const normalized = nextSites.map(normalizeSite).filter(item => item.host);
-    setInnerSites(normalized);
-    onSitesChange?.(normalized);
+  const persistUserSites = useRefCallback(nextUserSites => {
+    const normalized = writeUserSites(nextUserSites, storageKey);
+    setUserSites(normalized);
     return normalized;
   });
 
+  // storageKey 变更时从对应 key 重新加载用户站点
+  useEffect(() => {
+    setUserSites(readUserSites(storageKey));
+  }, [storageKey]);
+
+  const setHostStatus = useRefCallback((host, status) => {
+    setSiteStatus(prev => (prev[host] === status ? prev : { ...prev, [host]: status }));
+  });
+
+  const probeSite = useRefCallback(async host => {
+    if (!host || isLocalStorageHost(host)) {
+      return;
+    }
+    setHostStatus(host, 'checking');
+    const result = await probeSiteConnection(host);
+    setHostStatus(host, result.ok ? 'ok' : 'fail');
+    return result;
+  });
+
+  useEffect(() => {
+    onSitesChange?.(innerSites);
+  }, [innerSites, onSitesChange]);
+
+  // 远程站点列表变化时探测连通性
+  useEffect(() => {
+    if (!remoteHostsKey) {
+      return;
+    }
+    remoteHostsKey.split('\0').forEach(host => {
+      if (host) {
+        probeSite(host);
+      }
+    });
+  }, [remoteHostsKey, probeSite]);
+
   const api = useMemo(() => (activeHost ? createSiteApi(activeHost) : null), [activeHost]);
-  const activeSite = innerSites.find(item => item.host === activeHost) || innerSites[0];
 
   const refreshTree = useRefCallback(async () => {
-    if (!api) {
+    if (!api || !activeHost) {
       setTree([]);
       return;
     }
     setLoading(true);
+    if (!isLocalStorageHost(activeHost)) {
+      setHostStatus(activeHost, 'checking');
+    }
     try {
       const data = await api.getFolderTree();
+      if (!isLocalStorageHost(activeHost) && !isValidFolderTree(data)) {
+        setHostStatus(activeHost, 'fail');
+        setTree([]);
+        message.error(formatMessage({ id: 'MsgSiteTreeInvalid' }));
+        return;
+      }
+      if (!isLocalStorageHost(activeHost)) {
+        setHostStatus(activeHost, 'ok');
+      }
       setTree(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error(error);
+      if (!isLocalStorageHost(activeHost)) {
+        setHostStatus(activeHost, 'fail');
+      }
       message.error(error.message || formatMessage({ id: 'MsgLoadTreeFail' }));
       setTree([]);
     } finally {
@@ -296,7 +413,7 @@ const SiteFilePanel = ({
   }, []);
 
   const openEditSiteModal = useCallback(() => {
-    if (!activeSite) {
+    if (!activeSite || propHostSet.has(activeSite.host)) {
       return;
     }
     setSiteModal({
@@ -305,7 +422,7 @@ const SiteFilePanel = ({
       host: activeSite.host || '',
       originHost: activeSite.host
     });
-  }, [activeSite]);
+  }, [activeSite, propHostSet]);
 
   const handleSiteModalConfirm = useRefCallback(() => {
     if (!siteModal) {
@@ -326,48 +443,69 @@ const SiteFilePanel = ({
         message.error(formatMessage({ id: 'MsgDuplicateSite' }));
         return;
       }
-      const list = updateSites([...innerSites, next]);
+      persistUserSites([...userSites, next]);
       setActiveHost(next.host);
       setSiteModal(null);
       message.success(formatMessage({ id: 'MsgSiteCreateSuccess' }));
-      if (!list.length) {
-        return;
+      if (!isLocalStorageHost(next.host)) {
+        probeSite(next.host);
       }
       return;
     }
 
     const originHost = siteModal.originHost;
+    if (propHostSet.has(originHost)) {
+      message.warning(formatMessage({ id: 'MsgSiteReadonly' }));
+      return;
+    }
     if (next.host !== originHost && innerSites.some(item => item.host === next.host)) {
       message.error(formatMessage({ id: 'MsgDuplicateSite' }));
       return;
     }
-    const list = updateSites(
-      innerSites.map(item => (item.host === originHost ? next : item))
-    );
+    persistUserSites(userSites.map(item => (item.host === originHost ? next : item)));
     setActiveHost(next.host);
     if (currentFile?.siteHost === originHost) {
       onCurrentFileChange?.({ ...currentFile, siteHost: next.host });
     }
     setSiteModal(null);
     message.success(formatMessage({ id: 'MsgSiteUpdateSuccess' }));
-    return list;
+    if (originHost !== next.host) {
+      setSiteStatus(prev => {
+        const nextStatus = { ...prev };
+        delete nextStatus[originHost];
+        return nextStatus;
+      });
+    }
+    if (!isLocalStorageHost(next.host)) {
+      probeSite(next.host);
+    }
   });
 
   const handleRemoveSite = useRefCallback(() => {
-    if (!activeSite) {
+    if (!activeSite || propHostSet.has(activeSite.host)) {
+      message.warning(formatMessage({ id: 'MsgSiteReadonly' }));
       return;
     }
     modal.confirm({
       title: formatMessage({ id: 'ConfirmRemoveSiteTitle' }),
       content: formatMessage({ id: 'ConfirmRemoveSiteContent' }, { name: activeSite.name || activeSite.host }),
       onOk: () => {
-        const next = innerSites.filter(item => item.host !== activeSite.host);
-        updateSites(next);
-        if (currentFile?.siteHost === activeSite.host) {
+        const removedHost = activeSite.host;
+        const next = userSites.filter(item => item.host !== removedHost);
+        const merged = mergeSites(propSites, persistUserSites(next));
+        setSiteStatus(prev => {
+          if (!(removedHost in prev)) {
+            return prev;
+          }
+          const nextStatus = { ...prev };
+          delete nextStatus[removedHost];
+          return nextStatus;
+        });
+        if (currentFile?.siteHost === removedHost) {
           onCurrentFileChange?.(null);
         }
-        if (next[0]) {
-          setActiveHost(next[0].host);
+        if (merged[0]) {
+          setActiveHost(merged[0].host);
         }
         message.success(formatMessage({ id: 'MsgSiteRemoveSuccess' }));
       }
@@ -381,7 +519,7 @@ const SiteFilePanel = ({
           key: 'edit',
           icon: <EditOutlined />,
           label: formatMessage({ id: 'MenuEditSite' }),
-          disabled: !activeSite,
+          disabled: !canManageActiveSite,
           onClick: openEditSiteModal
         },
         {
@@ -389,12 +527,35 @@ const SiteFilePanel = ({
           icon: <DeleteOutlined />,
           danger: true,
           label: formatMessage({ id: 'MenuRemoveSite' }),
-          disabled: !activeSite,
+          disabled: !canManageActiveSite,
           onClick: handleRemoveSite
         }
       ]
     }),
-    [activeSite, formatMessage, handleRemoveSite, openEditSiteModal]
+    [canManageActiveSite, formatMessage, handleRemoveSite, openEditSiteModal]
+  );
+
+  const siteOptions = useMemo(
+    () =>
+      innerSites.map(site => ({
+        value: site.host,
+        label: (
+          <Flex align="center" gap={6} className={style['site-option']}>
+            <SiteTypeIcon
+              host={site.host}
+              className={style['site-type-icon']}
+              title={formatMessage({
+                id: isLocalStorageHost(site.host) ? 'SiteTypeLocal' : 'SiteTypeRemote'
+              })}
+            />
+            <span className={style['site-option-name']}>{site.name || site.host}</span>
+            {!isLocalStorageHost(site.host) ? (
+              <SiteConnectionIcon status={siteStatus[site.host]} formatMessage={formatMessage} />
+            ) : null}
+          </Flex>
+        )
+      })),
+    [formatMessage, innerSites, siteStatus]
   );
 
   return (
@@ -435,13 +596,13 @@ const SiteFilePanel = ({
         <Flex gap={4} align="center">
           <Select
             value={activeHost}
-            options={innerSites.map(site => ({ value: site.host, label: site.name || site.host }))}
+            options={siteOptions}
             onChange={setActiveHost}
             style={{ flex: 1, minWidth: 0 }}
             placeholder={formatMessage({ id: 'SiteSelectPlaceholder' })}
             allowClear={false}
           />
-          {siteActions ? (
+          {siteActionsOpen ? (
             <>
               <Button
                 type="text"
@@ -457,9 +618,21 @@ const SiteFilePanel = ({
           ) : null}
         </Flex>
         {activeSite ? (
-          <Text type="secondary" ellipsis className={style['site-host']}>
-            {activeSite.host}
-          </Text>
+          <Flex align="center" gap={6} className={style['site-host-row']}>
+            <SiteTypeIcon
+              host={activeSite.host}
+              className={style['site-type-icon']}
+              title={formatMessage({
+                id: isLocalStorageHost(activeSite.host) ? 'SiteTypeLocal' : 'SiteTypeRemote'
+              })}
+            />
+            <Text type="secondary" ellipsis className={style['site-host']}>
+              {activeSite.host}
+            </Text>
+            {!isLocalStorageHost(activeSite.host) ? (
+              <SiteConnectionIcon status={siteStatus[activeSite.host]} formatMessage={formatMessage} />
+            ) : null}
+          </Flex>
         ) : null}
         <div className={style['site-tree']}>
           <Spin spinning={loading}>
@@ -582,13 +755,27 @@ export const SaveAsModal = ({ open, sites, defaultHost, onCancel, onOk }) => {
 
   const dirOptions = useMemo(() => flattenDirectories(tree), [tree]);
 
+  const siteOptions = useMemo(
+    () =>
+      (sites || []).map(site => ({
+        value: site.host,
+        label: (
+          <Flex align="center" gap={6} className={style['site-option']}>
+            <SiteTypeIcon host={site.host} className={style['site-type-icon']} />
+            <span className={style['site-option-name']}>{site.name || site.host}</span>
+          </Flex>
+        )
+      })),
+    [sites]
+  );
+
   return (
     <Modal
       title={formatMessage({ id: 'SaveAs' })}
       open={open}
       confirmLoading={loading}
       onCancel={onCancel}
-        onOk={() => {
+      onOk={() => {
         const selected = dirOptions.find(item => item.id === parentId);
         if (selected?.permission === 'r') {
           message.warning(formatMessage({ id: 'MsgReadOnly' }));
@@ -608,7 +795,7 @@ export const SaveAsModal = ({ open, sites, defaultHost, onCancel, onOk }) => {
       <Flex vertical gap={12}>
         <Select
           value={host}
-          options={sites.map(site => ({ value: site.host, label: site.name || site.host }))}
+          options={siteOptions}
           onChange={value => {
             setHost(value);
             setParentId('');
