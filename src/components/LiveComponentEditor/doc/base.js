@@ -1,5 +1,5 @@
 const { default: LiveComponentEditor } = _LiveComponentEditor;
-const { Flex, Alert, Input } = antd;
+const { Flex, Alert, Input, Button } = antd;
 const { useState, useRef } = React;
 const BaseExample = () => {
   const ref = useRef(null);
@@ -9,7 +9,13 @@ const BaseExample = () => {
   return (
     <Flex vertical gap={12}>
       <Alert message={<Input.TextArea variant="borderless" autoSize value={value || ''} onChange={e => ref.current.setValue(e.target.value)} />} />
-      <LiveComponentEditor defaultValue={value} onChange={setValue} ref={ref} />
+      <LiveComponentEditor
+        defaultValue={value}
+        onChange={setValue}
+        ref={ref}
+        toolbarExtra={<Button onClick={() => console.log(ref.current?.getValue())}>自定义按钮</Button>}
+        sites={[{ host: 'localStorage:live-component-demo', name: '本地演示' }]}
+      />
     </Flex>
   );
 };

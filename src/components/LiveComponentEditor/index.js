@@ -2,24 +2,43 @@ import { createWithRemoteLoader } from '@kne/remote-loader';
 import { encode } from 'plantuml-encoder';
 import { decodeLiveComponentConfig } from '@components/LiveComponentView/decodeConfig';
 import { App, Tabs, Flex, Alert, Segmented, Splitter, Collapse, Button, Space, Empty } from 'antd';
-import { MenuOutlined, SplitCellsOutlined, EyeOutlined, CopyOutlined, SnippetsOutlined } from '@ant-design/icons';
+import {
+  MenuOutlined,
+  SplitCellsOutlined,
+  EyeOutlined,
+  CopyOutlined,
+  SnippetsOutlined,
+  SaveOutlined,
+  FormOutlined,
+  MenuUnfoldOutlined
+} from '@ant-design/icons';
 import CodeEditor from '@components/CodeEditor';
 import LiveComponentView from '@components/LiveComponentView';
 import useRefCallback from '@kne/use-ref-callback';
 import lodash from 'lodash';
-import { transform, debounce, get, isEqual } from 'lodash';
+import { transform, debounce, throttle, get, isEqual } from 'lodash';
 import dayjs from 'dayjs';
 import { useState, useRef, useEffect, useMemo, useImperativeHandle, forwardRef } from 'react';
 import { createRoot } from 'react-dom/client';
 import { useIntl } from '@kne/react-intl';
 import withLocale from './withLocale';
+import SiteFilePanel, { SaveAsModal } from './SiteFilePanel';
+import { createSiteApi, DEFAULT_USER_SITES_STORAGE_KEY, mergeSites, readUserSites } from './siteApi';
+import {
+  HIGHLIGHT_DURATION_MS,
+  handlePreviewLocate,
+  measureHighlightRects,
+  rectsRelativeTo,
+  resolveElementsFromEditorPosition,
+  resolveSourceFromPoint,
+  findSameSourceElements
+} from './previewLocate';
 import style from './style.module.scss';
 
 /** @deprecated 使用 decodeLiveComponentConfig */
 export const decodeLiveComponentValue = decodeLiveComponentConfig;
 
-const mergeParams = value =>
-  Object.assign({ content: '', props: {}, scope: {} }, decodeLiveComponentConfig(value) || {});
+const mergeParams = value => Object.assign({ content: '', props: {}, scope: {} }, decodeLiveComponentConfig(value) || {});
 
 const buildPropsFormData = props => ({
   props: Object.keys(props).map(name => {
@@ -135,401 +154,774 @@ const LiveComponentEditorCore = createWithRemoteLoader({
   ]
 })(
   withLocale(
-    forwardRef(({ remoteModules, defaultValue, defaultMod = 'mix', height = 500, libs = { lodash, dayjs }, onChange }, ref) => {
-      const { formatMessage } = useIntl();
-      const { message } = App.useApp();
-      const [FormInfo, useFormContext, InfoPage, CentralContent, SimpleBar] = remoteModules;
-      const FormAutoSaver = useMemo(() => createFormAutoSaver(useFormContext), [useFormContext]);
-      const { Form, TableList } = FormInfo;
-      const { Input, Select } = FormInfo.fields;
-      const codeEditorRef = useRef(null);
-      const [params, setParams] = useState(() => mergeParams(defaultValue));
+    forwardRef(
+      (
+        {
+          remoteModules,
+          defaultValue,
+          defaultMod = 'mix',
+          height = 500,
+          width = 260,
+          libs = { lodash, dayjs },
+          onChange,
+          toolbarExtra,
+          sites,
+          onSitesChange,
+          siteActionsOpen = true,
+          userSitesStorageKey = DEFAULT_USER_SITES_STORAGE_KEY,
+          enableSourceLocate = true
+        },
+        ref
+      ) => {
+        const { formatMessage } = useIntl();
+        const { message } = App.useApp();
+        const [FormInfo, useFormContext, InfoPage, CentralContent, SimpleBar] = remoteModules;
+        const FormAutoSaver = useMemo(() => createFormAutoSaver(useFormContext), [useFormContext]);
+        const { Form, TableList } = FormInfo;
+        const { Input, Select } = FormInfo.fields;
+        const codeEditorRef = useRef(null);
+        const [params, setParams] = useState(() => mergeParams(defaultValue));
+        const enableSites = Array.isArray(sites);
+        const [currentFile, setCurrentFile] = useState(null);
+        const [saveAsOpen, setSaveAsOpen] = useState(false);
+        const [treeRefreshToken, setTreeRefreshToken] = useState(0);
+        const [sitesCollapsed, setSitesCollapsed] = useState(false);
+        const resolvedUserSitesKey =
+          String(userSitesStorageKey || '').trim() || DEFAULT_USER_SITES_STORAGE_KEY;
+        // 合并后的站点列表（props.sites 在前 + 用户本地添加的站点），由 SiteFilePanel 维护并回调
+        const [mergedSites, setMergedSites] = useState(() =>
+          Array.isArray(sites) ? mergeSites(sites, readUserSites(resolvedUserSitesKey)) : []
+        );
+        const sitesPanelWidth = Number(width) > 0 ? Number(width) : 260;
 
-      const applyParams = useRefCallback(nextParams => {
-        const merged = Object.assign({}, { content: '', props: {}, scope: {} }, nextParams);
+        const handleSitesChange = useRefCallback(next => {
+          setMergedSites(next);
+          onSitesChange?.(next);
+        });
 
-        setParams(merged);
-        setPropsFormData(buildPropsFormData(merged.props));
-        setScopeFormData(buildScopeFormData(merged.scope));
-        codeEditorRef.current?.setValue(merged.content || '');
-      });
-      const defaultValueRef = useRef(defaultValue);
-      const outputContent = useMemo(() => {
-        if (!String(params.content || '').trim()) {
-          return '';
-        }
-        return encode(JSON.stringify(params));
-      }, [params]);
+        const applyParams = useRefCallback(nextParams => {
+          const merged = Object.assign({}, { content: '', props: {}, scope: {} }, nextParams);
 
-      const [activeKey, setActiveKey] = useState('content');
-
-      const handleChange = useRefCallback(onChange);
-
-      // 创建稳定的 content update debounced 函数，避免频繁更新
-      const updateContentDebouncedRef = useRef(null);
-
-      if (!updateContentDebouncedRef.current) {
-        updateContentDebouncedRef.current = debounce((newContent, setParams) => {
-          setParams(prev => ({ ...prev, content: newContent }));
-        }, 300);
-      }
-
-      useImperativeHandle(
-        ref,
-        () => ({
-          getValue: () => outputContent,
-          setValue: value => {
-            const newParams = mergeParams(value);
-            setParams(newParams);
-            codeEditorRef.current?.setValue(newParams.content || '');
+          setParams(merged);
+          setPropsFormData(buildPropsFormData(merged.props));
+          setScopeFormData(buildScopeFormData(merged.scope));
+          codeEditorRef.current?.setValue(merged.content || '');
+        });
+        const defaultValueRef = useRef(defaultValue);
+        const outputContent = useMemo(() => {
+          if (!String(params.content || '').trim()) {
+            return '';
           }
-        }),
-        [outputContent]
-      );
+          return encode(JSON.stringify(params));
+        }, [params]);
 
-      useEffect(() => {
-        if (!String(defaultValue || '').trim()) {
-          return;
+        const [activeKey, setActiveKey] = useState('content');
+
+        const handleChange = useRefCallback(onChange);
+
+        // 创建稳定的 content update debounced 函数，避免频繁更新
+        const updateContentDebouncedRef = useRef(null);
+
+        if (!updateContentDebouncedRef.current) {
+          updateContentDebouncedRef.current = debounce((newContent, setParams) => {
+            setParams(prev => ({ ...prev, content: newContent }));
+          }, 300);
         }
-        const merged = mergeParams(defaultValue);
-        setParams(merged);
-        setPropsFormData(buildPropsFormData(merged.props));
-        setScopeFormData(buildScopeFormData(merged.scope));
-        codeEditorRef.current?.setValue(merged.content || '');
-      }, [defaultValue]);
-      useEffect(() => {
-        if (defaultValueRef.current !== outputContent) {
-          defaultValueRef.current = outputContent;
-          handleChange && handleChange(outputContent);
+
+        useImperativeHandle(
+          ref,
+          () => ({
+            getValue: () => outputContent,
+            setValue: value => {
+              const newParams = mergeParams(value);
+              setParams(newParams);
+              codeEditorRef.current?.setValue(newParams.content || '');
+            }
+          }),
+          [outputContent]
+        );
+
+        useEffect(() => {
+          if (!String(defaultValue || '').trim()) {
+            return;
+          }
+          const merged = mergeParams(defaultValue);
+          setParams(merged);
+          setPropsFormData(buildPropsFormData(merged.props));
+          setScopeFormData(buildScopeFormData(merged.scope));
+          codeEditorRef.current?.setValue(merged.content || '');
+        }, [defaultValue]);
+        useEffect(() => {
+          if (defaultValueRef.current !== outputContent) {
+            defaultValueRef.current = outputContent;
+            handleChange && handleChange(outputContent);
+          }
+        }, [outputContent, handleChange]);
+        const [mod, setMod] = useState(defaultMod);
+        const { content, props, scope } = Object.assign({}, { content: '', props: {}, scope: {} }, params);
+        const [propsFormData, setPropsFormData] = useState(() => buildPropsFormData(props));
+        const [scopeFormData, setScopeFormData] = useState(() => buildScopeFormData(scope));
+        const propsFormRef = useRef(null);
+        const scopeFormRef = useRef(null);
+
+        const submitPropsDebouncedRef = useRef(null);
+        const submitScopeDebouncedRef = useRef(null);
+
+        if (!submitPropsDebouncedRef.current) {
+          submitPropsDebouncedRef.current = debounce(() => {
+            propsFormRef.current?.submit();
+          }, 300);
         }
-      }, [outputContent, handleChange]);
-      const [mod, setMod] = useState(defaultMod);
-      const { content, props, scope } = Object.assign({}, { content: '', props: {}, scope: {} }, params);
-      const [propsFormData, setPropsFormData] = useState(() => buildPropsFormData(props));
-      const [scopeFormData, setScopeFormData] = useState(() => buildScopeFormData(scope));
-      const propsFormRef = useRef(null);
-      const scopeFormRef = useRef(null);
 
-      const submitPropsDebouncedRef = useRef(null);
-      const submitScopeDebouncedRef = useRef(null);
+        if (!submitScopeDebouncedRef.current) {
+          submitScopeDebouncedRef.current = debounce(() => {
+            scopeFormRef.current?.submit();
+          }, 300);
+        }
 
-      if (!submitPropsDebouncedRef.current) {
-        submitPropsDebouncedRef.current = debounce(() => {
+        const handlePropsFormSave = useRefCallback(() => {
+          submitPropsDebouncedRef.current?.();
+        });
+
+        const handleScopeFormSave = useRefCallback(() => {
+          submitScopeDebouncedRef.current?.();
+        });
+
+        const flushFormSaves = useRefCallback(() => {
+          submitPropsDebouncedRef.current?.flush();
+          submitScopeDebouncedRef.current?.flush();
           propsFormRef.current?.submit();
-        }, 300);
-      }
-
-      if (!submitScopeDebouncedRef.current) {
-        submitScopeDebouncedRef.current = debounce(() => {
           scopeFormRef.current?.submit();
-        }, 300);
-      }
+        });
 
-      const handlePropsFormSave = useRefCallback(() => {
-        submitPropsDebouncedRef.current?.();
-      });
+        useEffect(() => {
+          return () => {
+            submitPropsDebouncedRef.current?.cancel();
+            submitScopeDebouncedRef.current?.cancel();
+            updateContentDebouncedRef.current?.cancel();
+          };
+        }, []);
 
-      const handleScopeFormSave = useRefCallback(() => {
-        submitScopeDebouncedRef.current?.();
-      });
-
-      const flushFormSaves = useRefCallback(() => {
-        submitPropsDebouncedRef.current?.flush();
-        submitScopeDebouncedRef.current?.flush();
-        propsFormRef.current?.submit();
-        scopeFormRef.current?.submit();
-      });
-
-      useEffect(() => {
-        return () => {
-          submitPropsDebouncedRef.current?.cancel();
-          submitScopeDebouncedRef.current?.cancel();
-          updateContentDebouncedRef.current?.cancel();
-        };
-      }, []);
-
-      const handleCopy = useRefCallback(async () => {
-        if (!outputContent) {
-          message.warning(formatMessage({ id: 'MsgNoCopyContent' }));
-          return;
-        }
-
-        try {
-          await navigator.clipboard.writeText(outputContent);
-          message.success(formatMessage({ id: 'MsgCopySuccess' }));
-        } catch (error) {
-          console.error(error);
-          message.error(formatMessage({ id: 'MsgCopyFail' }));
-        }
-      });
-
-      const handleImportFromClipboard = useRefCallback(async () => {
-        if (!navigator.clipboard?.readText) {
-          message.error(formatMessage({ id: 'MsgClipboardUnsupported' }));
-          return;
-        }
-
-        try {
-          const text = await navigator.clipboard.readText();
-          const parsed = decodeLiveComponentValue(text);
-
-          if (!parsed) {
-            message.error(formatMessage({ id: 'MsgInvalidConfig' }));
+        const handleCopy = useRefCallback(async () => {
+          if (!outputContent) {
+            message.warning(formatMessage({ id: 'MsgNoCopyContent' }));
             return;
           }
 
-          applyParams(parsed);
-          message.success(formatMessage({ id: 'MsgImportSuccess' }));
-        } catch (error) {
-          console.error(error);
-          message.error(formatMessage({ id: 'MsgClipboardReadFail' }));
-        }
-      });
+          try {
+            await navigator.clipboard.writeText(outputContent);
+            message.success(formatMessage({ id: 'MsgCopySuccess' }));
+          } catch (error) {
+            console.error(error);
+            message.error(formatMessage({ id: 'MsgCopyFail' }));
+          }
+        });
 
-      const editor = (
-        <div className={style['code-editor']}>
-          <CodeEditor
-            ref={codeEditorRef}
-            height={height}
-            defaultValue={content}
-            defaultLanguage="javascript"
-            onChange={value => updateContentDebouncedRef.current(value, setParams)}
-          />
-        </div>
-      );
+        const handleImportFromClipboard = useRefCallback(async () => {
+          if (!navigator.clipboard?.readText) {
+            message.error(formatMessage({ id: 'MsgClipboardUnsupported' }));
+            return;
+          }
 
-      const preview = (
-        <SimpleBar
-          style={{
-            maxHeight: `${height}px`
-          }}>
-          <div className={style['preview']} style={{ minHeight: `${height}px` }}>
-            {!content ? (
-              <Empty description={formatMessage({ id: 'EmptyContent' })} />
-            ) : (
-              <SafeRender>
-                <Form>
-                  <LiveComponentView content={outputContent} libs={libs} />
-                </Form>
-              </SafeRender>
+          try {
+            const text = await navigator.clipboard.readText();
+            const parsed = decodeLiveComponentValue(text);
+
+            if (!parsed) {
+              message.error(formatMessage({ id: 'MsgInvalidConfig' }));
+              return;
+            }
+
+            applyParams(parsed);
+            message.success(formatMessage({ id: 'MsgImportSuccess' }));
+          } catch (error) {
+            console.error(error);
+            message.error(formatMessage({ id: 'MsgClipboardReadFail' }));
+          }
+        });
+
+        const handleOpenFile = useRefCallback(({ siteHost, id, name, permission, content: fileContent }) => {
+          const parsed = decodeLiveComponentConfig(fileContent);
+          if (parsed) {
+            applyParams(parsed);
+          } else {
+            applyParams({ content: String(fileContent || ''), props: {}, scope: {} });
+          }
+          setCurrentFile({ siteHost, id, name, permission });
+        });
+
+        const handleSave = useRefCallback(async () => {
+          if (!currentFile) {
+            message.warning(formatMessage({ id: 'MsgNoCurrentFile' }));
+            return;
+          }
+          if (currentFile.permission !== 'rw') {
+            message.warning(formatMessage({ id: 'MsgReadOnly' }));
+            return;
+          }
+          if (!outputContent) {
+            message.warning(formatMessage({ id: 'MsgNoCopyContent' }));
+            return;
+          }
+          try {
+            const api = createSiteApi(currentFile.siteHost);
+            await api.save({ id: currentFile.id, content: outputContent });
+            message.success(formatMessage({ id: 'MsgSaveSuccess' }));
+            setTreeRefreshToken(token => token + 1);
+          } catch (error) {
+            console.error(error);
+            message.error(error.message || formatMessage({ id: 'MsgSaveFail' }));
+          }
+        });
+
+        const handleSaveAs = useRefCallback(async ({ host, parentId, name }) => {
+          try {
+            const api = createSiteApi(host);
+            const file = await api.create({ parentId, name, content: outputContent || '' });
+            setCurrentFile({
+              siteHost: host,
+              id: file.id,
+              name: file.name || name,
+              permission: file.permission || 'rw'
+            });
+            setSaveAsOpen(false);
+            setTreeRefreshToken(token => token + 1);
+            message.success(formatMessage({ id: 'MsgSaveSuccess' }));
+          } catch (error) {
+            console.error(error);
+            message.error(
+              error.message === 'DUPLICATE_NAME'
+                ? formatMessage({ id: 'MsgDuplicateName' })
+                : error.message || formatMessage({ id: 'MsgSaveFail' })
+            );
+          }
+        });
+
+        const sourceLocateActive = enableSourceLocate && mod === 'mix';
+        const sourceLocateActiveRef = useRef(sourceLocateActive);
+        sourceLocateActiveRef.current = sourceLocateActive;
+
+        const previewPanelRef = useRef(null);
+        const previewRootRef = useRef(null);
+        const hoverElementsRef = useRef([]);
+        const cursorElementsRef = useRef([]);
+        const locateFromPreviewRef = useRef(false);
+        const flashTimerRef = useRef(null);
+        const cursorDisposableRef = useRef(null);
+        const [hoverRects, setHoverRects] = useState([]);
+        const [cursorRects, setCursorRects] = useState([]);
+        const [flashRects, setFlashRects] = useState([]);
+
+        const toPanelRects = useRefCallback(clientRects => {
+          return rectsRelativeTo(clientRects, previewPanelRef.current);
+        });
+
+        const clearLocateOverlays = useRefCallback(() => {
+          hoverElementsRef.current = [];
+          cursorElementsRef.current = [];
+          setHoverRects([]);
+          setCursorRects([]);
+          setFlashRects([]);
+          if (flashTimerRef.current) {
+            window.clearTimeout(flashTimerRef.current);
+            flashTimerRef.current = null;
+          }
+        });
+
+        const remountLocateOverlays = useRefCallback(() => {
+          if (hoverElementsRef.current.length) {
+            setHoverRects(toPanelRects(measureHighlightRects(hoverElementsRef.current)));
+          }
+          if (cursorElementsRef.current.length) {
+            setCursorRects(toPanelRects(measureHighlightRects(cursorElementsRef.current)));
+          }
+        });
+
+        const syncCursorHighlight = useRefCallback((line, column) => {
+          if (!sourceLocateActiveRef.current || locateFromPreviewRef.current) {
+            return;
+          }
+          const els = resolveElementsFromEditorPosition(previewRootRef.current, line, column);
+          cursorElementsRef.current = els;
+          setCursorRects(toPanelRects(measureHighlightRects(els)));
+        });
+
+        const handlePreviewMouseMove = useMemo(
+          () =>
+            throttle(event => {
+              if (!sourceLocateActiveRef.current) {
+                return;
+              }
+              const resolved = resolveSourceFromPoint(event.clientX, event.clientY, previewRootRef.current);
+              if (!resolved) {
+                hoverElementsRef.current = [];
+                setHoverRects([]);
+                return;
+              }
+              let els = findSameSourceElements(previewRootRef.current, resolved.line, resolved.column);
+              if (!els.length) {
+                els = [resolved.element];
+              }
+              hoverElementsRef.current = els;
+              setHoverRects(toPanelRects(measureHighlightRects(els)));
+            }, 50),
+          [toPanelRects]
+        );
+
+        const handlePreviewMouseLeave = useRefCallback(() => {
+          handlePreviewMouseMove.cancel?.();
+          hoverElementsRef.current = [];
+          setHoverRects([]);
+        });
+
+        const handlePreviewDoubleClick = useRefCallback(event => {
+          if (!sourceLocateActiveRef.current) {
+            return;
+          }
+          const result = handlePreviewLocate(event, {
+            codeEditorRef,
+            previewRoot: previewRootRef.current
+          });
+          if (!result.ok) {
+            if (!String(content || '').trim()) {
+              return;
+            }
+            const hasMarkers = !!previewRootRef.current?.querySelector('[data-live-line]');
+            message.info(
+              formatMessage({
+                id: hasMarkers ? 'MsgLocateNoSource' : 'MsgLocatePreviewNotReady'
+              })
+            );
+            return;
+          }
+          locateFromPreviewRef.current = true;
+          window.setTimeout(() => {
+            locateFromPreviewRef.current = false;
+          }, 200);
+          cursorElementsRef.current = result.elements || [];
+          const panelRects = toPanelRects(result.rects || []);
+          setCursorRects(panelRects);
+          setFlashRects(panelRects);
+          if (flashTimerRef.current) {
+            window.clearTimeout(flashTimerRef.current);
+          }
+          flashTimerRef.current = window.setTimeout(() => {
+            setFlashRects([]);
+            flashTimerRef.current = null;
+          }, HIGHLIGHT_DURATION_MS);
+        });
+
+        const handleCodeEditorMount = useRefCallback(({ editor }) => {
+          cursorDisposableRef.current?.dispose?.();
+          if (!editor?.onDidChangeCursorPosition) {
+            return;
+          }
+          const onCursor = debounce(e => {
+            syncCursorHighlight(e.position.lineNumber, e.position.column);
+          }, 150);
+          const disposable = editor.onDidChangeCursorPosition(onCursor);
+          cursorDisposableRef.current = {
+            dispose: () => {
+              onCursor.cancel?.();
+              disposable?.dispose?.();
+            }
+          };
+          if (sourceLocateActiveRef.current) {
+            const pos = editor.getPosition?.();
+            if (pos) {
+              syncCursorHighlight(pos.lineNumber, pos.column);
+            }
+          }
+        });
+
+        useEffect(() => {
+          if (!sourceLocateActive) {
+            clearLocateOverlays();
+            return undefined;
+          }
+          const onScrollOrResize = () => {
+            remountLocateOverlays();
+          };
+          window.addEventListener('resize', onScrollOrResize);
+          document.addEventListener('scroll', onScrollOrResize, true);
+          return () => {
+            window.removeEventListener('resize', onScrollOrResize);
+            document.removeEventListener('scroll', onScrollOrResize, true);
+          };
+        }, [sourceLocateActive, clearLocateOverlays, remountLocateOverlays]);
+
+        useEffect(() => {
+          if (!sourceLocateActive) {
+            return undefined;
+          }
+          const editor = codeEditorRef.current?.getEditor?.();
+          const pos = editor?.getPosition?.();
+          if (!pos) {
+            return undefined;
+          }
+          const timer = window.setTimeout(() => {
+            syncCursorHighlight(pos.lineNumber, pos.column);
+          }, 120);
+          return () => window.clearTimeout(timer);
+        }, [outputContent, sourceLocateActive, syncCursorHighlight]);
+
+        useEffect(() => {
+          return () => {
+            cursorDisposableRef.current?.dispose?.();
+            handlePreviewMouseMove.cancel?.();
+            if (flashTimerRef.current) {
+              window.clearTimeout(flashTimerRef.current);
+            }
+          };
+        }, [handlePreviewMouseMove]);
+
+        const canSaveCurrent = !!(currentFile && currentFile.permission === 'rw');
+
+        const renderLocateOverlays = (rects, className) =>
+          rects.map((rect, index) => (
+            <div
+              key={`${className}-${index}`}
+              className={className}
+              style={{
+                top: rect.top,
+                left: rect.left,
+                width: Math.max(rect.width, 2),
+                height: Math.max(rect.height, 2)
+              }}
+            />
+          ));
+
+        const editor = (
+          <div className={style['code-editor']}>
+            <CodeEditor
+              ref={codeEditorRef}
+              height={height}
+              defaultValue={content}
+              defaultLanguage="javascript"
+              onMount={handleCodeEditorMount}
+              onChange={value => updateContentDebouncedRef.current(value, setParams)}
+            />
+          </div>
+        );
+
+        const preview = (
+          <div
+            ref={previewPanelRef}
+            className={style['preview-panel']}
+            style={{ height: `${height}px` }}
+            onMouseMove={sourceLocateActive ? handlePreviewMouseMove : undefined}
+            onMouseLeave={sourceLocateActive ? handlePreviewMouseLeave : undefined}>
+            <SimpleBar
+              style={{
+                maxHeight: `${height}px`
+              }}>
+              <div
+                ref={previewRootRef}
+                className={style['preview']}
+                style={{ minHeight: `${height}px` }}
+                onDoubleClick={sourceLocateActive ? handlePreviewDoubleClick : undefined}>
+                {!content ? (
+                  <Empty description={formatMessage({ id: 'EmptyContent' })} />
+                ) : (
+                  <SafeRender>
+                    <Form>
+                      <LiveComponentView
+                        content={outputContent}
+                        libs={libs}
+                        enableSourceLocate={enableSourceLocate}
+                      />
+                    </Form>
+                  </SafeRender>
+                )}
+              </div>
+            </SimpleBar>
+            {sourceLocateActive && (
+              <div className={style['preview-locate-layer']} aria-hidden>
+                {renderLocateOverlays(hoverRects, style['preview-locate-hover'])}
+                {renderLocateOverlays(cursorRects, style['preview-locate-cursor'])}
+                {renderLocateOverlays(flashRects, style['preview-locate-flash'])}
+              </div>
             )}
           </div>
-        </SimpleBar>
-      );
-      return (
-        <Tabs
-          activeKey={activeKey}
-          onChange={nextKey => {
-            flushFormSaves();
-            if (nextKey === 'props') {
-              setPropsFormData(buildPropsFormData(props));
-            }
-            if (nextKey === 'scope') {
-              setScopeFormData(buildScopeFormData(scope));
-            }
-            setActiveKey(nextKey);
-          }}
-          tabBarExtraContent={
-            <div className={style['toolbar-extra']}>
-              <Space size={8} align="center">
-                <Space.Compact>
-                  <Button icon={<CopyOutlined />} onClick={handleCopy}>
-                    {formatMessage({ id: 'Copy' })}
-                  </Button>
-                  <Button icon={<SnippetsOutlined />} onClick={handleImportFromClipboard}>
-                    {formatMessage({ id: 'ImportFromClipboard' })}
-                  </Button>
-                </Space.Compact>
-                {activeKey === 'content' && (
-                  <Segmented
-                    className={style['view-mode-segmented']}
-                    value={mod}
-                    onChange={setMod}
-                    options={[
-                      {
-                        label: formatMessage({ id: 'ModeEditor' }),
-                        value: 'editor',
-                        icon: <MenuOutlined />
-                      },
-                      {
-                        label: formatMessage({ id: 'ModeMix' }),
-                        value: 'mix',
-                        icon: <SplitCellsOutlined />
-                      },
-                      {
-                        label: formatMessage({ id: 'ModePreview' }),
-                        value: 'preview',
-                        icon: <EyeOutlined />
-                      }
-                    ]}
-                  />
-                )}
-              </Space>
-            </div>
-          }
-          items={[
-            {
-              key: 'props',
-              label: formatMessage({ id: 'TabProps' }),
-              children: (
-                <Form
-                  ref={propsFormRef}
-                  data={propsFormData}
-                  onSubmit={formData => {
-                    const nextProps = normalizePropsFormData(formData);
-                    setParams(currentParams => {
-                      if (isEqual(currentParams.props, nextProps)) {
-                        return currentParams;
-                      }
-                      return Object.assign({}, currentParams, { props: nextProps });
-                    });
-                  }}>
-                  <FormAutoSaver onSave={handlePropsFormSave} />
-                  <TableList
-                    title={formatMessage({ id: 'ParamListTitle' })}
-                    name="props"
-                    list={[
-                      <Input name="name" label={formatMessage({ id: 'VarName' })} rule="REQ LEN-0-100" />,
-                      <Select
-                        name="type"
-                        label={formatMessage({ id: 'Type' })}
-                        rule="REQ"
-                        defaultValue="string"
-                        options={[
-                          { label: formatMessage({ id: 'TypeString' }), value: 'string' },
-                          { label: formatMessage({ id: 'TypeNumber' }), value: 'number' },
-                          { label: formatMessage({ id: 'TypeBoolean' }), value: 'boolean' },
-                          { label: formatMessage({ id: 'TypeArray' }), value: 'array' },
-                          { label: formatMessage({ id: 'TypeObject' }), value: 'object' },
-                          { label: formatMessage({ id: 'TypeFunction' }), value: 'function' }
-                        ]}
-                        onChange={(value, item, { openApi, groupArgs }) => {
-                          setTimeout(() => {
-                            openApi.setField({
-                              name: 'defaultValue',
-                              groupName: 'props',
-                              groupIndex: groupArgs[0].index,
-                              value: ''
-                            });
-                          }, 100);
-                        }}
-                      />,
-                      <Input
-                        name="defaultValue"
-                        label={formatMessage({ id: 'DefaultValue' })}
-                        rule="LEN-0-500"
-                        display={({ formData, groupArgs }) => {
-                          return get(formData.props, `${groupArgs[0].index}.type`) !== 'function';
-                        }}
-                      />,
-                      <div
-                        className={style['function-default-value']}
-                        name="defaultValue"
-                        label={formatMessage({ id: 'DefaultValue' })}
-                        display={({ formData, groupArgs }) => {
-                          return get(formData.props, `${groupArgs[0].index}.type`) === 'function';
-                        }}>
-                        {'()=>null'}
-                      </div>
-                    ]}
-                  />
-                </Form>
-              )
-            },
-            {
-              key: 'scope',
-              label: formatMessage({ id: 'TabScope' }),
-              children: (
-                <Form
-                  ref={scopeFormRef}
-                  data={scopeFormData}
-                  onSubmit={formData => {
-                    const nextScope = normalizeScopeFormData(formData);
-                    setParams(currentParams => {
-                      if (isEqual(currentParams.scope, nextScope)) {
-                        return currentParams;
-                      }
-                      return Object.assign({}, currentParams, { scope: nextScope });
-                    });
-                  }}>
-                  <FormAutoSaver onSave={handleScopeFormSave} />
-                  <TableList
-                    title={formatMessage({ id: 'ScopeListTitle' })}
-                    name="scope"
-                    list={[
-                      <Input name="name" label={formatMessage({ id: 'VarName' })} rule="REQ LEN-0-100" />,
-                      <Input name="token" label={formatMessage({ id: 'Token' })} rule="REQ LEN-0-100" />
-                    ]}
-                  />
-                </Form>
-              )
-            },
-            {
-              key: 'content',
-              label: formatMessage({ id: 'TabContent' }),
-              children: (
-                <Flex vertical gap={12}>
-                  <Collapse
-                    size="small"
-                    items={[
-                      {
-                        key: 'refer',
-                        label: formatMessage({ id: 'RefLabel' }),
-                        children: (
-                          <Alert
-                            message={
-                              <InfoPage>
-                                <CentralContent
-                                  dataSource={{ props, scope }}
-                                  col={1}
-                                  columns={[
-                                    {
-                                      name: 'props',
-                                      title: formatMessage({ id: 'RefAvailableProps' }),
-                                      getValueOf: item => {
-                                        return Object.keys(item.props)
-                                          .map(str => `props.${str}`)
-                                          .join(',');
-                                      }
-                                    },
-                                    {
-                                      name: 'scope',
-                                      title: formatMessage({ id: 'RefAvailableComponents' }),
-                                      getValueOf: item => {
-                                        return ['Antd', ...Object.keys(item.scope)].join(',');
-                                      }
-                                    },
-                                    {
-                                      name: 'lib',
-                                      title: formatMessage({ id: 'RefAvailableLibs' }),
-                                      getValueOf: () => {
-                                        return Object.keys(libs).join(',');
-                                      }
-                                    }
-                                  ]}
-                                />
-                              </InfoPage>
-                            }
-                          />
-                        )
-                      }
-                    ]}
-                  />
-                  {mod === 'editor' && editor}
-                  {mod === 'mix' && (
-                    <Splitter>
-                      <Splitter.Panel>{editor}</Splitter.Panel>
-                      <Splitter.Panel>{preview}</Splitter.Panel>
-                    </Splitter>
+        );
+
+        const editorTabs = (
+          <Tabs
+            activeKey={activeKey}
+            onChange={nextKey => {
+              flushFormSaves();
+              if (nextKey === 'props') {
+                setPropsFormData(buildPropsFormData(props));
+              }
+              if (nextKey === 'scope') {
+                setScopeFormData(buildScopeFormData(scope));
+              }
+              setActiveKey(nextKey);
+            }}
+            tabBarExtraContent={
+              <div className={style['toolbar-extra']}>
+                <Space size={8} align="center">
+                  <Space.Compact>
+                    <Button icon={<CopyOutlined />} onClick={handleCopy}>
+                      {formatMessage({ id: 'Copy' })}
+                    </Button>
+                    <Button icon={<SnippetsOutlined />} onClick={handleImportFromClipboard}>
+                      {formatMessage({ id: 'ImportFromClipboard' })}
+                    </Button>
+                  </Space.Compact>
+                  {enableSites && (
+                    <Space.Compact>
+                      <Button icon={<SaveOutlined />} disabled={!canSaveCurrent} onClick={handleSave}>
+                        {formatMessage({ id: 'Save' })}
+                      </Button>
+                      <Button icon={<FormOutlined />} disabled={!mergedSites.length} onClick={() => setSaveAsOpen(true)}>
+                        {formatMessage({ id: 'SaveAs' })}
+                      </Button>
+                    </Space.Compact>
                   )}
-                  {mod === 'preview' && preview}
-                </Flex>
-              )
+                  {toolbarExtra}
+                  {activeKey === 'content' && (
+                    <Segmented
+                      className={style['view-mode-segmented']}
+                      value={mod}
+                      onChange={setMod}
+                      options={[
+                        {
+                          label: formatMessage({ id: 'ModeEditor' }),
+                          value: 'editor',
+                          icon: <MenuOutlined />
+                        },
+                        {
+                          label: formatMessage({ id: 'ModeMix' }),
+                          value: 'mix',
+                          icon: <SplitCellsOutlined />
+                        },
+                        {
+                          label: formatMessage({ id: 'ModePreview' }),
+                          value: 'preview',
+                          icon: <EyeOutlined />
+                        }
+                      ]}
+                    />
+                  )}
+                </Space>
+              </div>
             }
-          ]}
-        />
-      );
-    })
+            items={[
+              {
+                key: 'props',
+                label: formatMessage({ id: 'TabProps' }),
+                children: (
+                  <Form
+                    ref={propsFormRef}
+                    data={propsFormData}
+                    onSubmit={formData => {
+                      const nextProps = normalizePropsFormData(formData);
+                      setParams(currentParams => {
+                        if (isEqual(currentParams.props, nextProps)) {
+                          return currentParams;
+                        }
+                        return Object.assign({}, currentParams, { props: nextProps });
+                      });
+                    }}>
+                    <FormAutoSaver onSave={handlePropsFormSave} />
+                    <TableList
+                      title={formatMessage({ id: 'ParamListTitle' })}
+                      name="props"
+                      list={[
+                        <Input name="name" label={formatMessage({ id: 'VarName' })} rule="REQ LEN-0-100" />,
+                        <Select
+                          name="type"
+                          label={formatMessage({ id: 'Type' })}
+                          rule="REQ"
+                          defaultValue="string"
+                          options={[
+                            { label: formatMessage({ id: 'TypeString' }), value: 'string' },
+                            { label: formatMessage({ id: 'TypeNumber' }), value: 'number' },
+                            { label: formatMessage({ id: 'TypeBoolean' }), value: 'boolean' },
+                            { label: formatMessage({ id: 'TypeArray' }), value: 'array' },
+                            { label: formatMessage({ id: 'TypeObject' }), value: 'object' },
+                            { label: formatMessage({ id: 'TypeFunction' }), value: 'function' }
+                          ]}
+                          onChange={(value, item, { openApi, groupArgs }) => {
+                            setTimeout(() => {
+                              openApi.setField({
+                                name: 'defaultValue',
+                                groupName: 'props',
+                                groupIndex: groupArgs[0].index,
+                                value: ''
+                              });
+                            }, 100);
+                          }}
+                        />,
+                        <Input
+                          name="defaultValue"
+                          label={formatMessage({ id: 'DefaultValue' })}
+                          rule="LEN-0-500"
+                          display={({ formData, groupArgs }) => {
+                            return get(formData.props, `${groupArgs[0].index}.type`) !== 'function';
+                          }}
+                        />,
+                        <div
+                          className={style['function-default-value']}
+                          name="defaultValue"
+                          label={formatMessage({ id: 'DefaultValue' })}
+                          display={({ formData, groupArgs }) => {
+                            return get(formData.props, `${groupArgs[0].index}.type`) === 'function';
+                          }}>
+                          {'()=>null'}
+                        </div>
+                      ]}
+                    />
+                  </Form>
+                )
+              },
+              {
+                key: 'scope',
+                label: formatMessage({ id: 'TabScope' }),
+                children: (
+                  <Form
+                    ref={scopeFormRef}
+                    data={scopeFormData}
+                    onSubmit={formData => {
+                      const nextScope = normalizeScopeFormData(formData);
+                      setParams(currentParams => {
+                        if (isEqual(currentParams.scope, nextScope)) {
+                          return currentParams;
+                        }
+                        return Object.assign({}, currentParams, { scope: nextScope });
+                      });
+                    }}>
+                    <FormAutoSaver onSave={handleScopeFormSave} />
+                    <TableList
+                      title={formatMessage({ id: 'ScopeListTitle' })}
+                      name="scope"
+                      list={[
+                        <Input name="name" label={formatMessage({ id: 'VarName' })} rule="REQ LEN-0-100" />,
+                        <Input name="token" label={formatMessage({ id: 'Token' })} rule="REQ LEN-0-100" />
+                      ]}
+                    />
+                  </Form>
+                )
+              },
+              {
+                key: 'content',
+                label: formatMessage({ id: 'TabContent' }),
+                children: (
+                  <Flex vertical gap={12}>
+                    <Collapse
+                      size="small"
+                      items={[
+                        {
+                          key: 'refer',
+                          label: formatMessage({ id: 'RefLabel' }),
+                          children: (
+                            <Alert
+                              message={
+                                <InfoPage>
+                                  <CentralContent
+                                    dataSource={{ props, scope }}
+                                    col={1}
+                                    columns={[
+                                      {
+                                        name: 'props',
+                                        title: formatMessage({ id: 'RefAvailableProps' }),
+                                        getValueOf: item => {
+                                          return Object.keys(item.props)
+                                            .map(str => `props.${str}`)
+                                            .join(',');
+                                        }
+                                      },
+                                      {
+                                        name: 'scope',
+                                        title: formatMessage({ id: 'RefAvailableComponents' }),
+                                        getValueOf: item => {
+                                          return ['Antd', ...Object.keys(item.scope)].join(',');
+                                        }
+                                      },
+                                      {
+                                        name: 'lib',
+                                        title: formatMessage({ id: 'RefAvailableLibs' }),
+                                        getValueOf: () => {
+                                          return Object.keys(libs).join(',');
+                                        }
+                                      }
+                                    ]}
+                                  />
+                                </InfoPage>
+                              }
+                            />
+                          )
+                        }
+                      ]}
+                    />
+                    {mod === 'editor' && editor}
+                    {mod === 'mix' && (
+                      <Splitter>
+                        <Splitter.Panel>{editor}</Splitter.Panel>
+                        <Splitter.Panel>{preview}</Splitter.Panel>
+                      </Splitter>
+                    )}
+                    {mod === 'preview' && preview}
+                  </Flex>
+                )
+              }
+            ]}
+          />
+        );
+
+        return (
+          <>
+            {enableSites ? (
+              <div className={style['editor-with-sites']}>
+                <aside
+                  className={`${style['sites-aside']}${sitesCollapsed ? ` ${style['sites-aside-collapsed']}` : ''}`}
+                  style={sitesCollapsed ? undefined : { width: sitesPanelWidth }}>
+                  {!sitesCollapsed ? (
+                    <div className={style['sites-aside-body']}>
+                      <SiteFilePanel
+                        sites={sites}
+                        onSitesChange={handleSitesChange}
+                        siteActionsOpen={siteActionsOpen}
+                        userSitesStorageKey={resolvedUserSitesKey}
+                        currentFile={currentFile}
+                        onOpenFile={handleOpenFile}
+                        onCurrentFileChange={setCurrentFile}
+                        height={height}
+                        refreshToken={treeRefreshToken}
+                        onCollapse={() => setSitesCollapsed(true)}
+                      />
+                    </div>
+                  ) : (
+                    <Button
+                      type="text"
+                      size="small"
+                      className={style['sites-toggle']}
+                      icon={<MenuUnfoldOutlined />}
+                      title={formatMessage({ id: 'SitesExpand' })}
+                      aria-label={formatMessage({ id: 'SitesExpand' })}
+                      onClick={() => setSitesCollapsed(false)}
+                    />
+                  )}
+                </aside>
+                <div className={style['sites-main']}>{editorTabs}</div>
+              </div>
+            ) : (
+              editorTabs
+            )}
+            {enableSites && (
+              <SaveAsModal
+                open={saveAsOpen}
+                sites={mergedSites}
+                defaultHost={currentFile?.siteHost || mergedSites[0]?.host}
+                onCancel={() => setSaveAsOpen(false)}
+                onOk={handleSaveAs}
+              />
+            )}
+          </>
+        );
+      }
+    )
   )
 );
 

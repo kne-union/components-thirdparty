@@ -1,0 +1,36 @@
+{
+  "bundler": {
+    "name": "webpack"
+  },
+  "mfConfig": {
+    "name": "components_thirdparty_0_1_26",
+    "exposes": {
+      "./components": "/Users/linzhipeng/Documents/Github/components-thirdparty/node_modules/readme/modules.js",
+      "./CKEditor": "/Users/linzhipeng/Documents/Github/components-thirdparty/src/components/CKEditor",
+      "./Calendar": "/Users/linzhipeng/Documents/Github/components-thirdparty/src/components/Calendar",
+      "./CodeEditor": "/Users/linzhipeng/Documents/Github/components-thirdparty/src/components/CodeEditor",
+      "./Echart": "/Users/linzhipeng/Documents/Github/components-thirdparty/src/components/Echart",
+      "./JSONEditor": "/Users/linzhipeng/Documents/Github/components-thirdparty/src/components/JSONEditor",
+      "./LiveComponentEditor": "/Users/linzhipeng/Documents/Github/components-thirdparty/src/components/LiveComponentEditor",
+      "./LiveComponentView": "/Users/linzhipeng/Documents/Github/components-thirdparty/src/components/LiveComponentView",
+      "./LottiePlayer": "/Users/linzhipeng/Documents/Github/components-thirdparty/src/components/LottiePlayer",
+      "./MarkdownRender": "/Users/linzhipeng/Documents/Github/components-thirdparty/src/components/MarkdownRender",
+      "./ModelView": "/Users/linzhipeng/Documents/Github/components-thirdparty/src/components/ModelView"
+    }
+  },
+  "latestErrorEvent": {
+    "code": "BUILD-001",
+    "message": "Failed to find expose module. #BUILD-001\nargs: {\"exposeModules\":[{\"name\":\"./CKEditor\",\"module\":null,\"request\":\"/Users/linzhipeng/Documents/Github/components-thirdparty/src/components/CKEditor\"}],\"FEDERATION_WEBPACK_PATH\":\"\"}\nView the docs to see how to solve: https://module-federation.io/guide/troubleshooting/build#build-001",
+    "args": {
+      "exposeModules": [
+        {
+          "name": "./CKEditor",
+          "module": null,
+          "request": "/Users/linzhipeng/Documents/Github/components-thirdparty/src/components/CKEditor"
+        }
+      ],
+      "FEDERATION_WEBPACK_PATH": ""
+    },
+    "timestamp": 1784770277270
+  }
+}

@@ -12,6 +12,9 @@ LiveComponentEditor 是一个实时的组件编辑器，允许用户在运行时
 - 集成 FormInfo 进行参数管理
 - 错误边界保护
 - 支持 Antd 组件库集成
+- 可扩展工具栏（toolbarExtra）
+- 多站点文件管理（含 localStorage 适配、`siteActionsOpen` 本地自管站点）
+- 混合模式源码双向定位（预览 ↔ 编辑器，`enableSourceLocate` 可关）
 
 ### 使用场景
 

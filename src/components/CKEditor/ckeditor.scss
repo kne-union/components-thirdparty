@@ -18,7 +18,6 @@
     box-sizing: border-box;
     clear: both;
     background: var(--ck-media-frame-bg);
-    border: 1px solid var(--ck-media-frame-border);
     border-radius: var(--radius-default, 2px);
 
     &.image_resized {
@@ -116,7 +115,6 @@
     box-sizing: border-box;
     clear: both;
     background: var(--ck-media-frame-bg);
-    border: 1px solid var(--ck-media-frame-border);
     border-radius: var(--radius-default, 2px);
 
     &.image_resized {
@@ -192,7 +190,6 @@
     box-sizing: border-box;
     clear: both;
     background: var(--ck-media-frame-bg);
-    border: 1px solid var(--ck-media-frame-border);
     border-radius: var(--radius-default, 2px);
 
     &.image_resized {

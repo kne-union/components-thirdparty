@@ -8,7 +8,10 @@ import * as Antd from 'antd';
 import { Flex, Spin } from 'antd';
 import { useIntl } from '@kne/react-intl';
 import withLocale from './withLocale';
+import createJsxSourceLocatePlugin from './jsxSourceLocatePlugin';
 import style from './style.module.scss';
+
+const RENDER_WRAP_PREFIX = 'render(';
 
 const formatErrorMessage = error => {
   if (error == null) {
@@ -45,25 +48,28 @@ const ensureFormInfoFormWrapper = (jsxContent, scope = {}) => {
   const text = (jsxContent || '').trim();
 
   if (!text) {
-    return text;
+    return { content: text, lineOffset: 0 };
   }
 
   const usesFormInfo =
     Object.values(scope).includes(FORM_INFO_SCOPE_TOKEN) || /<FormInfo[\s.>/]/.test(text);
 
   if (!usesFormInfo || /<FormInfo\.Form[\s>]/.test(text)) {
-    return text;
+    return { content: text, lineOffset: 0 };
   }
 
-  return `<FormInfo.Form data={{}}>\n${text}\n</FormInfo.Form>`;
+  return {
+    content: `<FormInfo.Form data={{}}>\n${text}\n</FormInfo.Form>`,
+    lineOffset: 1
+  };
 };
 
-const LiveComponent = withRemoteLoader(({ remoteModules, children, props, libs = {} }) => {
+const LiveComponent = withRemoteLoader(({ remoteModules, children, props, libs = {}, enableSourceLocate = true }) => {
   const [error, setError] = useState(null);
   const [renderJsx, setRenderJsx] = useState(null);
   const [compiledCode, setCompiledCode] = useState(null);
 
-  const { content, moduleNames } = children;
+  const { content, moduleNames, lineOffset = 0 } = children;
   const moduleNamesKey = moduleNames.join('\0');
   const scope = useMemo(
     () =>
@@ -95,16 +101,22 @@ const LiveComponent = withRemoteLoader(({ remoteModules, children, props, libs =
       setCompiledCode(null);
       return;
     }
-    
+
     try {
       setError(null);
-      const code = babelTransform(`render(${content});`, { presets: ['es2015', 'react'] }).code;
+      const plugins = enableSourceLocate
+        ? [createJsxSourceLocatePlugin({ lineOffset, wrapPrefix: RENDER_WRAP_PREFIX })]
+        : [];
+      const code = babelTransform(`${RENDER_WRAP_PREFIX}${content});`, {
+        presets: ['es2015', 'react'],
+        plugins
+      }).code;
       setCompiledCode(code);
     } catch (e) {
       setError(e);
       setCompiledCode(null);
     }
-  }, [content]);
+  }, [content, lineOffset, enableSourceLocate]);
 
   // 拆分 useEffect: 2) 渲染组件 (scope/moduleNames/libs 变化时，不需要重新编译)
   useEffect(() => {
@@ -149,23 +161,25 @@ const resolvePropValue = (type, defaultValue) => {
   return defaultValue;
 };
 
-const LiveComponentView = withLocale(({ content: inputStr, props: componentProps, libs }) => {
+const LiveComponentView = withLocale(({ content: inputStr, props: componentProps, libs, enableSourceLocate = true }) => {
   const { formatMessage, locale } = useIntl();
-  const { content, props, scope, error } = useMemo(() => {
+  const { content, lineOffset, props, scope, error } = useMemo(() => {
     try {
       if (!inputStr) {
-        return { content: '', scope: {}, props: {}, error: null };
+        return { content: '', lineOffset: 0, scope: {}, props: {}, error: null };
       }
 
       const parsed = decodeLiveComponentConfig(inputStr);
       if (!parsed) {
-        return { content: '', scope: {}, props: {}, error: formatMessage({ id: 'ParseError' }) };
+        return { content: '', lineOffset: 0, scope: {}, props: {}, error: formatMessage({ id: 'ParseError' }) };
       }
 
       const resolvedScope = parsed.scope;
+      const wrapped = ensureFormInfoFormWrapper(parsed.content, resolvedScope);
 
       return {
-        content: ensureFormInfoFormWrapper(parsed.content, resolvedScope),
+        content: wrapped.content,
+        lineOffset: wrapped.lineOffset,
         scope: resolvedScope,
         props: transform(
           parsed.props || {},
@@ -179,7 +193,7 @@ const LiveComponentView = withLocale(({ content: inputStr, props: componentProps
         error: null
       };
     } catch (e) {
-      return { content: '', scope: {}, props: {}, error: e.message || formatMessage({ id: 'ParseError' }) };
+      return { content: '', lineOffset: 0, scope: {}, props: {}, error: e.message || formatMessage({ id: 'ParseError' }) };
     }
     // locale 切换时需刷新解析错误文案；勿将 formatMessage 放入依赖（引用每轮会变）
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -202,16 +216,24 @@ const LiveComponentView = withLocale(({ content: inputStr, props: componentProps
   const { children, modules } = useMemo(
     () => ({
       modules: ['components-core:Global@PureGlobal'].concat(scopeModuleNames.map(name => scope[name])),
-      children: { content, moduleNames: runtimeModuleNames }
+      children: { content, moduleNames: runtimeModuleNames, lineOffset }
     }),
-    [scope, scopeModuleNames, content, runtimeModuleNames]
+    [scope, scopeModuleNames, content, runtimeModuleNames, lineOffset]
   );
 
   if (error) {
     return <ErrorComponent error={error} />;
   }
 
-  return <LiveComponent props={targetProps} libs={libs} modules={modules} children={children} />;
+  return (
+    <LiveComponent
+      props={targetProps}
+      libs={libs}
+      modules={modules}
+      children={children}
+      enableSourceLocate={enableSourceLocate}
+    />
+  );
 });
 
 const LiveComponentsViewCatch = memo(props => {
