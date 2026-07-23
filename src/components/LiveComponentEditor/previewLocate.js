@@ -208,17 +208,39 @@ export const resolveElementsFromEditorPosition = (previewRoot, lineNumber, colum
   return onBestLine.filter(p => p.column === bestCol).map(p => p.el);
 };
 
-/** 定位 Monaco 到指定行列 */
+/** 定位 Monaco 到指定行列，并滚入编辑器视口中心 */
 export const revealEditorPosition = (editorApi, line, column = 1) => {
   const editor = editorApi?.getEditor?.() || editorApi;
-  if (!editor?.revealLineInCenter) {
+  if (!editor?.setPosition) {
     return;
   }
   const lineNumber = Math.max(1, Number(line) || 1);
   const columnNumber = Math.max(1, Number(column) || 1);
-  editor.revealLineInCenter(lineNumber);
-  editor.setPosition({ lineNumber, column: columnNumber });
+  const position = { lineNumber, column: columnNumber };
+  if (editor.revealPositionInCenter) {
+    editor.revealPositionInCenter(position);
+  } else if (editor.revealLineInCenter) {
+    editor.revealLineInCenter(lineNumber);
+  }
+  editor.setPosition(position);
   editor.focus();
+};
+
+/**
+ * 将目标元素滚入最近滚动容器的可视区域（不改 DOM 结构）
+ * @param {Element[]} elements
+ * @param {{ block?: ScrollLogicalPosition, inline?: ScrollLogicalPosition, behavior?: ScrollBehavior }} [options]
+ */
+export const scrollElementsIntoView = (elements, options = {}) => {
+  const el = elements?.[0];
+  if (!el?.scrollIntoView) {
+    return;
+  }
+  el.scrollIntoView({
+    block: options.block || 'nearest',
+    inline: options.inline || 'nearest',
+    behavior: options.behavior || 'smooth'
+  });
 };
 
 /**

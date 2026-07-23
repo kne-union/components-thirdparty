@@ -147,7 +147,7 @@
   box-sizing: border-box;
   border: 1px dashed var(--primary-color, #1677ff);
   background: rgba(22, 119, 255, 0.06);
-  border-radius: 2px;
+  border-radius: 4px;
 }
 
 .preview-locate-cursor {
@@ -155,7 +155,7 @@
   box-sizing: border-box;
   border: 1px solid var(--primary-color, #1677ff);
   background: rgba(22, 119, 255, 0.08);
-  border-radius: 2px;
+  border-radius: 4px;
 }
 
 .preview-locate-flash {
@@ -163,7 +163,7 @@
   box-sizing: border-box;
   border: 1px solid var(--primary-color, #1677ff);
   background: rgba(22, 119, 255, 0.12);
-  border-radius: 2px;
+  border-radius: 4px;
   animation: live-locate-fade 1s ease forwards;
 }
 
