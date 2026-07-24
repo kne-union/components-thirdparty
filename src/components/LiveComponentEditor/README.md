@@ -19,6 +19,7 @@ LiveComponentEditor 是一个实时的组件编辑器，允许用户在运行时
 - 可扩展工具栏（toolbarExtra）
 - 多站点文件管理（含 localStorage 适配、`siteActionsOpen` 本地自管站点）
 - 混合模式源码双向定位（预览 ↔ 编辑器，`enableSourceLocate` 可关）
+- 远程站点 AI 助手（需站点 `GET /info` 的 `aiEnabled`；先完善需求再点「开始生成」写入编辑器）
 
 ### 使用场景
 
@@ -192,6 +193,7 @@ render(<SitesExample />);
 |------|------|------|
 | GET | `{host}/getFolderTree` | 获取文件树 |
 | GET | `{host}/get?id=` | 按 id 读取文件内容 |
+| GET | `{host}/info` | 站点信息（含 `aiEnabled`） |
 | GET | `{prefix}/content/{contentShorten}` | 直出已保存 content（`text/plain`；不含站点 shorten） |
 | POST | `{host}/content-share/create` | body: `{ id, expiresIn? }` |
 | GET | `{host}/content-share/list?id=` | 列出未过期内容短链 |
@@ -201,6 +203,10 @@ render(<SitesExample />);
 | POST | `{host}/save` | body: `{ id, content }` |
 | POST | `{host}/rename` | body: `{ id, name }`；同目录重名校验 |
 | POST | `{host}/remove` | body: `{ ids: string[] }`；非空目录不可删 |
+| POST | `{host}/ai/start` | 创建 AI 流任务（需 `aiEnabled`） |
+| GET | `{host}/ai/stream?token=` | AI SSE 流式输出 |
+
+远程站点且 `info.aiEnabled` 为 true 时，编辑器右侧显示 AI 助手：多轮完善需求后点「开始生成」写入编辑器；可选「限定到选中组件」。
 
 响应统一取 `res.data ?? res`。
 

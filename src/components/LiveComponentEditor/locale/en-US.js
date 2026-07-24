@@ -104,7 +104,20 @@ const localeMessages = {
   CreateFileUnder: 'New file under "{name}"',
   CreateFolderUnder: 'New folder under "{name}"',
   MsgLocatePreviewNotReady: 'Preview is not ready; cannot locate source',
-  MsgLocateNoSource: 'Cannot map this area to source code'
+  MsgLocateNoSource: 'Cannot map this area to source code',
+  AiTitle: 'AI Assist',
+  AiCollapse: 'Collapse AI panel',
+  AiExpand: 'Expand AI panel',
+  AiLimitSelection: 'Limit to selected component',
+  AiNoSelection: 'Double-click a component in preview to select',
+  AiEmptyHint: 'Describe what you need. AI will refine the requirement first; click Start generate when ready.',
+  AiRoleUser: 'You',
+  AiRoleAssistant: 'AI',
+  AiStartGenerate: 'Start generate',
+  AiInputPlaceholder: 'Describe the requirement or answer follow-ups…',
+  AiSend: 'Send',
+  AiMsgFail: 'AI request failed: {msg}',
+  AiMsgGenerateDone: 'Generated and written to the editor. You can refine and generate again.'
 };
 
 export default localeMessages;

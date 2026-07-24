@@ -11,7 +11,8 @@ import {
   SnippetsOutlined,
   SaveOutlined,
   FormOutlined,
-  MenuUnfoldOutlined
+  MenuUnfoldOutlined,
+  MenuFoldOutlined
 } from '@ant-design/icons';
 import CodeEditor from '@components/CodeEditor';
 import LiveComponentView from '@components/LiveComponentView';
@@ -25,6 +26,7 @@ import { useIntl } from '@kne/react-intl';
 import withLocale from './withLocale';
 import SiteFilePanel, { SaveAsModal } from './SiteFilePanel';
 import ContentShareModal from './ContentShareModal';
+import AiAssistPanel from './AiAssistPanel';
 import {
   createSiteApi,
   DEFAULT_USER_SITES_STORAGE_KEY,
@@ -32,6 +34,8 @@ import {
   mergeSites,
   readUserSites
 } from './siteApi';
+import { extractSelectionFromContent, applySelectionToContent } from './aiSelection';
+import { getLibs } from '@components/LiveComponentView';
 import {
   HIGHLIGHT_DURATION_MS,
   handlePreviewLocate,
@@ -202,6 +206,11 @@ const LiveComponentEditorCore = createWithRemoteLoader({
         const [contentShareOpen, setContentShareOpen] = useState(false);
         const [treeRefreshToken, setTreeRefreshToken] = useState(0);
         const [sitesCollapsed, setSitesCollapsed] = useState(false);
+        const [aiCollapsed, setAiCollapsed] = useState(false);
+        const [aiEnabled, setAiEnabled] = useState(false);
+        const [selectedSource, setSelectedSource] = useState(null);
+        const [limitToSelection, setLimitToSelection] = useState(false);
+        const aiWidth = 280;
         const resolvedUserSitesKey =
           String(userSitesStorageKey || '').trim() || DEFAULT_USER_SITES_STORAGE_KEY;
         // 合并后的站点列表（props.sites 在前 + 用户本地添加的站点），由 SiteFilePanel 维护并回调
@@ -372,6 +381,8 @@ const LiveComponentEditorCore = createWithRemoteLoader({
             applyParams({ content: String(fileContent || ''), props: {}, scope: {} });
           }
           setCurrentFile({ siteHost, id, name, permission });
+          setSelectedSource(null);
+          setLimitToSelection(false);
         });
 
         const handleSave = useRefCallback(async () => {
@@ -478,6 +489,9 @@ const LiveComponentEditorCore = createWithRemoteLoader({
             }, 320);
           }
           setCursorRects(toPanelRects(measureHighlightRects(els)));
+          if (line) {
+            setSelectedSource({ line, column: column || 1 });
+          }
         });
 
         const handlePreviewMouseMove = useMemo(
@@ -543,6 +557,9 @@ const LiveComponentEditorCore = createWithRemoteLoader({
             setFlashRects([]);
             flashTimerRef.current = null;
           }, HIGHLIGHT_DURATION_MS);
+          if (result.line) {
+            setSelectedSource({ line: result.line, column: result.column || 1 });
+          }
         });
 
         const handleCodeEditorMount = useRefCallback(({ editor }) => {
@@ -615,6 +632,65 @@ const LiveComponentEditorCore = createWithRemoteLoader({
           currentFile?.siteHost &&
           !isLocalStorageHost(currentFile.siteHost)
         );
+
+        const selection = useMemo(() => {
+          if (!selectedSource?.line) {
+            return null;
+          }
+          return extractSelectionFromContent(content, selectedSource.line, selectedSource.column);
+        }, [content, selectedSource]);
+
+        const showAiPanel =
+          enableSites &&
+          !!currentFile?.siteHost &&
+          !isLocalStorageHost(currentFile.siteHost) &&
+          aiEnabled;
+
+        useEffect(() => {
+          let cancelled = false;
+          const host = currentFile?.siteHost;
+          if (!host || isLocalStorageHost(host)) {
+            setAiEnabled(false);
+            return undefined;
+          }
+          createSiteApi(host)
+            .getInfo()
+            .then(info => {
+              if (!cancelled) {
+                setAiEnabled(!!info?.aiEnabled);
+              }
+            })
+            .catch(() => {
+              if (!cancelled) {
+                setAiEnabled(false);
+              }
+            });
+          return () => {
+            cancelled = true;
+          };
+        }, [currentFile?.siteHost]);
+
+        const handleAiApplyContent = useRefCallback(nextCode => {
+          if (limitToSelection && selection?.code) {
+            const mergedContent = applySelectionToContent(content, selection, nextCode);
+            applyParams({ ...params, content: mergedContent });
+            return;
+          }
+          applyParams({ ...params, content: nextCode });
+        });
+
+        const handleAiApplyScope = useRefCallback(suggestedScope => {
+          if (!suggestedScope || typeof suggestedScope !== 'object') {
+            return;
+          }
+          const nextScope = Object.assign({}, scope);
+          Object.keys(suggestedScope).forEach(key => {
+            if (!nextScope[key]) {
+              nextScope[key] = suggestedScope[key];
+            }
+          });
+          applyParams({ ...params, scope: nextScope });
+        });
 
         const renderLocateOverlays = (rects, className) =>
           rects.map((rect, index) => (
@@ -955,6 +1031,38 @@ const LiveComponentEditorCore = createWithRemoteLoader({
                   )}
                 </aside>
                 <div className={style['sites-main']}>{editorTabs}</div>
+                {showAiPanel && (
+                  <aside
+                    className={`${style['ai-aside']}${aiCollapsed ? ` ${style['ai-aside-collapsed']}` : ''}`}
+                    style={aiCollapsed ? undefined : { width: aiWidth }}>
+                    {!aiCollapsed ? (
+                      <AiAssistPanel
+                        siteHost={currentFile.siteHost}
+                        content={content}
+                        scope={scope}
+                        libs={Object.assign({}, getLibs(), libs)}
+                        selection={selection}
+                        limitToSelection={limitToSelection}
+                        onLimitToSelectionChange={setLimitToSelection}
+                        onApplyContent={handleAiApplyContent}
+                        onApplyScope={handleAiApplyScope}
+                        onCollapse={() => setAiCollapsed(true)}
+                        formatMessage={formatMessage}
+                        height={height}
+                      />
+                    ) : (
+                      <Button
+                        type="text"
+                        size="small"
+                        className={style['ai-toggle']}
+                        icon={<MenuFoldOutlined rotate={180} />}
+                        title={formatMessage({ id: 'AiExpand' })}
+                        aria-label={formatMessage({ id: 'AiExpand' })}
+                        onClick={() => setAiCollapsed(false)}
+                      />
+                    )}
+                  </aside>
+                )}
               </div>
             ) : (
               editorTabs

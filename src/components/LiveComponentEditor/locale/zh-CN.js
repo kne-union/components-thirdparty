@@ -104,7 +104,20 @@ const localeMessages = {
   CreateFileUnder: '在「{name}」下新建文件',
   CreateFolderUnder: '在「{name}」下新建文件夹',
   MsgLocatePreviewNotReady: '预览未就绪，无法定位',
-  MsgLocateNoSource: '此处无法对应到源码'
+  MsgLocateNoSource: '此处无法对应到源码',
+  AiTitle: 'AI 助手',
+  AiCollapse: '收起 AI 面板',
+  AiExpand: '展开 AI 面板',
+  AiLimitSelection: '限定到选中组件',
+  AiNoSelection: '请在预览中双击选中组件',
+  AiEmptyHint: '描述你想要的功能，AI 会先帮你完善需求；确认后点击「开始生成」。',
+  AiRoleUser: '你',
+  AiRoleAssistant: 'AI',
+  AiStartGenerate: '开始生成',
+  AiInputPlaceholder: '描述需求，或回答 AI 的追问…',
+  AiSend: '发送',
+  AiMsgFail: 'AI 请求失败：{msg}',
+  AiMsgGenerateDone: '已生成并写入编辑器。可继续完善需求后再次生成。'
 };
 
 export default localeMessages;

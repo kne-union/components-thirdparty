@@ -87,6 +87,7 @@
 |------|------|------|
 | GET | `{host}/getFolderTree` | 获取文件树 |
 | GET | `{host}/get?id=` | 按 id 读取文件内容 |
+| GET | `{host}/info` | 站点信息（含 `aiEnabled`） |
 | GET | `{prefix}/content/{contentShorten}` | 直出已保存 content（`text/plain`；不含站点 shorten） |
 | POST | `{host}/content-share/create` | body: `{ id, expiresIn? }` |
 | GET | `{host}/content-share/list?id=` | 列出未过期内容短链 |
@@ -96,6 +97,10 @@
 | POST | `{host}/save` | body: `{ id, content }` |
 | POST | `{host}/rename` | body: `{ id, name }`；同目录重名校验 |
 | POST | `{host}/remove` | body: `{ ids: string[] }`；非空目录不可删 |
+| POST | `{host}/ai/start` | 创建 AI 流任务（需 `aiEnabled`） |
+| GET | `{host}/ai/stream?token=` | AI SSE 流式输出 |
+
+远程站点且 `info.aiEnabled` 为 true 时，编辑器右侧显示 AI 助手：多轮完善需求后点「开始生成」写入编辑器；可选「限定到选中组件」。
 
 响应统一取 `res.data ?? res`。
 

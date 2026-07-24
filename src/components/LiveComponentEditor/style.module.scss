@@ -51,6 +51,106 @@
   padding-left: 8px;
 }
 
+.ai-aside {
+  position: relative;
+  flex: none;
+  box-sizing: border-box;
+  border-left: 1px solid var(--font-color-grey-3, #f0f0f0);
+  overflow: hidden;
+  transition: width 0.2s ease;
+}
+
+.ai-aside-collapsed {
+  width: 32px;
+}
+
+.ai-toggle {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+
+.ai-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 8px 10px;
+  box-sizing: border-box;
+  min-width: 0;
+}
+
+.ai-panel-header {
+  margin-bottom: 8px;
+}
+
+.ai-panel-scope {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.ai-selection-tag {
+  align-self: flex-start;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.ai-selection-hint {
+  font-size: 12px;
+}
+
+.ai-panel-messages {
+  flex: 1;
+  min-height: 120px;
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--font-color-grey-3, #f0f0f0);
+  border-radius: 6px;
+  background: var(--bg-color-grey-1, #fafafa);
+}
+
+.ai-msg-user,
+.ai-msg-assistant {
+  margin-bottom: 10px;
+}
+
+.ai-msg-role {
+  display: block;
+  font-size: 12px;
+  margin-bottom: 2px;
+}
+
+.ai-msg-content {
+  margin: 0;
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.ai-panel-footer {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.ai-input-row {
+  width: 100%;
+  align-items: stretch;
+
+  :global {
+    textarea {
+      flex: 1;
+    }
+  }
+}
+
 .site-panel {
   padding: 8px 12px;
   overflow: hidden;

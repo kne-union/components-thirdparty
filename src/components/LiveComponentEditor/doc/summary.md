@@ -15,6 +15,7 @@ LiveComponentEditor 是一个实时的组件编辑器，允许用户在运行时
 - 可扩展工具栏（toolbarExtra）
 - 多站点文件管理（含 localStorage 适配、`siteActionsOpen` 本地自管站点）
 - 混合模式源码双向定位（预览 ↔ 编辑器，`enableSourceLocate` 可关）
+- 远程站点 AI 助手（需站点 `GET /info` 的 `aiEnabled`；先完善需求再点「开始生成」写入编辑器）
 
 ### 使用场景
 

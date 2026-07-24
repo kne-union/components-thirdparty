@@ -366,7 +366,9 @@ const httpApi = host => {
     remove: body => request('POST', 'remove', { body }),
     createContentShare: body => request('POST', 'content-share/create', { body }),
     listContentShare: id => request('GET', 'content-share/list', { query: { id } }),
-    removeContentShare: body => request('POST', 'content-share/remove', { body })
+    removeContentShare: body => request('POST', 'content-share/remove', { body }),
+    getInfo: () => request('GET', 'info'),
+    aiStart: body => request('POST', 'ai/start', { body })
   };
 };
 
