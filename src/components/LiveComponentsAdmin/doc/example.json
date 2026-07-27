@@ -3,16 +3,47 @@
   "list": [
     {
       "title": "站点列表",
-      "description": "BizUnit 管理 Live 组件站点：创建、编辑、开启/关闭、删除；行操作可进入内容管理",
-      "code": "./base.js",
+      "description": "BizUnit 管理 Live 组件站点：关键字搜索、状态筛选、创建、编辑、开启/关闭、删除；行操作可进入内容管理",
+      "code": "./list.js",
       "scope": [
         {
-          "name": "_LiveComponentsAdminList",
-          "packageName": "@components/LiveComponentsAdmin/List"
+          "name": "_LiveComponentsAdmin",
+          "packageName": "@components/LiveComponentsAdmin"
+        },
+        {
+          "name": "_mockPreset",
+          "packageName": "@root/mockPreset"
         },
         {
           "name": "remoteLoader",
           "packageName": "@kne/remote-loader"
+        },
+        {
+          "name": "reactRouterDom",
+          "packageName": "react-router-dom"
+        }
+      ]
+    },
+    {
+      "title": "表单字段",
+      "description": "站点创建/编辑表单：站点名称、默认权限（可读写 / 只读）",
+      "code": "./form-inner.js",
+      "scope": [
+        {
+          "name": "_LiveComponentsAdmin",
+          "packageName": "@components/LiveComponentsAdmin"
+        },
+        {
+          "name": "_mockPreset",
+          "packageName": "@root/mockPreset"
+        },
+        {
+          "name": "remoteLoader",
+          "packageName": "@kne/remote-loader"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
         }
       ]
     },
@@ -22,12 +53,20 @@
       "code": "./detail.js",
       "scope": [
         {
-          "name": "_LiveComponentsAdminDetail",
-          "packageName": "@components/LiveComponentsAdmin/Detail"
+          "name": "_LiveComponentsAdmin",
+          "packageName": "@components/LiveComponentsAdmin"
+        },
+        {
+          "name": "_mockPreset",
+          "packageName": "@root/mockPreset"
         },
         {
           "name": "remoteLoader",
           "packageName": "@kne/remote-loader"
+        },
+        {
+          "name": "reactRouterDom",
+          "packageName": "react-router-dom"
         }
       ]
     }

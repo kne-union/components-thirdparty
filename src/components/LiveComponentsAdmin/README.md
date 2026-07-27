@@ -15,71 +15,20 @@
 #### 示例代码
 
 - 站点列表
-- BizUnit 管理 Live 组件站点：创建、编辑、开启/关闭、删除；行操作可进入内容管理
-- _LiveComponentsAdminList(@components/LiveComponentsAdmin/List),remoteLoader(@kne/remote-loader)
+- BizUnit 管理 Live 组件站点：关键字搜索、状态筛选、创建、编辑、开启/关闭、删除；行操作可进入内容管理
+- _LiveComponentsAdmin(@components/LiveComponentsAdmin),_mockPreset(@root/mockPreset),remoteLoader(@kne/remote-loader),reactRouterDom(react-router-dom)
 
 ```jsx
-const { default: List } = _LiveComponentsAdminList;
+const { List } = _LiveComponentsAdmin;
+const { default: mockPreset } = _mockPreset;
 const { createWithRemoteLoader } = remoteLoader;
 
-const mockSites = [
-  {
-    id: '1',
-    name: '演示站点',
-    shorten: 'ABC123',
-    host: '/api/v1/live-components-site/ABC123',
-    status: 'open',
-    defaultPermission: 'rw',
-    createdAt: '2026-07-01T10:00:00.000Z'
-  },
-  {
-    id: '2',
-    name: '已关闭站点',
-    shorten: 'XYZ789',
-    host: '/api/v1/live-components-site/XYZ789',
-    status: 'closed',
-    defaultPermission: 'r',
-    createdAt: '2026-07-10T08:30:00.000Z'
-  }
-];
-
-const BaseExample = createWithRemoteLoader({
+const ListExample = createWithRemoteLoader({
   modules: ['components-core:Global@PureGlobal', 'components-core:Layout']
 })(({ remoteModules }) => {
   const [PureGlobal, Layout] = remoteModules;
-
-  const liveComponentsSite = {
-    list: {
-      loader: () => Promise.resolve({ pageData: mockSites, totalCount: mockSites.length })
-    },
-    create: {
-      loader: ({ data }) =>
-        Promise.resolve({
-          id: String(Date.now()),
-          shorten: 'NEW001',
-          host: '/api/v1/live-components-site/NEW001',
-          status: 'open',
-          defaultPermission: 'rw',
-          createdAt: new Date().toISOString(),
-          ...data
-        })
-    },
-    save: {
-      loader: () => Promise.resolve({})
-    },
-    remove: {
-      loader: () => Promise.resolve({})
-    },
-    detail: {
-      loader: ({ params }) => Promise.resolve(mockSites.find(item => item.id === String(params?.id)) || mockSites[0])
-    }
-  };
-
   return (
-    <PureGlobal
-      preset={{
-        apis: { liveComponentsSite }
-      }}>
+    <PureGlobal preset={mockPreset}>
       <Layout navigation={{ isFixed: false }}>
         <List />
       </Layout>
@@ -87,61 +36,64 @@ const BaseExample = createWithRemoteLoader({
   );
 });
 
-render(<BaseExample />);
+render(<ListExample />);
+
+```
+
+- 表单字段
+- 站点创建/编辑表单：站点名称、默认权限（可读写 / 只读）
+- _LiveComponentsAdmin(@components/LiveComponentsAdmin),_mockPreset(@root/mockPreset),remoteLoader(@kne/remote-loader),antd(antd)
+
+```jsx
+const { FormInner } = _LiveComponentsAdmin;
+const { default: mockPreset } = _mockPreset;
+const { createWithRemoteLoader } = remoteLoader;
+const { Card } = antd;
+
+const FormInnerExample = createWithRemoteLoader({
+  modules: ['components-core:FormInfo@Form', 'components-core:Global@PureGlobal']
+})(({ remoteModules }) => {
+  const [Form, PureGlobal] = remoteModules;
+  return (
+    <PureGlobal preset={mockPreset}>
+      <Card title="站点表单字段">
+        <Form
+          data={{ defaultPermission: 'rw' }}
+          onSubmit={data => {
+            console.log(data);
+          }}>
+          <FormInner />
+        </Form>
+      </Card>
+    </PureGlobal>
+  );
+});
+
+render(<FormInnerExample />);
 
 ```
 
 - 站点内容
 - 详情页展示站点信息，并用 LiveComponentEditor 管理该站点下的文件与组件配置（localStorage 演示）
-- _LiveComponentsAdminDetail(@components/LiveComponentsAdmin/Detail),remoteLoader(@kne/remote-loader)
+- _LiveComponentsAdmin(@components/LiveComponentsAdmin),_mockPreset(@root/mockPreset),remoteLoader(@kne/remote-loader),reactRouterDom(react-router-dom)
 
 ```jsx
-const { default: Detail } = _LiveComponentsAdminDetail;
+const { Detail } = _LiveComponentsAdmin;
+const { default: mockPreset } = _mockPreset;
 const { createWithRemoteLoader } = remoteLoader;
-
-const mockSite = {
-  id: 'demo',
-  name: '本地演示站点',
-  shorten: 'LOCAL',
-  host: 'localStorage:live-components-admin-demo',
-  status: 'open',
-  defaultPermission: 'rw',
-  createdAt: '2026-07-01T10:00:00.000Z'
-};
+const { Routes, Route, Navigate } = reactRouterDom;
 
 const DetailExample = createWithRemoteLoader({
   modules: ['components-core:Global@PureGlobal', 'components-core:Layout']
 })(({ remoteModules }) => {
   const [PureGlobal, Layout] = remoteModules;
-
-  const liveComponentsSite = {
-    detail: {
-      loader: () => Promise.resolve(mockSite)
-    }
-  };
-
-  // 文档环境用 query 注入 id
-  if (typeof window !== 'undefined' && !new URLSearchParams(window.location.search).get('id')) {
-    const url = new URL(window.location.href);
-    url.searchParams.set('id', mockSite.id);
-    window.history.replaceState({}, '', url);
-  }
-
   return (
-    <PureGlobal
-      preset={{
-        apis: { liveComponentsSite },
-        ajax: params => {
-          if (params?.loader) {
-            return Promise.resolve(params.loader(params)).then(data => ({
-              data: { code: 0, data }
-            }));
-          }
-          return Promise.resolve({ data: { code: 0, data: null } });
-        }
-      }}>
+    <PureGlobal preset={mockPreset}>
       <Layout navigation={{ isFixed: false }}>
-        <Detail />
+        <Routes>
+          <Route path="/detail" element={<Detail />} />
+          <Route path="*" element={<Navigate to="/detail?id=site-001" replace />} />
+        </Routes>
       </Layout>
     </PureGlobal>
   );

@@ -14,7 +14,8 @@ import {
   CheckCircleFilled,
   DisconnectOutlined,
   LoadingOutlined,
-  LinkOutlined
+  LinkOutlined,
+  DragOutlined
 } from '@ant-design/icons';
 import FileSystemView from '@kne/file-system-view';
 import '@kne/file-system-view/dist/index.css';
@@ -25,6 +26,7 @@ import {
   DEFAULT_USER_SITES_STORAGE_KEY,
   findParentId,
   flattenDirectories,
+  collectNodeAndDescendantIds,
   hasDuplicateName,
   isLocalStorageHost,
   isValidFolderTree,
@@ -48,6 +50,9 @@ const resolveErrorMessage = (error, formatMessage, fallbackId) => {
   }
   if (error?.message === 'Cannot remove non-empty folder') {
     return formatMessage({ id: 'MsgRemoveNonEmpty' });
+  }
+  if (error?.message === 'INVALID_MOVE_TARGET') {
+    return formatMessage({ id: 'MsgInvalidMoveTarget' });
   }
   return error?.message || formatMessage({ id: fallbackId });
 };
@@ -98,6 +103,7 @@ const SiteFilePanel = ({
   currentFile,
   onOpenFile,
   onCurrentFileChange,
+  onActiveHostChange,
   height = 500,
   refreshToken = 0,
   onCollapse
@@ -114,6 +120,7 @@ const SiteFilePanel = ({
   const [loading, setLoading] = useState(false);
   const [createModal, setCreateModal] = useState(null);
   const [renameModal, setRenameModal] = useState(null);
+  const [moveModal, setMoveModal] = useState(null);
   const [siteModal, setSiteModal] = useState(null);
   const [contentShareModal, setContentShareModal] = useState(null);
   // host -> 'ok' | 'fail' | 'checking'
@@ -224,6 +231,10 @@ const SiteFilePanel = ({
   }, [innerSites, activeHost]);
 
   useEffect(() => {
+    onActiveHostChange?.(activeHost || null);
+  }, [activeHost, onActiveHostChange]);
+
+  useEffect(() => {
     refreshTree();
   }, [activeHost, refreshTree, refreshToken]);
 
@@ -330,6 +341,36 @@ const SiteFilePanel = ({
     [formatMessage, message, tree]
   );
 
+  const openMoveModal = useCallback(
+    data => {
+      if (!data) {
+        return;
+      }
+      if (data.permission === 'r') {
+        message.warning(formatMessage({ id: 'MsgReadOnly' }));
+        return;
+      }
+      const currentParentId = findParentId(tree, data.id);
+      const excludeIds = isDirectoryData(data) ? collectNodeAndDescendantIds(tree, data.id) : [];
+      const options = flattenDirectories(tree, '', excludeIds).filter(item => {
+        const optionId = item.id || null;
+        return optionId !== currentParentId;
+      });
+      if (!options.length) {
+        message.warning(formatMessage({ id: 'MsgNoMoveTarget' }));
+        return;
+      }
+      setMoveModal({
+        id: data.id,
+        name: data.name,
+        currentParentId,
+        parentId: options[0].id,
+        options
+      });
+    },
+    [formatMessage, message, tree]
+  );
+
   const handleRenameConfirm = useRefCallback(async () => {
     if (!api || !renameModal?.name?.trim()) {
       return;
@@ -350,6 +391,35 @@ const SiteFilePanel = ({
     } catch (error) {
       console.error(error);
       message.error(resolveErrorMessage(error, formatMessage, 'MsgRenameFail'));
+    }
+  });
+
+  const handleMoveConfirm = useRefCallback(async () => {
+    if (!api || !moveModal) {
+      return;
+    }
+    const targetParentId = moveModal.parentId || null;
+    if (targetParentId === moveModal.currentParentId) {
+      message.error(formatMessage({ id: 'MsgInvalidMoveTarget' }));
+      return;
+    }
+    const selected = moveModal.options.find(item => item.id === (moveModal.parentId || ''));
+    if (selected?.permission === 'r') {
+      message.warning(formatMessage({ id: 'MsgReadOnly' }));
+      return;
+    }
+    if (hasDuplicateName(tree, targetParentId, moveModal.name, moveModal.id)) {
+      message.error(formatMessage({ id: 'MsgDuplicateName' }));
+      return;
+    }
+    try {
+      await api.move({ id: moveModal.id, parentId: targetParentId });
+      message.success(formatMessage({ id: 'MsgMoveSuccess' }));
+      setMoveModal(null);
+      await refreshTree();
+    } catch (error) {
+      console.error(error);
+      message.error(resolveErrorMessage(error, formatMessage, 'MsgMoveFail'));
     }
   });
 
@@ -417,6 +487,12 @@ const SiteFilePanel = ({
         onClick: data => openRenameModal(data)
       },
       {
+        label: formatMessage({ id: 'MenuMoveTo' }),
+        icon: <DragOutlined />,
+        disabled: data => data.permission === 'r',
+        onClick: data => openMoveModal(data)
+      },
+      {
         label: formatMessage({ id: 'MenuRemove' }),
         icon: <DeleteOutlined />,
         danger: true,
@@ -424,7 +500,7 @@ const SiteFilePanel = ({
         onClick: (data, key) => handleRemove(data, key)
       }
     ],
-    [activeHost, formatMessage, handleRemove, openCreateModal, openRenameModal]
+    [activeHost, formatMessage, handleRemove, openCreateModal, openMoveModal, openRenameModal]
   );
 
   const openAddSiteModal = useCallback(() => {
@@ -699,6 +775,24 @@ const SiteFilePanel = ({
           placeholder={formatMessage({ id: 'NamePlaceholder' })}
           onPressEnter={handleRenameConfirm}
         />
+      </Modal>
+
+      <Modal
+        title={formatMessage({ id: 'MoveToTitle' }, { name: moveModal?.name || '' })}
+        open={!!moveModal}
+        onCancel={() => setMoveModal(null)}
+        onOk={handleMoveConfirm}
+        destroyOnClose>
+        <Flex vertical gap={8}>
+          <Text type="secondary">{formatMessage({ id: 'MoveToHint' })}</Text>
+          <Select
+            value={moveModal?.parentId ?? ''}
+            options={(moveModal?.options || []).map(item => ({ value: item.id, label: item.label }))}
+            onChange={value => setMoveModal(prev => (prev ? { ...prev, parentId: value } : prev))}
+            placeholder={formatMessage({ id: 'MoveToPlaceholder' })}
+            style={{ width: '100%' }}
+          />
+        </Flex>
       </Modal>
 
       <Modal

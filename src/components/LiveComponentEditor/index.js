@@ -1,7 +1,7 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { encode } from 'plantuml-encoder';
 import { decodeLiveComponentConfig } from '@components/LiveComponentView/decodeConfig';
-import { App, Tabs, Flex, Alert, Segmented, Splitter, Collapse, Button, Space, Empty } from 'antd';
+import { App, Tabs, Flex, Alert, Segmented, Splitter, Collapse, Button, Space, Empty, Tooltip } from 'antd';
 import {
   MenuOutlined,
   SplitCellsOutlined,
@@ -11,7 +11,8 @@ import {
   SnippetsOutlined,
   SaveOutlined,
   FormOutlined,
-  MenuUnfoldOutlined
+  MenuUnfoldOutlined,
+  MenuFoldOutlined
 } from '@ant-design/icons';
 import CodeEditor from '@components/CodeEditor';
 import LiveComponentView from '@components/LiveComponentView';
@@ -25,6 +26,7 @@ import { useIntl } from '@kne/react-intl';
 import withLocale from './withLocale';
 import SiteFilePanel, { SaveAsModal } from './SiteFilePanel';
 import ContentShareModal from './ContentShareModal';
+import AiAssistPanel from './AiAssistPanel';
 import {
   createSiteApi,
   DEFAULT_USER_SITES_STORAGE_KEY,
@@ -32,6 +34,9 @@ import {
   mergeSites,
   readUserSites
 } from './siteApi';
+import { extractSelectionFromContent, applySelectionToContent, mergeSuggestedProps } from './aiSelection';
+import { installAiSiteMock, uninstallAiSiteMock, AI_MOCK_HOST } from './aiSiteMock';
+import { getLibs } from '@components/LiveComponentView';
 import {
   HIGHLIGHT_DURATION_MS,
   handlePreviewLocate,
@@ -177,6 +182,7 @@ const LiveComponentEditorCore = createWithRemoteLoader({
           defaultMod = 'mix',
           height = 500,
           width = 260,
+          aiWidth = 360,
           libs = { lodash, dayjs },
           onChange,
           toolbarExtra,
@@ -195,6 +201,13 @@ const LiveComponentEditorCore = createWithRemoteLoader({
         const { Form, TableList } = FormInfo;
         const { Input, Select } = FormInfo.fields;
         const codeEditorRef = useRef(null);
+        const skipEditorChangeRef = useRef(false);
+        const updateContentDebouncedRef = useRef(null);
+        if (!updateContentDebouncedRef.current) {
+          updateContentDebouncedRef.current = debounce((newContent, setParams) => {
+            setParams(prev => ({ ...prev, content: newContent }));
+          }, 300);
+        }
         const [params, setParams] = useState(() => mergeParams(defaultValue));
         const enableSites = Array.isArray(sites);
         const [currentFile, setCurrentFile] = useState(null);
@@ -202,6 +215,11 @@ const LiveComponentEditorCore = createWithRemoteLoader({
         const [contentShareOpen, setContentShareOpen] = useState(false);
         const [treeRefreshToken, setTreeRefreshToken] = useState(0);
         const [sitesCollapsed, setSitesCollapsed] = useState(false);
+        const [aiCollapsed, setAiCollapsed] = useState(false);
+        const [aiEnabled, setAiEnabled] = useState(false);
+        const [activeSiteHost, setActiveSiteHost] = useState(null);
+        const [selectedSource, setSelectedSource] = useState(null);
+        const [limitToSelection, setLimitToSelection] = useState(false);
         const resolvedUserSitesKey =
           String(userSitesStorageKey || '').trim() || DEFAULT_USER_SITES_STORAGE_KEY;
         // 合并后的站点列表（props.sites 在前 + 用户本地添加的站点），由 SiteFilePanel 维护并回调
@@ -209,6 +227,7 @@ const LiveComponentEditorCore = createWithRemoteLoader({
           Array.isArray(sites) ? mergeSites(sites, readUserSites(resolvedUserSitesKey)) : []
         );
         const sitesPanelWidth = Number(width) > 0 ? Number(width) : 260;
+        const aiPanelWidth = Number(aiWidth) > 0 ? Number(aiWidth) : 360;
 
         const handleSitesChange = useRefCallback(next => {
           setMergedSites(next);
@@ -218,10 +237,18 @@ const LiveComponentEditorCore = createWithRemoteLoader({
         const applyParams = useRefCallback(nextParams => {
           const merged = Object.assign({}, { content: '', props: {}, scope: {} }, nextParams);
 
+          // 避免 AI/外部写入后，编辑器 onChange 的 debounce 用旧值盖回 content
+          updateContentDebouncedRef.current?.cancel?.();
+          skipEditorChangeRef.current = true;
           setParams(merged);
           setPropsFormData(buildPropsFormData(merged.props));
           setScopeFormData(buildScopeFormData(merged.scope));
           codeEditorRef.current?.setValue(merged.content || '');
+          updateContentDebouncedRef.current?.cancel?.();
+          Promise.resolve().then(() => {
+            updateContentDebouncedRef.current?.cancel?.();
+            skipEditorChangeRef.current = false;
+          });
         });
         const defaultValueRef = useRef(defaultValue);
         const outputContent = useMemo(() => {
@@ -234,15 +261,6 @@ const LiveComponentEditorCore = createWithRemoteLoader({
         const [activeKey, setActiveKey] = useState('content');
 
         const handleChange = useRefCallback(onChange);
-
-        // 创建稳定的 content update debounced 函数，避免频繁更新
-        const updateContentDebouncedRef = useRef(null);
-
-        if (!updateContentDebouncedRef.current) {
-          updateContentDebouncedRef.current = debounce((newContent, setParams) => {
-            setParams(prev => ({ ...prev, content: newContent }));
-          }, 300);
-        }
 
         useImperativeHandle(
           ref,
@@ -372,6 +390,8 @@ const LiveComponentEditorCore = createWithRemoteLoader({
             applyParams({ content: String(fileContent || ''), props: {}, scope: {} });
           }
           setCurrentFile({ siteHost, id, name, permission });
+          setSelectedSource(null);
+          setLimitToSelection(false);
         });
 
         const handleSave = useRefCallback(async () => {
@@ -478,6 +498,9 @@ const LiveComponentEditorCore = createWithRemoteLoader({
             }, 320);
           }
           setCursorRects(toPanelRects(measureHighlightRects(els)));
+          if (line) {
+            setSelectedSource({ line, column: column || 1 });
+          }
         });
 
         const handlePreviewMouseMove = useMemo(
@@ -543,6 +566,9 @@ const LiveComponentEditorCore = createWithRemoteLoader({
             setFlashRects([]);
             flashTimerRef.current = null;
           }, HIGHLIGHT_DURATION_MS);
+          if (result.line) {
+            setSelectedSource({ line: result.line, column: result.column || 1 });
+          }
         });
 
         const handleCodeEditorMount = useRefCallback(({ editor }) => {
@@ -616,6 +642,96 @@ const LiveComponentEditorCore = createWithRemoteLoader({
           !isLocalStorageHost(currentFile.siteHost)
         );
 
+        const selection = useMemo(() => {
+          if (!selectedSource?.line) {
+            return null;
+          }
+          return extractSelectionFromContent(content, selectedSource.line, selectedSource.column);
+        }, [content, selectedSource]);
+
+        const aiSiteHost = useMemo(() => {
+          if (!activeSiteHost || isLocalStorageHost(activeSiteHost)) {
+            return null;
+          }
+          return activeSiteHost;
+        }, [activeSiteHost]);
+
+        const showAiPanel = enableSites && !!aiSiteHost && aiEnabled;
+
+        useEffect(() => {
+          let cancelled = false;
+          if (!aiSiteHost) {
+            setAiEnabled(false);
+            return undefined;
+          }
+          setAiEnabled(false);
+          createSiteApi(aiSiteHost)
+            .getInfo()
+            .then(info => {
+              if (!cancelled) {
+                setAiEnabled(!!info?.aiEnabled);
+              }
+            })
+            .catch(() => {
+              if (!cancelled) {
+                setAiEnabled(false);
+              }
+            });
+          return () => {
+            cancelled = true;
+          };
+        }, [aiSiteHost]);
+
+        const handleAiApplyGenerate = useRefCallback(({ content: nextCode, suggestedScope, suggestedProps } = {}) => {
+          const next = Object.assign({}, params);
+          let contentChanged = false;
+          if (typeof nextCode === 'string' && nextCode.trim()) {
+            if (limitToSelection && selection?.code) {
+              next.content = applySelectionToContent(params.content, selection, nextCode);
+            } else {
+              next.content = nextCode;
+            }
+            contentChanged = true;
+          }
+          if (suggestedScope && typeof suggestedScope === 'object') {
+            const nextScope = Object.assign({}, params.scope);
+            Object.keys(suggestedScope).forEach(key => {
+              if (!nextScope[key]) {
+                nextScope[key] = suggestedScope[key];
+              }
+            });
+            next.scope = nextScope;
+          }
+          // 再扫一遍最终 content，确保写入代码里用到的 props 都进「组件参数」
+          const codeForProps = typeof next.content === 'string' ? next.content : '';
+          const mergedPropsSuggest = mergeSuggestedProps(codeForProps, suggestedProps, params.props);
+          if (mergedPropsSuggest && Object.keys(mergedPropsSuggest).length) {
+            const nextProps = Object.assign({}, params.props);
+            Object.keys(mergedPropsSuggest).forEach(key => {
+              if (nextProps[key]) {
+                return;
+              }
+              const item =
+                mergedPropsSuggest[key] && typeof mergedPropsSuggest[key] === 'object' ? mergedPropsSuggest[key] : {};
+              const type = item.type || 'string';
+              nextProps[key] = {
+                type,
+                defaultValue: type === 'function' ? '()=>null' : item.defaultValue ?? ''
+              };
+            });
+            next.props = nextProps;
+          }
+          applyParams(next);
+          // 生成后切到 content，避免仍停在 props/scope 或纯预览时看不到写入
+          if (contentChanged) {
+            setActiveKey('content');
+            if (mod === 'preview') {
+              setMod('mix');
+            }
+          }
+          return contentChanged;
+        });
+
         const renderLocateOverlays = (rects, className) =>
           rects.map((rect, index) => (
             <div
@@ -638,7 +754,12 @@ const LiveComponentEditorCore = createWithRemoteLoader({
               defaultValue={content}
               defaultLanguage="javascript"
               onMount={handleCodeEditorMount}
-              onChange={value => updateContentDebouncedRef.current(value, setParams)}
+              onChange={value => {
+                if (skipEditorChangeRef.current) {
+                  return;
+                }
+                updateContentDebouncedRef.current(value, setParams);
+              }}
             />
           </div>
         );
@@ -686,6 +807,7 @@ const LiveComponentEditorCore = createWithRemoteLoader({
 
         const editorTabs = (
           <Tabs
+            className={style['editor-tabs']}
             activeKey={activeKey}
             onChange={nextKey => {
               flushFormSaves();
@@ -701,28 +823,32 @@ const LiveComponentEditorCore = createWithRemoteLoader({
               <div className={style['toolbar-extra']}>
                 <Space size={8} align="center">
                   <Space.Compact>
-                    <Button icon={<CopyOutlined />} onClick={handleCopy}>
-                      {formatMessage({ id: 'Copy' })}
-                    </Button>
-                    <Button icon={<SnippetsOutlined />} onClick={handleImportFromClipboard}>
-                      {formatMessage({ id: 'ImportFromClipboard' })}
-                    </Button>
+                    <Tooltip title={formatMessage({ id: 'Copy' })}>
+                      <Button icon={<CopyOutlined />} onClick={handleCopy} />
+                    </Tooltip>
+                    <Tooltip title={formatMessage({ id: 'ImportFromClipboard' })}>
+                      <Button icon={<SnippetsOutlined />} onClick={handleImportFromClipboard} />
+                    </Tooltip>
                   </Space.Compact>
                   {enableSites && (
                     <Space.Compact>
-                      <Button icon={<SaveOutlined />} disabled={!canSaveCurrent} onClick={handleSave}>
-                        {formatMessage({ id: 'Save' })}
-                      </Button>
-                      <Button icon={<FormOutlined />} disabled={!mergedSites.length} onClick={() => setSaveAsOpen(true)}>
-                        {formatMessage({ id: 'SaveAs' })}
-                      </Button>
-                      <Button
-                        icon={<LinkOutlined />}
-                        disabled={!canCopyContentUrl}
-                        onClick={handleCopyContentUrl}
-                      >
-                        {formatMessage({ id: 'CopyContentUrl' })}
-                      </Button>
+                      <Tooltip title={formatMessage({ id: 'Save' })}>
+                        <Button icon={<SaveOutlined />} disabled={!canSaveCurrent} onClick={handleSave} />
+                      </Tooltip>
+                      <Tooltip title={formatMessage({ id: 'SaveAs' })}>
+                        <Button
+                          icon={<FormOutlined />}
+                          disabled={!mergedSites.length}
+                          onClick={() => setSaveAsOpen(true)}
+                        />
+                      </Tooltip>
+                      <Tooltip title={formatMessage({ id: 'CopyContentUrl' })}>
+                        <Button
+                          icon={<LinkOutlined />}
+                          disabled={!canCopyContentUrl}
+                          onClick={handleCopyContentUrl}
+                        />
+                      </Tooltip>
                     </Space.Compact>
                   )}
                   {toolbarExtra}
@@ -750,6 +876,18 @@ const LiveComponentEditorCore = createWithRemoteLoader({
                       ]}
                     />
                   )}
+                  {showAiPanel && aiCollapsed ? (
+                    <Tooltip title={formatMessage({ id: 'AiExpand' })}>
+                      <Button
+                        type="text"
+                        size="small"
+                        className={style['ai-toolbar-toggle']}
+                        icon={<MenuFoldOutlined rotate={180} />}
+                        aria-label={formatMessage({ id: 'AiExpand' })}
+                        onClick={() => setAiCollapsed(false)}
+                      />
+                    </Tooltip>
+                  ) : null}
                 </Space>
               </div>
             }
@@ -937,6 +1075,7 @@ const LiveComponentEditorCore = createWithRemoteLoader({
                         currentFile={currentFile}
                         onOpenFile={handleOpenFile}
                         onCurrentFileChange={setCurrentFile}
+                        onActiveHostChange={setActiveSiteHost}
                         height={height}
                         refreshToken={treeRefreshToken}
                         onCollapse={() => setSitesCollapsed(true)}
@@ -955,6 +1094,24 @@ const LiveComponentEditorCore = createWithRemoteLoader({
                   )}
                 </aside>
                 <div className={style['sites-main']}>{editorTabs}</div>
+                {showAiPanel && !aiCollapsed ? (
+                  <aside className={style['ai-aside']} style={{ width: aiPanelWidth }}>
+                    <AiAssistPanel
+                      siteHost={aiSiteHost}
+                      content={content}
+                      scope={scope}
+                      props={props}
+                      libs={Object.assign({}, getLibs(), libs)}
+                      selection={selection}
+                      limitToSelection={limitToSelection}
+                      onLimitToSelectionChange={setLimitToSelection}
+                      onApplyGenerate={handleAiApplyGenerate}
+                      onCollapse={() => setAiCollapsed(true)}
+                      formatMessage={formatMessage}
+                      height={height}
+                    />
+                  </aside>
+                ) : null}
               </div>
             ) : (
               editorTabs
@@ -990,4 +1147,9 @@ const LiveComponentEditor = forwardRef((props, ref) => (
   </App>
 ));
 
+LiveComponentEditor.installAiSiteMock = installAiSiteMock;
+LiveComponentEditor.uninstallAiSiteMock = uninstallAiSiteMock;
+LiveComponentEditor.AI_MOCK_HOST = AI_MOCK_HOST;
+
+export { installAiSiteMock, uninstallAiSiteMock, AI_MOCK_HOST };
 export default LiveComponentEditor;

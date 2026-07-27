@@ -19,6 +19,8 @@ LiveComponentEditor 是一个实时的组件编辑器，允许用户在运行时
 - 可扩展工具栏（toolbarExtra）
 - 多站点文件管理（含 localStorage 适配、`siteActionsOpen` 本地自管站点）
 - 混合模式源码双向定位（预览 ↔ 编辑器，`enableSourceLocate` 可关）
+- 远程站点 AI 助手（当前选中远程站且 `info.aiEnabled` 时显示）
+
 
 ### 使用场景
 
@@ -98,6 +100,64 @@ const SitesExample = () => {
 };
 
 render(<SitesExample />);
+
+```
+
+- AI 助手（Mock）
+- 浏览器内 Mock 远程站点 AI：完善需求 → 开始生成 → 流式写入编辑器
+- _LiveComponentEditor(@components/LiveComponentEditor),antd(antd)
+
+```jsx
+const { default: LiveComponentEditor } = _LiveComponentEditor;
+const { Flex, Alert } = antd;
+const { useEffect, useState, useRef } = React;
+
+const MOCK_HOST = LiveComponentEditor.AI_MOCK_HOST || 'https://mock-live-ai.local';
+
+const AiExample = () => {
+  const ref = useRef(null);
+  const [value, setValue] = useState('');
+  const [ready, setReady] = useState(false);
+
+  useEffect(() => {
+    if (typeof LiveComponentEditor.installAiSiteMock === 'function') {
+      LiveComponentEditor.installAiSiteMock();
+    }
+    setReady(true);
+    return () => {
+      LiveComponentEditor.uninstallAiSiteMock?.();
+    };
+  }, []);
+
+  if (!ready) {
+    return null;
+  }
+
+  return (
+    <Flex vertical gap={12}>
+      <Alert
+        type="info"
+        showIcon
+        message="AI Mock 站点（无需后端）"
+        description={
+          <span>
+            已拦截 <code>{MOCK_HOST}</code>。右侧 AI 面板应直接出现；可打开左侧「AI Demo」再试生成，或直接对编辑器内容完善需求后点「开始生成」。
+          </span>
+        }
+      />
+      <LiveComponentEditor
+        defaultValue={value}
+        onChange={setValue}
+        ref={ref}
+        height={520}
+        siteActionsOpen={false}
+        sites={[{ host: MOCK_HOST, name: 'AI Mock 站点' }]}
+      />
+    </Flex>
+  );
+};
+
+render(<AiExample />);
 
 ```
 
@@ -192,6 +252,7 @@ render(<SitesExample />);
 |------|------|------|
 | GET | `{host}/getFolderTree` | 获取文件树 |
 | GET | `{host}/get?id=` | 按 id 读取文件内容 |
+| GET | `{host}/info` | 站点信息（含 `aiEnabled`） |
 | GET | `{prefix}/content/{contentShorten}` | 直出已保存 content（`text/plain`；不含站点 shorten） |
 | POST | `{host}/content-share/create` | body: `{ id, expiresIn? }` |
 | GET | `{host}/content-share/list?id=` | 列出未过期内容短链 |
@@ -201,6 +262,12 @@ render(<SitesExample />);
 | POST | `{host}/save` | body: `{ id, content }` |
 | POST | `{host}/rename` | body: `{ id, name }`；同目录重名校验 |
 | POST | `{host}/remove` | body: `{ ids: string[] }`；非空目录不可删 |
+| POST | `{host}/ai/start` | 创建 AI 流任务（需 `aiEnabled`） |
+| GET | `{host}/ai/stream?token=` | AI SSE 流式输出 |
+
+远程站点且当前选中站点的 `info.aiEnabled` 为 true 时，编辑器右侧显示 AI 助手；未选站点、localStorage 站点或不支持 AI 的站点不显示。多轮完善需求后点「开始生成」写入编辑器；可选「限定到选中组件」。
+
+自测可用 `LiveComponentEditor.installAiSiteMock()`（见文档示例「AI 助手（Mock）」），拦截 `https://mock-live-ai.local`。
 
 响应统一取 `res.data ?? res`。
 
