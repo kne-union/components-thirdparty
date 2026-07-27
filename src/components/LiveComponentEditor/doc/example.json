@@ -30,6 +30,21 @@
           "packageName": "antd"
         }
       ]
+    },
+    {
+      "title": "AI 助手（Mock）",
+      "description": "浏览器内 Mock 远程站点 AI：完善需求 → 开始生成 → 流式写入编辑器",
+      "code": "./ai.js",
+      "scope": [
+        {
+          "name": "_LiveComponentEditor",
+          "packageName": "@components/LiveComponentEditor"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        }
+      ]
     }
   ]
 }

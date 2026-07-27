@@ -83,8 +83,12 @@ const localeMessages = {
   MenuNewFile: '新建文件',
   MenuNewFolder: '新建文件夹',
   MenuRename: '重命名',
+  MenuMoveTo: '移动到',
   MenuRemove: '删除',
   NamePlaceholder: '请输入名称',
+  MoveToTitle: '移动「{name}」',
+  MoveToHint: '请选择目标文件夹（不可选当前文件夹或其子文件夹）',
+  MoveToPlaceholder: '选择目标文件夹',
   ConfirmRemoveTitle: '确认删除',
   ConfirmRemoveContent: '确定删除「{name}」吗？',
   MsgLoadTreeFail: '加载文件树失败',
@@ -93,6 +97,10 @@ const localeMessages = {
   MsgCreateFail: '创建失败',
   MsgRenameSuccess: '重命名成功',
   MsgRenameFail: '重命名失败',
+  MsgMoveSuccess: '移动成功',
+  MsgMoveFail: '移动失败',
+  MsgInvalidMoveTarget: '不能移动到当前文件夹或其子文件夹',
+  MsgNoMoveTarget: '没有可移动到的目标文件夹',
   MsgRemoveSuccess: '删除成功',
   MsgRemoveFail: '删除失败',
   MsgRemoveNonEmpty: '文件夹不为空，无法删除',
@@ -117,7 +125,8 @@ const localeMessages = {
   AiInputPlaceholder: '描述需求，或回答 AI 的追问…',
   AiSend: '发送',
   AiMsgFail: 'AI 请求失败：{msg}',
-  AiMsgGenerateDone: '已生成并写入编辑器。可继续完善需求后再次生成。'
+  AiMsgGenerateDone: '已生成并写入编辑器。可继续完善需求后再次生成。',
+  AiMsgGenerateEmpty: '生成结束，但未解析到可写入的 JSX。请重试「开始生成」，或让我先补充需求后再生成。'
 };
 
 export default localeMessages;

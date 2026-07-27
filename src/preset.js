@@ -79,7 +79,8 @@ export const globalInit = async () => {
   const componentsCoreRemote = {
     ...registry,
     remote: 'components-core',
-    defaultVersion: '0.4.55'
+    // BizUnit isNext 依赖 Filter.useUrlFilterValue（core >= 0.5.x）
+    defaultVersion: '0.5.20'
   };
   remoteLoaderPreset({
     remotes: {
@@ -93,7 +94,7 @@ export const globalInit = async () => {
       'components-admin': {
         ...registry,
         remote: 'components-admin',
-        defaultVersion: '1.1.69'
+        defaultVersion: '1.1.70'
       },
       'components-thirdparty':
         process.env.NODE_ENV === 'development'

@@ -83,8 +83,12 @@ const localeMessages = {
   MenuNewFile: 'New file',
   MenuNewFolder: 'New folder',
   MenuRename: 'Rename',
+  MenuMoveTo: 'Move to',
   MenuRemove: 'Delete',
   NamePlaceholder: 'Enter a name',
+  MoveToTitle: 'Move "{name}"',
+  MoveToHint: 'Choose a destination folder (not the current folder or its subfolders)',
+  MoveToPlaceholder: 'Select destination folder',
   ConfirmRemoveTitle: 'Delete',
   ConfirmRemoveContent: 'Delete "{name}"?',
   MsgLoadTreeFail: 'Failed to load folder tree',
@@ -93,6 +97,10 @@ const localeMessages = {
   MsgCreateFail: 'Create failed',
   MsgRenameSuccess: 'Renamed',
   MsgRenameFail: 'Rename failed',
+  MsgMoveSuccess: 'Moved',
+  MsgMoveFail: 'Move failed',
+  MsgInvalidMoveTarget: 'Cannot move to the current folder or its subfolders',
+  MsgNoMoveTarget: 'No available destination folder',
   MsgRemoveSuccess: 'Deleted',
   MsgRemoveFail: 'Delete failed',
   MsgRemoveNonEmpty: 'Cannot delete a non-empty folder',
@@ -117,7 +125,8 @@ const localeMessages = {
   AiInputPlaceholder: 'Describe the requirement or answer follow-ups…',
   AiSend: 'Send',
   AiMsgFail: 'AI request failed: {msg}',
-  AiMsgGenerateDone: 'Generated and written to the editor. You can refine and generate again.'
+  AiMsgGenerateDone: 'Generated and written to the editor. You can refine and generate again.',
+  AiMsgGenerateEmpty: 'Generation finished, but no writable JSX was found. Please retry Generate, or refine the requirements first.'
 };
 
 export default localeMessages;

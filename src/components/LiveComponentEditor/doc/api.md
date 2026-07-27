@@ -100,7 +100,9 @@
 | POST | `{host}/ai/start` | 创建 AI 流任务（需 `aiEnabled`） |
 | GET | `{host}/ai/stream?token=` | AI SSE 流式输出 |
 
-远程站点且 `info.aiEnabled` 为 true 时，编辑器右侧显示 AI 助手：多轮完善需求后点「开始生成」写入编辑器；可选「限定到选中组件」。
+远程站点且当前选中站点的 `info.aiEnabled` 为 true 时，编辑器右侧显示 AI 助手；未选站点、localStorage 站点或不支持 AI 的站点不显示。多轮完善需求后点「开始生成」写入编辑器；可选「限定到选中组件」。
+
+自测可用 `LiveComponentEditor.installAiSiteMock()`（见文档示例「AI 助手（Mock）」），拦截 `https://mock-live-ai.local`。
 
 响应统一取 `res.data ?? res`。
 

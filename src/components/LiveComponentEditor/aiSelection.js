@@ -60,20 +60,123 @@ export const applySelectionToContent = (content, selection, nextCode) => {
 
 export const stripCodeFence = text => {
   const raw = String(text || '').trim();
-  const matched = raw.match(/^```(?:jsx|javascript|js|tsx|ts)?\s*([\s\S]*?)```$/i);
-  if (matched) {
-    return matched[1].trim();
+  if (!raw) {
+    return '';
   }
+
+  // 整段就是一个代码围栏
+  const whole = raw.match(/^```(?:jsx|javascript|js|tsx|ts)?\s*\r?\n?([\s\S]*?)\r?\n?```$/i);
+  if (whole) {
+    return whole[1].trim();
+  }
+
+  // 混有说明文字时，优先取 jsx/js 围栏
+  const preferred = raw.match(/```(?:jsx|javascript|js|tsx|ts)\s*\r?\n?([\s\S]*?)\r?\n?```/i);
+  if (preferred) {
+    return preferred[1].trim();
+  }
+
+  // 任意围栏
+  const generic = raw.match(/```[^\n]*\r?\n([\s\S]*?)\r?\n?```/);
+  if (generic) {
+    return generic[1].trim();
+  }
+
+  // 残缺围栏（只有开头）
+  if (/^```/.test(raw)) {
+    return raw.replace(/^```[^\n]*\r?\n?/, '').replace(/\r?\n?```\s*$/, '').trim();
+  }
+
+  // 无围栏但前面有说明：从第一个 JSX 根截取
+  if (!/^[<!(]/.test(raw)) {
+    const idx = raw.search(/<(?:[A-Za-z!/?]|>)/);
+    if (idx >= 0) {
+      return raw.slice(idx).trim();
+    }
+  }
+
   return raw;
 };
 
+const escapeRegExp = value => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const inferPropDef = (code, name) => {
+  if (/^on[A-Z]/.test(name)) {
+    return { type: 'function', defaultValue: '()=>null' };
+  }
+  const access = `props(?:\\?\\.)?\\.${escapeRegExp(name)}`;
+  const orString = code.match(new RegExp(`${access}\\s*(?:\\|\\||\\?\\?)\\s*['"\`]([^'"\`]*)['"\`]`));
+  if (orString) {
+    return { type: 'string', defaultValue: orString[1] };
+  }
+  const orNum = code.match(new RegExp(`${access}\\s*(?:\\|\\||\\?\\?)\\s*(-?\\d+(?:\\.\\d+)?)`));
+  if (orNum) {
+    return { type: 'number', defaultValue: orNum[1] };
+  }
+  const orBool = code.match(new RegExp(`${access}\\s*(?:\\|\\||\\?\\?)\\s*(true|false)\\b`));
+  if (orBool) {
+    return { type: 'boolean', defaultValue: orBool[1] };
+  }
+  if (new RegExp(`${access}\\s*(?:\\|\\||\\?\\?)\\s*\\[`).test(code)) {
+    return { type: 'array', defaultValue: '[]' };
+  }
+  if (new RegExp(`${access}\\s*(?:\\|\\||\\?\\?)\\s*\\{`).test(code)) {
+    return { type: 'object', defaultValue: '{}' };
+  }
+  return { type: 'string', defaultValue: '' };
+};
+
+/** 从 JSX/content 中收集 props.xxx 用法，生成可写入「组件参数」的声明 */
+export const extractPropsFromCode = (code, existingProps = {}) => {
+  const text = String(code || '');
+  if (!text.trim()) {
+    return {};
+  }
+  const names = new Set();
+  const re = /props(?:\?\.)?\.([A-Za-z_$][\w$]*)|props\[\s*['"`]([^'"`]+)['"`]\s*\]/g;
+  let match;
+  while ((match = re.exec(text))) {
+    const name = match[1] || match[2];
+    if (name) {
+      names.add(name);
+    }
+  }
+  const result = {};
+  names.forEach(name => {
+    if (existingProps && existingProps[name]) {
+      return;
+    }
+    result[name] = inferPropDef(text, name);
+  });
+  return result;
+};
+
+/** 合并 AI suggestProps 与代码扫描结果（工具声明优先） */
+export const mergeSuggestedProps = (code, suggestedProps, existingProps = {}) => {
+  const extracted = extractPropsFromCode(code, existingProps);
+  return Object.assign({}, extracted, suggestedProps && typeof suggestedProps === 'object' ? suggestedProps : {});
+};
+
+/** 从 preset remotes 收集 AI 索引清单（跳过别名 / 非组件库） */
 export const collectRemotesPayload = remotes => {
   if (!remotes || typeof remotes !== 'object') {
     return [];
   }
-  return Object.entries(remotes).map(([name, cfg]) => ({
-    name,
-    version: cfg?.version || 'latest',
-    packageName: cfg?.packageName
-  }));
+  const skip = new Set(['default', 'fastify-app']);
+  const seen = new Set();
+  return Object.entries(remotes)
+    .filter(([name]) => name && !skip.has(name))
+    .map(([name, cfg]) => ({
+      name,
+      version: cfg?.version || cfg?.defaultVersion || 'latest',
+      packageName: cfg?.packageName
+    }))
+    .filter(item => {
+      const key = `${item.name}@${item.version}`;
+      if (seen.has(key)) {
+        return false;
+      }
+      seen.add(key);
+      return true;
+    });
 };

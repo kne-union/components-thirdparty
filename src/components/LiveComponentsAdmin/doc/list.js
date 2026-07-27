@@ -1,22 +1,18 @@
-const { Detail } = _LiveComponentsAdmin;
+const { List } = _LiveComponentsAdmin;
 const { default: mockPreset } = _mockPreset;
 const { createWithRemoteLoader } = remoteLoader;
-const { Routes, Route, Navigate } = reactRouterDom;
 
-const DetailExample = createWithRemoteLoader({
+const ListExample = createWithRemoteLoader({
   modules: ['components-core:Global@PureGlobal', 'components-core:Layout']
 })(({ remoteModules }) => {
   const [PureGlobal, Layout] = remoteModules;
   return (
     <PureGlobal preset={mockPreset}>
       <Layout navigation={{ isFixed: false }}>
-        <Routes>
-          <Route path="/detail" element={<Detail />} />
-          <Route path="*" element={<Navigate to="/detail?id=site-001" replace />} />
-        </Routes>
+        <List />
       </Layout>
     </PureGlobal>
   );
 });
 
-render(<DetailExample />);
+render(<ListExample />);

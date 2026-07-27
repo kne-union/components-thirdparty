@@ -133,6 +133,9 @@ render(<BaseExample />);
 | preset | 全局默认参数，可与组件 props 合并 |
 | markdownComponentsPlugin | markdown-it 插件，解析 md-components 标记 |
 | MarkdownComponents | 将 HTML 转为 React 树的底层组件 |
+| HtmlBlock | 将 `props.html` 渲染为真实 DOM（非代码块） |
+| HtmlMarkdown | 自动把 \`\`\`html 围栏转为 HtmlBlock 再渲染 |
+| prepareHtmlMarkdown | 将 Markdown 中的 HTML 围栏预处理为 md-components |
 
 #### 样式
 

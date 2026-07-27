@@ -107,6 +107,15 @@ const collectDescendantIds = node => {
   return ids;
 };
 
+/** 收集节点自身及其所有子孙 id（用于移动时排除非法目标） */
+export const collectNodeAndDescendantIds = (nodes, id) => {
+  const found = findNode(nodes, id);
+  if (!found) {
+    return [];
+  }
+  return collectDescendantIds(found.node);
+};
+
 const assertWritable = node => {
   if (!node) {
     throw new Error('Node not found');
@@ -287,6 +296,57 @@ const localApi = host => {
       return { id: found.node.id, name: found.node.name, type: found.node.type, permission: found.node.permission };
     },
 
+    async move({ id, parentId }) {
+      const store = readLocalStore(key);
+      const found = findNode(store.tree, id);
+      if (!found) {
+        throw new Error('Node not found');
+      }
+      assertWritable(found.node);
+
+      const targetParentId = parentId || null;
+      const currentParentId = found.parent?.id || null;
+      if (targetParentId === currentParentId) {
+        throw new Error('INVALID_MOVE_TARGET');
+      }
+      if (targetParentId === id) {
+        throw new Error('INVALID_MOVE_TARGET');
+      }
+      if (isDirectoryNode(found.node) && targetParentId) {
+        const blocked = new Set(collectDescendantIds(found.node));
+        if (blocked.has(targetParentId)) {
+          throw new Error('INVALID_MOVE_TARGET');
+        }
+      }
+
+      let targetList = store.tree;
+      if (targetParentId) {
+        const target = findNode(store.tree, targetParentId);
+        if (!target) {
+          throw new Error('Parent not found');
+        }
+        assertWritable(target.node);
+        if (!isDirectoryNode(target.node)) {
+          throw new Error('Parent is not a directory');
+        }
+        target.node.type = 'directory';
+        target.node.children = target.node.children || [];
+        targetList = target.node.children;
+      }
+
+      assertUniqueSiblingName(store.tree, targetParentId, found.node.name, id);
+      found.list.splice(found.list.indexOf(found.node), 1);
+      targetList.push(found.node);
+      writeLocalStore(key, store);
+      return {
+        id: found.node.id,
+        name: found.node.name,
+        type: found.node.type,
+        permission: found.node.permission,
+        parentId: targetParentId
+      };
+    },
+
     async remove({ ids }) {
       const idList = Array.isArray(ids) ? ids : [ids];
       const store = readLocalStore(key);
@@ -363,6 +423,7 @@ const httpApi = host => {
     create: body => request('POST', 'create', { body }),
     save: body => request('POST', 'save', { body }),
     rename: body => request('POST', 'rename', { body }),
+    move: body => request('POST', 'move', { body }),
     remove: body => request('POST', 'remove', { body }),
     createContentShare: body => request('POST', 'content-share/create', { body }),
     listContentShare: id => request('GET', 'content-share/list', { query: { id } }),
@@ -480,12 +541,18 @@ export const toFileSystemViewData = (nodes = []) =>
     return item;
   });
 
-/** 收集目录选项（另存为选父目录） */
-export const flattenDirectories = (nodes = [], pathLabel = '') => {
+/** 收集目录选项（另存为/移动到选父目录）；excludeIds 排除自身及子树 */
+export const flattenDirectories = (nodes = [], pathLabel = '', excludeIds = []) => {
+  const blocked = new Set((excludeIds || []).filter(Boolean).map(String));
   const result = [{ id: '', label: pathLabel || '/', permission: 'rw' }];
   const walk = (list, prefix) => {
     (list || []).forEach(node => {
       if (node.type !== 'directory') {
+        return;
+      }
+      const nodeId = String(node.id);
+      if (blocked.has(nodeId)) {
+        // 跳过该目录及其子树
         return;
       }
       const label = prefix ? `${prefix}/${node.name}` : node.name;

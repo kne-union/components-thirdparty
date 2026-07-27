@@ -4,9 +4,10 @@ import { RobotOutlined, SendOutlined, ThunderboltOutlined, MenuFoldOutlined } fr
 import createAjax from '@kne/axios-fetch';
 import { getGlobal } from '@kne/remote-loader';
 import { getLibs } from '@components/LiveComponentView';
+import { HtmlMarkdown } from '@components/MarkdownRender';
 import useRefCallback from '@kne/use-ref-callback';
 import { createSiteApi, isLocalStorageHost } from './siteApi';
-import { collectRemotesPayload, stripCodeFence } from './aiSelection';
+import { collectRemotesPayload, stripCodeFence, mergeSuggestedProps } from './aiSelection';
 import style from './style.module.scss';
 
 const { Text } = Typography;
@@ -21,12 +22,12 @@ const AiAssistPanel = ({
   siteHost,
   content,
   scope,
+  props: componentProps,
   libs,
   selection,
   limitToSelection,
   onLimitToSelectionChange,
-  onApplyContent,
-  onApplyScope,
+  onApplyGenerate,
   onCollapse,
   formatMessage,
   height
@@ -59,6 +60,7 @@ const AiAssistPanel = ({
       messages: nextMessages.map(m => ({ role: m.role, content: m.content })),
       content: content || '',
       scope: scope || {},
+      props: componentProps || {},
       libs: libKeys,
       remotes
     };
@@ -89,6 +91,7 @@ const AiAssistPanel = ({
       const ajax = createStreamAjax();
       let acc = '';
       let suggestedScope = null;
+      let suggestedProps = null;
       const client = await ajax.sse({
         url: `${String(siteHost).replace(/\/$/, '')}/ai/stream`,
         params: { token: streamToken },
@@ -101,10 +104,16 @@ const AiAssistPanel = ({
             setStreamingText(acc);
           }
           if (parsed.done) {
+            if ((!acc || !String(acc).trim()) && parsed.text) {
+              acc = parsed.text;
+            }
             if (parsed.suggestedScope) {
               suggestedScope = parsed.suggestedScope;
             }
-            onDone?.({ text: acc, suggestedScope });
+            if (parsed.suggestedProps) {
+              suggestedProps = parsed.suggestedProps;
+            }
+            onDone?.({ text: acc, suggestedScope, suggestedProps });
             setStreamingText('');
             setLoading(false);
             stopStream();
@@ -150,17 +159,27 @@ const AiAssistPanel = ({
     await runStream({
       mode: 'generate',
       nextMessages: messages,
-      onDone: ({ text: reply, suggestedScope }) => {
+      onDone: ({ text: reply, suggestedScope, suggestedProps }) => {
         const code = stripCodeFence(reply);
-        if (code) {
-          onApplyContent?.(code);
-        }
-        if (suggestedScope && typeof suggestedScope === 'object') {
-          onApplyScope?.(suggestedScope);
-        }
+        const hasCode = Boolean(code && code.trim());
+        const mergedProps = hasCode
+          ? mergeSuggestedProps(code, suggestedProps, componentProps)
+          : suggestedProps && typeof suggestedProps === 'object'
+            ? suggestedProps
+            : {};
+        const written = onApplyGenerate?.({
+          content: hasCode ? code : undefined,
+          suggestedScope,
+          suggestedProps: Object.keys(mergedProps).length ? mergedProps : null
+        });
         setMessages(prev => [
           ...prev,
-          { role: 'assistant', content: formatMessage({ id: 'AiMsgGenerateDone' }) }
+          {
+            role: 'assistant',
+            content: written
+              ? formatMessage({ id: 'AiMsgGenerateDone' })
+              : formatMessage({ id: 'AiMsgGenerateEmpty' })
+          }
         ]);
       }
     });
@@ -212,10 +231,15 @@ const AiAssistPanel = ({
           <div
             key={`${msg.role}-${index}`}
             className={msg.role === 'user' ? style['ai-msg-user'] : style['ai-msg-assistant']}>
-            <Text type="secondary" className={style['ai-msg-role']}>
-              {msg.role === 'user' ? formatMessage({ id: 'AiRoleUser' }) : formatMessage({ id: 'AiRoleAssistant' })}
-            </Text>
-            <pre className={style['ai-msg-content']}>{msg.content}</pre>
+            <div className={style['ai-msg-bubble']}>
+              {msg.role === 'assistant' ? (
+                <div className={style['ai-msg-markdown']}>
+                  <HtmlMarkdown>{msg.content || ''}</HtmlMarkdown>
+                </div>
+              ) : (
+                <pre className={style['ai-msg-content']}>{msg.content}</pre>
+              )}
+            </div>
           </div>
         ))}
       </div>

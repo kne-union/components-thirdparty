@@ -1,0 +1,52 @@
+{
+  "siteList": {
+    "totalCount": 4,
+    "pageData": [
+      {
+        "id": "site-001",
+        "name": "产品演示组件站",
+        "shorten": "PROD01",
+        "host": "localStorage:live-components-admin-demo",
+        "status": "open",
+        "defaultPermission": "rw",
+        "createdAt": "2026-03-12T09:20:00.000Z"
+      },
+      {
+        "id": "site-002",
+        "name": "招聘门户动态页",
+        "shorten": "HR2026",
+        "host": "/api/v1/live-components-site/HR2026",
+        "status": "open",
+        "defaultPermission": "r",
+        "createdAt": "2026-05-08T14:35:00.000Z"
+      },
+      {
+        "id": "site-003",
+        "name": "内部工具配置站",
+        "shorten": "TOOLS1",
+        "host": "/api/v1/live-components-site/TOOLS1",
+        "status": "closed",
+        "defaultPermission": "rw",
+        "createdAt": "2026-01-22T11:05:00.000Z"
+      },
+      {
+        "id": "site-004",
+        "name": "活动落地页组件库",
+        "shorten": "EVENT8",
+        "host": "/api/v1/live-components-site/EVENT8",
+        "status": "open",
+        "defaultPermission": "rw",
+        "createdAt": "2026-06-18T16:48:00.000Z"
+      }
+    ]
+  },
+  "siteDetail": {
+    "id": "site-001",
+    "name": "产品演示组件站",
+    "shorten": "PROD01",
+    "host": "localStorage:live-components-admin-demo",
+    "status": "open",
+    "defaultPermission": "rw",
+    "createdAt": "2026-03-12T09:20:00.000Z"
+  }
+}
