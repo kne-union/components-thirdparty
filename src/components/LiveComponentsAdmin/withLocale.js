@@ -1,7 +1,14 @@
-import createWithLocale from '../../common/createWithLocale';
+import { createWithIntlProvider } from '@kne/react-intl';
 import zhCN from './locale/zh-CN';
 import enUS from './locale/en-US';
 
-const withLocale = createWithLocale('LiveComponentsAdmin', enUS, zhCN);
+const withLocale = createWithIntlProvider({
+  defaultLocale: 'zh-CN',
+  messages: {
+    'zh-CN': zhCN,
+    'en-US': enUS
+  },
+  namespace: 'components-thirdparty'
+});
 
 export default withLocale;
