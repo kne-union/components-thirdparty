@@ -1,7 +1,6 @@
-import React, { useEffect, useMemo, memo, useState } from 'react';
+import React, { Component, useEffect, useMemo, memo, useState } from 'react';
 import { decodeLiveComponentConfig } from './decodeConfig';
 import { withRemoteLoader } from '@kne/remote-loader';
-import ErrorBoundary from '@kne/react-error-boundary';
 import { createWithFetch } from '@kne/react-fetch';
 import { transform as babelTransform } from '@babel/standalone';
 import transform from 'lodash/transform';
@@ -46,6 +45,35 @@ const ErrorComponent = memo(({ error }) => {
   );
 });
 
+/**
+ * 内容变更时自动清空错误态，避免预览卡在旧的运行时错误上。
+ * （@kne/react-error-boundary 捕获后不会随 props 恢复）
+ */
+class ResettableErrorBoundary extends Component {
+  state = { error: null };
+
+  static getDerivedStateFromError(error) {
+    return { error };
+  }
+
+  componentDidCatch(error) {
+    this.props.onError?.(error);
+  }
+
+  componentDidUpdate(prevProps) {
+    if (this.state.error != null && prevProps.resetKey !== this.props.resetKey) {
+      this.setState({ error: null });
+    }
+  }
+
+  render() {
+    if (this.state.error) {
+      const ErrorCmp = this.props.errorComponent || ErrorComponent;
+      return <ErrorCmp error={this.state.error} />;
+    }
+    return this.props.children;
+  }
+}
 const FORM_INFO_SCOPE_TOKEN = 'components-core:FormInfo';
 
 /** FormInfo 字段/列表依赖 Form 上下文，LiveComponentView 独立渲染时需外包 FormInfo.Form */
@@ -138,6 +166,7 @@ const LiveComponent = withRemoteLoader(({ remoteModules, children, props, libs =
       runnerFunction(React, jsx => setRenderJsx(jsx), props, Antd, ...libValues, ...newModuleScopeValues);
     } catch (e) {
       setError(e);
+      setRenderJsx(null);
     }
     // propsKey / libKeysKey 为序列化签名，避免 props、libs 引用变化导致重复执行
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -145,7 +174,9 @@ const LiveComponent = withRemoteLoader(({ remoteModules, children, props, libs =
 
   return (
     <Flex vertical>
-      <ErrorBoundary errorComponent={ErrorComponent}>{moduleNames.length !== remoteModules.length ? <Spin /> : renderJsx}</ErrorBoundary>
+      <ResettableErrorBoundary resetKey={content} errorComponent={ErrorComponent}>
+        {moduleNames.length !== remoteModules.length ? <Spin /> : renderJsx}
+      </ResettableErrorBoundary>
       {error && <ErrorComponent error={error} />}
     </Flex>
   );
@@ -244,10 +275,11 @@ const LiveComponentView = withLocale(({ content: inputStr, props: componentProps
 });
 
 const LiveComponentsViewCatch = memo(props => {
+  const resetKey = typeof props.content === 'string' ? props.content : String(props.content || '');
   return (
-    <ErrorBoundary errorComponent={ErrorComponent}>
+    <ResettableErrorBoundary resetKey={resetKey} errorComponent={ErrorComponent}>
       <LiveComponentView {...props} />
-    </ErrorBoundary>
+    </ResettableErrorBoundary>
   );
 });
 

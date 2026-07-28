@@ -1,61 +1,230 @@
-/** 从 content 中按 1-based line 抽取大致 JSX 片段 */
-export const extractSelectionFromContent = (content, line, column) => {
+const escapeRegExp = value => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+const indexFromLineColumn = (text, line, column) => {
+  const source = String(text || '');
+  const lines = source.split('\n');
+  if (!lines.length) {
+    return 0;
+  }
+  const lineIdx = Math.min(Math.max((line || 1) - 1, 0), lines.length - 1);
+  let index = 0;
+  for (let i = 0; i < lineIdx; i += 1) {
+    index += lines[i].length + 1;
+  }
+  return Math.min(index + Math.max((column || 1) - 1, 0), source.length);
+};
+
+const lineColumnFromIndex = (text, index) => {
+  const source = String(text || '');
+  const safeIndex = Math.max(0, Math.min(index, source.length));
+  const lines = source.slice(0, safeIndex).split('\n');
+  return {
+    line: lines.length,
+    column: (lines[lines.length - 1] || '').length + 1
+  };
+};
+
+/** 跳过 JSX 属性中的成对引号 / 表达式，定位开标签结束位置 */
+const scanJsxOpeningTagEnd = (text, fromIndex) => {
+  let i = fromIndex;
+  let quote = null;
+  while (i < text.length) {
+    const ch = text[i];
+    if (quote) {
+      if (ch === quote && text[i - 1] !== '\\') {
+        quote = null;
+      }
+      i += 1;
+      continue;
+    }
+    if (ch === '"' || ch === "'" || ch === '`') {
+      quote = ch;
+      i += 1;
+      continue;
+    }
+    if (ch === '{') {
+      let depth = 1;
+      i += 1;
+      while (i < text.length && depth > 0) {
+        const c = text[i];
+        if (c === '"' || c === "'" || c === '`') {
+          const q = c;
+          i += 1;
+          while (i < text.length && text[i] !== q) {
+            i += 1;
+          }
+          i += 1;
+          continue;
+        }
+        if (c === '{') {
+          depth += 1;
+        } else if (c === '}') {
+          depth -= 1;
+        }
+        i += 1;
+      }
+      continue;
+    }
+    if (ch === '/' && text[i + 1] === '>') {
+      return { end: i + 2, selfClosing: true };
+    }
+    if (ch === '>') {
+      return { end: i + 1, selfClosing: false };
+    }
+    i += 1;
+  }
+  return { end: text.length, selfClosing: false };
+};
+
+/**
+ * 按 1-based 行列定位完整 JSX 元素的字符区间 [start, end)
+ * data-live-line/column 指向开标签起点
+ */
+export const findJsxElementCharRange = (content, line, column) => {
   const text = String(content || '');
   if (!text.trim() || !line || line < 1) {
     return null;
   }
-  const lines = text.split('\n');
-  let startIdx = Math.min(Math.max(line - 1, 0), lines.length - 1);
 
-  while (startIdx > 0 && !/<\s*[A-Za-z]/.test(lines[startIdx])) {
-    startIdx -= 1;
-  }
-
-  const startLineText = lines[startIdx] || '';
-  const openMatch = startLineText.match(/<\s*([A-Za-z][\w.]*)/);
-  const tagName = openMatch?.[1];
-  const label = tagName ? `${tagName} @ L${startIdx + 1}` : `L${startIdx + 1}`;
-
-  let endIdx = startIdx;
-  if (tagName && !/\/\s*>/.test(startLineText) && !new RegExp(`</\\s*${tagName.replace('.', '\\.')}\\s*>`).test(startLineText)) {
-    let depth = 0;
-    const openRe = new RegExp(`<\\s*${tagName.replace('.', '\\.')}(\\s|>|/)`, 'g');
-    const closeRe = new RegExp(`</\\s*${tagName.replace('.', '\\.')}\\s*>`, 'g');
-    for (let i = startIdx; i < lines.length; i += 1) {
-      const row = lines[i];
-      const opens = row.match(openRe) || [];
-      const closes = row.match(closeRe) || [];
-      const selfClosing = (row.match(new RegExp(`<\\s*${tagName.replace('.', '\\.')}[^>]*?/\\s*>`, 'g')) || []).length;
-      depth += opens.length - selfClosing - closes.length;
-      endIdx = i;
-      if (i > startIdx && depth <= 0) {
-        break;
+  let start = indexFromLineColumn(text, line, column);
+  if (text[start] !== '<') {
+    let found = -1;
+    for (let i = Math.min(start, text.length - 1); i >= 0; i -= 1) {
+      if (text[i] !== '<') {
+        continue;
       }
-      if (i === startIdx && selfClosing && opens.length === selfClosing) {
-        break;
+      const next = text[i + 1];
+      if (!next || next === '/' || next === '!' || next === '?' || next === '>') {
+        continue;
       }
+      if (!/[A-Za-z]/.test(next)) {
+        continue;
+      }
+      found = i;
+      break;
     }
+    if (found < 0) {
+      return null;
+    }
+    start = found;
   }
 
-  const code = lines.slice(startIdx, endIdx + 1).join('\n');
+  const openMatch = text.slice(start).match(/^<\s*([A-Za-z][\w.]*)/);
+  if (!openMatch) {
+    return null;
+  }
+  const tagName = openMatch[1];
+  const opening = scanJsxOpeningTagEnd(text, start + openMatch[0].length);
+  if (opening.selfClosing) {
+    return { start, end: opening.end, tagName };
+  }
+
+  const openToken = new RegExp(`^<\\s*${escapeRegExp(tagName)}(?=[\\s>/])`);
+  const closeToken = new RegExp(`^</\\s*${escapeRegExp(tagName)}\\s*>`);
+  let depth = 1;
+  let i = opening.end;
+
+  while (i < text.length && depth > 0) {
+    if (text[i] !== '<') {
+      i += 1;
+      continue;
+    }
+    const slice = text.slice(i);
+    const closeMatch = slice.match(closeToken);
+    if (closeMatch) {
+      depth -= 1;
+      i += closeMatch[0].length;
+      if (depth === 0) {
+        return { start, end: i, tagName };
+      }
+      continue;
+    }
+    if (openToken.test(slice)) {
+      const nestedOpen = slice.match(openToken);
+      const nestedEnd = scanJsxOpeningTagEnd(text, i + nestedOpen[0].length);
+      if (nestedEnd.selfClosing) {
+        i = nestedEnd.end;
+      } else {
+        depth += 1;
+        i = nestedEnd.end;
+      }
+      continue;
+    }
+    i += 1;
+  }
+
+  return { start, end: Math.min(i, text.length), tagName };
+};
+
+const cleanupAfterJsxDelete = (text, joinIndex) => {
+  let next = String(text || '');
+  const at = Math.max(0, Math.min(joinIndex, next.length));
+  const before = next.slice(0, at).replace(/[ \t]+$/, '');
+  const after = next.slice(at).replace(/^[ \t]*\n/, '\n');
+  next = before + after;
+  // 去掉因删除产生的多余空行（标签之间）
+  next = next.replace(/>[ \t]*\n(?:[ \t]*\n)+([ \t]*)(?=<\/?|[{\w])/g, '>\n$1');
+  next = next.replace(/\n{3,}/g, '\n\n');
+  return next;
+};
+
+/** 从 content 中按 1-based line/column 抽取完整 JSX 片段 */
+export const extractSelectionFromContent = (content, line, column) => {
+  const text = String(content || '');
+  const range = findJsxElementCharRange(text, line, column);
+  if (!range) {
+    return null;
+  }
+  const startPos = lineColumnFromIndex(text, range.start);
+  const endPos = lineColumnFromIndex(text, range.end);
+  const code = text.slice(range.start, range.end);
   return {
-    startLine: startIdx + 1,
-    endLine: endIdx + 1,
-    column: column || 1,
+    startLine: startPos.line,
+    endLine: endPos.line,
+    column: startPos.column,
+    endColumn: endPos.column,
+    startOffset: range.start,
+    endOffset: range.end,
     code,
-    label
+    label: range.tagName ? `${range.tagName} @ L${startPos.line}` : `L${startPos.line}`
   };
 };
 
 export const applySelectionToContent = (content, selection, nextCode) => {
+  const text = String(content || '');
+  if (Number.isFinite(selection?.startOffset) && Number.isFinite(selection?.endOffset)) {
+    const mid = String(nextCode || '').replace(/\n$/, '');
+    return text.slice(0, selection.startOffset) + mid + text.slice(selection.endOffset);
+  }
   if (!selection?.startLine || !selection?.endLine) {
     return nextCode;
   }
-  const lines = String(content || '').split('\n');
+  const range = findJsxElementCharRange(text, selection.startLine, selection.column || 1);
+  if (range) {
+    const mid = String(nextCode || '').replace(/\n$/, '');
+    return text.slice(0, range.start) + mid + text.slice(range.end);
+  }
+  const lines = text.split('\n');
   const before = lines.slice(0, selection.startLine - 1);
   const after = lines.slice(selection.endLine);
   const mid = String(nextCode || '').replace(/\n$/, '').split('\n');
   return [...before, ...mid, ...after].join('\n');
+};
+
+/** 从 content 中删除选中的完整 JSX 元素 */
+export const deleteSelectionFromContent = (content, selection) => {
+  const text = String(content || '');
+  let range = null;
+  if (Number.isFinite(selection?.startOffset) && Number.isFinite(selection?.endOffset)) {
+    range = { start: selection.startOffset, end: selection.endOffset };
+  } else if (selection?.startLine) {
+    range = findJsxElementCharRange(text, selection.startLine, selection.column || 1);
+  }
+  if (!range) {
+    return text;
+  }
+  const next = text.slice(0, range.start) + text.slice(range.end);
+  return cleanupAfterJsxDelete(next, range.start);
 };
 
 export const stripCodeFence = text => {
@@ -97,8 +266,6 @@ export const stripCodeFence = text => {
 
   return raw;
 };
-
-const escapeRegExp = value => String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
 const inferPropDef = (code, name) => {
   if (/^on[A-Z]/.test(name)) {

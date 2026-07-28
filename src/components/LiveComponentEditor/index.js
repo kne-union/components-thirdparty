@@ -12,7 +12,9 @@ import {
   SaveOutlined,
   FormOutlined,
   MenuUnfoldOutlined,
-  MenuFoldOutlined
+  MenuFoldOutlined,
+  ArrowUpOutlined,
+  SelectOutlined
 } from '@ant-design/icons';
 import CodeEditor from '@components/CodeEditor';
 import LiveComponentView from '@components/LiveComponentView';
@@ -21,6 +23,7 @@ import lodash from 'lodash';
 import { transform, debounce, throttle, get, isEqual } from 'lodash';
 import dayjs from 'dayjs';
 import { useState, useRef, useEffect, useMemo, useImperativeHandle, forwardRef } from 'react';
+import classnames from 'classnames';
 import { createRoot } from 'react-dom/client';
 import { useIntl } from '@kne/react-intl';
 import withLocale from './withLocale';
@@ -32,7 +35,8 @@ import {
   DEFAULT_USER_SITES_STORAGE_KEY,
   isLocalStorageHost,
   mergeSites,
-  readUserSites
+  readUserSites,
+  writeEditorSelection
 } from './siteApi';
 import { extractSelectionFromContent, applySelectionToContent, mergeSuggestedProps } from './aiSelection';
 import { installAiSiteMock, uninstallAiSiteMock, AI_MOCK_HOST } from './aiSiteMock';
@@ -45,6 +49,9 @@ import {
   resolveElementsFromEditorPosition,
   resolveSourceFromPoint,
   findSameSourceElements,
+  findParentLiveSourceElement,
+  unionRects,
+  revealEditorPosition,
   scrollElementsIntoView
 } from './previewLocate';
 import style from './style.module.scss';
@@ -190,6 +197,7 @@ const LiveComponentEditorCore = createWithRemoteLoader({
           onSitesChange,
           siteActionsOpen = true,
           userSitesStorageKey = DEFAULT_USER_SITES_STORAGE_KEY,
+          transformContentUrl = null,
           enableSourceLocate = true
         },
         ref
@@ -292,6 +300,7 @@ const LiveComponentEditorCore = createWithRemoteLoader({
           }
         }, [outputContent, handleChange]);
         const [mod, setMod] = useState(defaultMod);
+
         const { content, props, scope } = Object.assign({}, { content: '', props: {}, scope: {} }, params);
         const [propsFormData, setPropsFormData] = useState(() => buildPropsFormData(props));
         const [scopeFormData, setScopeFormData] = useState(() => buildScopeFormData(scope));
@@ -428,6 +437,14 @@ const LiveComponentEditorCore = createWithRemoteLoader({
               name: file.name || name,
               permission: file.permission || 'rw'
             });
+            writeEditorSelection(
+              {
+                activeHost: host,
+                file: { siteHost: host, id: file.id, name: file.name || name }
+              },
+              resolvedUserSitesKey
+            );
+            setActiveSiteHost(host);
             setSaveAsOpen(false);
             setTreeRefreshToken(token => token + 1);
             message.success(formatMessage({ id: 'MsgSaveSuccess' }));
@@ -569,6 +586,83 @@ const LiveComponentEditorCore = createWithRemoteLoader({
           if (result.line) {
             setSelectedSource({ line: result.line, column: result.column || 1 });
           }
+        });
+
+        const applySelectionHighlight = useRefCallback(({ line, column, elements }) => {
+          locateFromPreviewRef.current = true;
+          window.setTimeout(() => {
+            locateFromPreviewRef.current = false;
+          }, 200);
+          const els = elements?.length ? elements : [];
+          cursorElementsRef.current = els;
+          const panelRects = toPanelRects(measureHighlightRects(els));
+          setCursorRects(panelRects);
+          setFlashRects(panelRects);
+          if (flashTimerRef.current) {
+            window.clearTimeout(flashTimerRef.current);
+          }
+          flashTimerRef.current = window.setTimeout(() => {
+            setFlashRects([]);
+            flashTimerRef.current = null;
+          }, HIGHLIGHT_DURATION_MS);
+          if (line) {
+            setSelectedSource({ line, column: column || 1 });
+          }
+        });
+
+        const handleSelectParent = useRefCallback(event => {
+          event?.stopPropagation?.();
+          event?.preventDefault?.();
+          const current = cursorElementsRef.current?.[0];
+          const parent = findParentLiveSourceElement(current, previewRootRef.current);
+          if (!parent) {
+            message.info(formatMessage({ id: 'MsgNoParentSelection' }));
+            return;
+          }
+          revealEditorPosition(codeEditorRef.current, parent.line, parent.column);
+          let elements = findSameSourceElements(previewRootRef.current, parent.line, parent.column);
+          if (!elements.length) {
+            elements = [parent.element];
+          }
+          applySelectionHighlight({
+            line: parent.line,
+            column: parent.column,
+            elements
+          });
+        });
+
+        const handleSelectInEditor = useRefCallback(event => {
+          event?.stopPropagation?.();
+          event?.preventDefault?.();
+          if (!selectedSource?.line) {
+            return;
+          }
+          const sel = extractSelectionFromContent(content, selectedSource.line, selectedSource.column);
+          if (!sel?.code) {
+            message.info(formatMessage({ id: 'MsgLocateNoSource' }));
+            return;
+          }
+          const editor = codeEditorRef.current?.getEditor?.() || codeEditorRef.current;
+          if (!editor?.setSelection) {
+            return;
+          }
+          const range = {
+            startLineNumber: sel.startLine,
+            startColumn: sel.column || 1,
+            endLineNumber: sel.endLine,
+            endColumn: sel.endColumn || 1
+          };
+          locateFromPreviewRef.current = true;
+          window.setTimeout(() => {
+            locateFromPreviewRef.current = false;
+          }, 200);
+          editor.setSelection(range);
+          if (editor.revealRangeInCenter) {
+            editor.revealRangeInCenter(range);
+          } else if (editor.revealLineInCenter) {
+            editor.revealLineInCenter(range.startLineNumber);
+          }
+          editor.focus?.();
         });
 
         const handleCodeEditorMount = useRefCallback(({ editor }) => {
@@ -746,11 +840,17 @@ const LiveComponentEditorCore = createWithRemoteLoader({
             />
           ));
 
+        const selectionUnionRect = useMemo(() => unionRects(cursorRects), [cursorRects]);
+        const canSelectParent = !!(
+          selectionUnionRect &&
+          findParentLiveSourceElement(cursorElementsRef.current?.[0], previewRootRef.current)
+        );
+
         const editor = (
           <div className={style['code-editor']}>
             <CodeEditor
               ref={codeEditorRef}
-              height={height}
+              height="100%"
               defaultValue={content}
               defaultLanguage="javascript"
               onMount={handleCodeEditorMount}
@@ -768,38 +868,74 @@ const LiveComponentEditorCore = createWithRemoteLoader({
           <div
             ref={previewPanelRef}
             className={style['preview-panel']}
-            style={{ height: `${height}px` }}
+            style={{ height: '100%' }}
             onMouseMove={sourceLocateActive ? handlePreviewMouseMove : undefined}
             onMouseLeave={sourceLocateActive ? handlePreviewMouseLeave : undefined}>
-            <SimpleBar
-              style={{
-                maxHeight: `${height}px`
-              }}>
-              <div
-                ref={previewRootRef}
-                className={style['preview']}
-                style={{ minHeight: `${height}px` }}
-                onDoubleClick={sourceLocateActive ? handlePreviewDoubleClick : undefined}>
-                {!content ? (
-                  <Empty description={formatMessage({ id: 'EmptyContent' })} />
-                ) : (
-                  <SafeRender>
-                    <Form>
-                      <LiveComponentView
-                        content={outputContent}
-                        libs={libs}
-                        enableSourceLocate={enableSourceLocate}
-                      />
-                    </Form>
-                  </SafeRender>
-                )}
-              </div>
-            </SimpleBar>
+            <div className={style['preview']}>
+              <SimpleBar
+                style={{
+                  maxHeight: '100%',
+                  height: '100%'
+                }}>
+                <div
+                  ref={previewRootRef}
+                  className={style['preview-inner']}
+                  onDoubleClick={sourceLocateActive ? handlePreviewDoubleClick : undefined}>
+                  {!content ? (
+                    <Empty description={formatMessage({ id: 'EmptyContent' })} />
+                  ) : (
+                    <SafeRender>
+                      <Form>
+                        <LiveComponentView
+                          content={outputContent}
+                          libs={libs}
+                          enableSourceLocate={enableSourceLocate}
+                        />
+                      </Form>
+                    </SafeRender>
+                  )}
+                </div>
+              </SimpleBar>
+            </div>
             {sourceLocateActive && (
-              <div className={style['preview-locate-layer']} aria-hidden>
+              <div className={style['preview-locate-layer']} aria-hidden={!selectionUnionRect}>
                 {renderLocateOverlays(hoverRects, style['preview-locate-hover'])}
                 {renderLocateOverlays(cursorRects, style['preview-locate-cursor'])}
                 {renderLocateOverlays(flashRects, style['preview-locate-flash'])}
+                {selectionUnionRect ? (
+                  <div
+                    className={style['preview-locate-selection']}
+                    style={{
+                      top: selectionUnionRect.top,
+                      left: selectionUnionRect.left,
+                      width: Math.max(selectionUnionRect.width, 2),
+                      height: Math.max(selectionUnionRect.height, 2)
+                    }}>
+                    <div className={style['preview-locate-actions']}>
+                      <Space.Compact size="small">
+                        <Tooltip title={formatMessage({ id: 'SelectParent' })}>
+                          <Button
+                            type="primary"
+                            size="small"
+                            icon={<ArrowUpOutlined />}
+                            disabled={!canSelectParent}
+                            aria-label={formatMessage({ id: 'SelectParent' })}
+                            onClick={handleSelectParent}
+                          />
+                        </Tooltip>
+                        <Tooltip title={formatMessage({ id: 'SelectInEditor' })}>
+                          <Button
+                            type="primary"
+                            size="small"
+                            icon={<SelectOutlined />}
+                            aria-label={formatMessage({ id: 'SelectInEditor' })}
+                            onClick={handleSelectInEditor}
+                          />
+                        </Tooltip>
+                      </Space.Compact>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             )}
           </div>
@@ -877,16 +1013,15 @@ const LiveComponentEditorCore = createWithRemoteLoader({
                     />
                   )}
                   {showAiPanel && aiCollapsed ? (
-                    <Tooltip title={formatMessage({ id: 'AiExpand' })}>
-                      <Button
-                        type="text"
-                        size="small"
-                        className={style['ai-toolbar-toggle']}
-                        icon={<MenuFoldOutlined rotate={180} />}
-                        aria-label={formatMessage({ id: 'AiExpand' })}
-                        onClick={() => setAiCollapsed(false)}
-                      />
-                    </Tooltip>
+                    <Button
+                      type="text"
+                      size="small"
+                      className={style['ai-toolbar-toggle']}
+                      icon={<MenuFoldOutlined rotate={180} />}
+                      title={formatMessage({ id: 'AiExpand' })}
+                      aria-label={formatMessage({ id: 'AiExpand' })}
+                      onClick={() => setAiCollapsed(false)}
+                    />
                   ) : null}
                 </Space>
               </div>
@@ -996,7 +1131,7 @@ const LiveComponentEditorCore = createWithRemoteLoader({
                 key: 'content',
                 label: formatMessage({ id: 'TabContent' }),
                 children: (
-                  <Flex vertical gap={12}>
+                  <Flex vertical gap={12} className={style['content-body']}>
                     <Collapse
                       size="small"
                       items={[
@@ -1043,14 +1178,16 @@ const LiveComponentEditorCore = createWithRemoteLoader({
                         }
                       ]}
                     />
-                    {mod === 'editor' && editor}
-                    {mod === 'mix' && (
-                      <Splitter>
-                        <Splitter.Panel>{editor}</Splitter.Panel>
-                        <Splitter.Panel>{preview}</Splitter.Panel>
-                      </Splitter>
-                    )}
-                    {mod === 'preview' && preview}
+                    <div className={style['content-stage']}>
+                      {mod === 'editor' && editor}
+                      {mod === 'mix' && (
+                        <Splitter style={{ height: '100%' }}>
+                          <Splitter.Panel>{editor}</Splitter.Panel>
+                          <Splitter.Panel>{preview}</Splitter.Panel>
+                        </Splitter>
+                      )}
+                      {mod === 'preview' && preview}
+                    </div>
                   </Flex>
                 )
               }
@@ -1058,64 +1195,70 @@ const LiveComponentEditorCore = createWithRemoteLoader({
           />
         );
 
+        const editorRootClassName = classnames(
+          style['live-component-editor'],
+          enableSites && style['editor-with-sites']
+        );
+
         return (
           <>
-            {enableSites ? (
-              <div className={style['editor-with-sites']}>
-                <aside
-                  className={`${style['sites-aside']}${sitesCollapsed ? ` ${style['sites-aside-collapsed']}` : ''}`}
-                  style={sitesCollapsed ? undefined : { width: sitesPanelWidth }}>
-                  {!sitesCollapsed ? (
-                    <div className={style['sites-aside-body']}>
-                      <SiteFilePanel
-                        sites={sites}
-                        onSitesChange={handleSitesChange}
-                        siteActionsOpen={siteActionsOpen}
-                        userSitesStorageKey={resolvedUserSitesKey}
-                        currentFile={currentFile}
-                        onOpenFile={handleOpenFile}
-                        onCurrentFileChange={setCurrentFile}
-                        onActiveHostChange={setActiveSiteHost}
-                        height={height}
-                        refreshToken={treeRefreshToken}
-                        onCollapse={() => setSitesCollapsed(true)}
+            <div className={editorRootClassName}>
+              {enableSites ? (
+                <>
+                  <aside
+                    className={`${style['sites-aside']}${sitesCollapsed ? ` ${style['sites-aside-collapsed']}` : ''}`}
+                    style={sitesCollapsed ? undefined : { width: sitesPanelWidth }}>
+                    {!sitesCollapsed ? (
+                      <div className={style['sites-aside-body']}>
+                        <SiteFilePanel
+                          sites={sites}
+                          onSitesChange={handleSitesChange}
+                          siteActionsOpen={siteActionsOpen}
+                          userSitesStorageKey={resolvedUserSitesKey}
+                          transformContentUrl={transformContentUrl}
+                          currentFile={currentFile}
+                          onOpenFile={handleOpenFile}
+                          onCurrentFileChange={setCurrentFile}
+                          onActiveHostChange={setActiveSiteHost}
+                          refreshToken={treeRefreshToken}
+                          onCollapse={() => setSitesCollapsed(true)}
+                        />
+                      </div>
+                    ) : (
+                      <Button
+                        type="text"
+                        size="small"
+                        className={style['sites-toggle']}
+                        icon={<MenuUnfoldOutlined />}
+                        title={formatMessage({ id: 'SitesExpand' })}
+                        aria-label={formatMessage({ id: 'SitesExpand' })}
+                        onClick={() => setSitesCollapsed(false)}
                       />
-                    </div>
-                  ) : (
-                    <Button
-                      type="text"
-                      size="small"
-                      className={style['sites-toggle']}
-                      icon={<MenuUnfoldOutlined />}
-                      title={formatMessage({ id: 'SitesExpand' })}
-                      aria-label={formatMessage({ id: 'SitesExpand' })}
-                      onClick={() => setSitesCollapsed(false)}
-                    />
-                  )}
-                </aside>
-                <div className={style['sites-main']}>{editorTabs}</div>
-                {showAiPanel && !aiCollapsed ? (
-                  <aside className={style['ai-aside']} style={{ width: aiPanelWidth }}>
-                    <AiAssistPanel
-                      siteHost={aiSiteHost}
-                      content={content}
-                      scope={scope}
-                      props={props}
-                      libs={Object.assign({}, getLibs(), libs)}
-                      selection={selection}
-                      limitToSelection={limitToSelection}
-                      onLimitToSelectionChange={setLimitToSelection}
-                      onApplyGenerate={handleAiApplyGenerate}
-                      onCollapse={() => setAiCollapsed(true)}
-                      formatMessage={formatMessage}
-                      height={height}
-                    />
+                    )}
                   </aside>
-                ) : null}
-              </div>
-            ) : (
-              editorTabs
-            )}
+                  <div className={style['sites-main']}>{editorTabs}</div>
+                  {showAiPanel && !aiCollapsed ? (
+                    <aside className={style['ai-aside']} style={{ width: aiPanelWidth }}>
+                      <AiAssistPanel
+                        siteHost={aiSiteHost}
+                        content={content}
+                        scope={scope}
+                        props={props}
+                        libs={Object.assign({}, getLibs(), libs)}
+                        selection={selection}
+                        limitToSelection={limitToSelection}
+                        onLimitToSelectionChange={setLimitToSelection}
+                        onApplyGenerate={handleAiApplyGenerate}
+                        onCollapse={() => setAiCollapsed(true)}
+                        formatMessage={formatMessage}
+                      />
+                    </aside>
+                  ) : null}
+                </>
+              ) : (
+                editorTabs
+              )}
+            </div>
             {enableSites && (
               <SaveAsModal
                 open={saveAsOpen}
@@ -1131,6 +1274,7 @@ const LiveComponentEditorCore = createWithRemoteLoader({
                 siteHost={currentFile?.siteHost}
                 fileId={currentFile?.id}
                 fileName={currentFile?.name}
+                transformContentUrl={transformContentUrl}
                 onCancel={() => setContentShareOpen(false)}
               />
             )}
@@ -1141,10 +1285,14 @@ const LiveComponentEditorCore = createWithRemoteLoader({
   )
 );
 
-const LiveComponentEditor = forwardRef((props, ref) => (
-  <App>
-    <LiveComponentEditorCore ref={ref} {...props} />
-  </App>
+const LiveComponentEditor = forwardRef(({ className, style: styleProp, height = 500, ...props }, ref) => (
+  <div
+    className={classnames(style['live-component-editor-host'], className)}
+    style={className ? styleProp : { height: `${Number(height) + 120}px`, ...styleProp }}>
+    <App>
+      <LiveComponentEditorCore ref={ref} height={height} {...props} />
+    </App>
+  </div>
 ));
 
 LiveComponentEditor.installAiSiteMock = installAiSiteMock;

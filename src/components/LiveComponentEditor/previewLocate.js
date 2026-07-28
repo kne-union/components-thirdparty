@@ -146,6 +146,50 @@ export const getSourceFromElement = el => {
   };
 };
 
+/** 当前标记节点的上级带 data-live-line 的节点 */
+export const findParentLiveSourceElement = (el, root) => {
+  if (!el?.parentElement) {
+    return null;
+  }
+  let parent = el.parentElement;
+  while (parent && parent !== document.documentElement) {
+    if (root && (parent === root || !root.contains(parent))) {
+      return null;
+    }
+    if (parent.getAttribute?.('data-live-line')) {
+      return getSourceFromElement(parent);
+    }
+    parent = parent.parentElement;
+  }
+  return null;
+};
+
+/** 多个定位框的并集矩形（相对坐标） */
+export const unionRects = rects => {
+  if (!rects?.length) {
+    return null;
+  }
+  let top = Infinity;
+  let left = Infinity;
+  let right = -Infinity;
+  let bottom = -Infinity;
+  rects.forEach(rect => {
+    top = Math.min(top, rect.top);
+    left = Math.min(left, rect.left);
+    right = Math.max(right, rect.left + rect.width);
+    bottom = Math.max(bottom, rect.top + rect.height);
+  });
+  if (!Number.isFinite(top)) {
+    return null;
+  }
+  return {
+    top,
+    left,
+    width: Math.max(right - left, 2),
+    height: Math.max(bottom - top, 2)
+  };
+};
+
 export const findSameSourceElements = (previewRoot, line, column) => {
   if (!previewRoot) {
     return [];
