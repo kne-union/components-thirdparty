@@ -13,16 +13,43 @@ const unwrap = payload => {
 
 const joinUrl = (host, path) => `${String(host).replace(/\/$/, '')}/${path.replace(/^\//, '')}`;
 
-/** 将站点相对路径补成可访问的绝对 URL */
-export const toAbsoluteUrl = pathOrUrl => {
+/** 从站点 host 解析 origin（仅绝对 http(s) URL） */
+export const getSiteOrigin = host => {
+  if (!host || isLocalStorageHost(host)) {
+    return '';
+  }
+  try {
+    const raw = String(host).trim();
+    if (/^https?:\/\//i.test(raw)) {
+      return new URL(raw).origin;
+    }
+  } catch {
+    // ignore invalid URL
+  }
+  return '';
+};
+
+/**
+ * 将站点相对路径补成可访问的绝对 URL。
+ * 传入 baseHost 时优先用站点 origin，避免编辑器页与站点不同域时误用 window.location.origin。
+ */
+export const toAbsoluteUrl = (pathOrUrl, baseHost) => {
   if (!pathOrUrl) {
     return null;
   }
   if (/^https?:\/\//i.test(pathOrUrl)) {
     return pathOrUrl;
   }
-  const origin = typeof window !== 'undefined' ? window.location?.origin : '';
   const path = pathOrUrl.startsWith('/') ? pathOrUrl : `/${pathOrUrl}`;
+  if (baseHost) {
+    const siteOrigin = getSiteOrigin(baseHost);
+    if (siteOrigin) {
+      return `${siteOrigin}${path}`;
+    }
+    // 站点 host 本身为相对路径时，内容地址保持相对，不拼当前页 origin
+    return path;
+  }
+  const origin = typeof window !== 'undefined' ? window.location?.origin : '';
   return origin ? `${origin}${path}` : path;
 };
 
@@ -40,7 +67,7 @@ export const getContentShareBase = host => {
   return parts.join('/');
 };
 
-/** 远程站点内容短链地址：{origin}{prefix}/content/{shorten}（不含站点 shorten） */
+/** 远程站点内容短链地址：{siteOrigin}{prefix}/content/{shorten}（不含站点 shorten） */
 export const getRemoteContentUrl = (host, contentShorten) => {
   if (!host || isLocalStorageHost(host) || !contentShorten) {
     return null;
@@ -49,7 +76,11 @@ export const getRemoteContentUrl = (host, contentShorten) => {
   if (!base) {
     return null;
   }
-  return toAbsoluteUrl(joinUrl(base, `content/${encodeURIComponent(String(contentShorten).toUpperCase())}`));
+  const path = joinUrl(base, `content/${encodeURIComponent(String(contentShorten).toUpperCase())}`);
+  if (/^https?:\/\//i.test(path)) {
+    return path;
+  }
+  return toAbsoluteUrl(path, host);
 };
 
 const createId = () => `f_${Date.now().toString(36)}_${Math.random().toString(36).slice(2, 8)}`;
@@ -512,6 +543,77 @@ export const writeUserSites = (sites, storageKey = DEFAULT_USER_SITES_STORAGE_KE
   const normalized = (Array.isArray(sites) ? sites : []).map(normalizeSite).filter(item => item.host);
   localStorage.setItem(key, JSON.stringify(normalized));
   return normalized;
+};
+
+/** 站点/文件选择缓存 key（与 userSitesStorageKey 关联） */
+export const getSelectionStorageKey = (userSitesKey = DEFAULT_USER_SITES_STORAGE_KEY) => {
+  const base = String(userSitesKey || '').trim() || DEFAULT_USER_SITES_STORAGE_KEY;
+  return `${base}:selection`;
+};
+
+const normalizeSelectionFile = file => {
+  if (!file || typeof file !== 'object') {
+    return null;
+  }
+  const siteHost = String(file.siteHost || '').trim();
+  const id = String(file.id || '').trim();
+  if (!siteHost || !id) {
+    return null;
+  }
+  return {
+    siteHost,
+    id,
+    name: String(file.name || '').trim()
+  };
+};
+
+/** 读取上次选中的站点与文件；无效数据返回 null */
+export const readEditorSelection = (userSitesKey = DEFAULT_USER_SITES_STORAGE_KEY) => {
+  try {
+    const raw = localStorage.getItem(getSelectionStorageKey(userSitesKey));
+    if (!raw) {
+      return null;
+    }
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object') {
+      return null;
+    }
+    return {
+      activeHost: String(parsed.activeHost || '').trim() || null,
+      file: normalizeSelectionFile(parsed.file)
+    };
+  } catch {
+    return null;
+  }
+};
+
+/** 写入站点/文件选择缓存 */
+export const writeEditorSelection = (selection, userSitesKey = DEFAULT_USER_SITES_STORAGE_KEY) => {
+  const payload = {
+    activeHost: String(selection?.activeHost || '').trim() || null,
+    file: normalizeSelectionFile(selection?.file)
+  };
+  localStorage.setItem(getSelectionStorageKey(userSitesKey), JSON.stringify(payload));
+  return payload;
+};
+
+/** 在文件树中查找节点（含子孙） */
+export const findTreeNode = (nodes, id) => {
+  if (!id) {
+    return null;
+  }
+  for (const node of nodes || []) {
+    if (node.id === id) {
+      return node;
+    }
+    if (node.children?.length) {
+      const found = findTreeNode(node.children, id);
+      if (found) {
+        return found;
+      }
+    }
+  }
+  return null;
 };
 
 /** props 站点在前，用户本地站点在后（同 host 以 props 为准） */

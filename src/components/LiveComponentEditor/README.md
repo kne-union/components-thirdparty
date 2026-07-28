@@ -171,7 +171,9 @@ render(<AiExample />);
 |--------|------|--------|------|
 | defaultValue | string | - | 默认组件配置（PlantUML 编码） |
 | defaultMod | string | 'mix' | 默认显示模式 |
-| height | number | 500 | 编辑器和预览区域高度 |
+| height | number | 500 | 未传 `className` 时用于默认容器高度（内容区 + 约 120px 工具栏） |
+| className | string | - | 合并到最外层容器；可通过 CSS 设置高度（如 `height: 100vh`），内部自动撑满 |
+| style | object | - | 最外层容器行内样式 |
 | width | number | 260 | 开启 `sites` 时左侧站点面板展开宽度（不可拖拽，可展开/收起） |
 | libs | object | { lodash, dayjs } | 可用库集合 |
 | onChange | function | - | 配置变化回调函数 |
@@ -179,7 +181,8 @@ render(<AiExample />);
 | sites | `{ host, name }[]` | - | 传入数组（可为 `[]`）时开启左侧多站点文件面板 |
 | onSitesChange | function | - | 合并后站点列表变更回调（props + 本地添加） |
 | siteActionsOpen | boolean | true | 开启后可添加站点；本地添加的站点可编辑/删除，`sites` 配置的不可改删 |
-| userSitesStorageKey | string | `live-component-editor:user-sites` | 用户自行添加站点在 `localStorage` 中的存储 key |
+| userSitesStorageKey | string | `live-component-editor:user-sites` | 用户自行添加站点在 `localStorage` 中的存储 key；站点/文件选择缓存为 `{key}:selection` |
+| transformContentUrl | `(url: string) => string` \| null | `null` | 复制内容地址弹窗：传入时在「已创建」列表额外展示转换后的打开地址（与源内容地址一并显示）；默认仅显示源地址 |
 | enableSourceLocate | boolean | true | 是否启用混合模式源码双向定位（预览↔编辑器） |
 
 #### 显示模式 (mod)

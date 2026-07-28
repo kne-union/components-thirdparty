@@ -5,6 +5,8 @@ const localeMessages = {
   ContentShareCreateSection: 'Create',
   ContentShareCreateHint: 'Pick an expiry, then generate a short link to the saved content.',
   ContentShareListSection: 'Existing',
+  ContentShareSourceUrl: 'Content URL',
+  ContentShareOpenUrl: 'Open URL',
   ContentShareCount: '{count}',
   ContentShareFile: '{name}',
   ContentShareEmpty: 'No content URLs yet. Create one above.',

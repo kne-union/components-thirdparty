@@ -29,8 +29,7 @@ const AiAssistPanel = ({
   onLimitToSelectionChange,
   onApplyGenerate,
   onCollapse,
-  formatMessage,
-  height
+  formatMessage
 }) => {
   const [messages, setMessages] = useState([]);
   const [input, setInput] = useState('');
@@ -190,7 +189,7 @@ const AiAssistPanel = ({
     : messages;
 
   return (
-    <div className={style['ai-panel']} style={{ height: `${height + 120}px` }}>
+    <div className={style['ai-panel']}>
       <Flex justify="space-between" align="center" className={style['ai-panel-header']}>
         <Space size={6}>
           <RobotOutlined />

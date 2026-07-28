@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { App, Button, Flex, Input, Modal, Select, Space, Spin, Typography, Dropdown } from 'antd';
 import {
   FolderAddOutlined,
@@ -25,6 +25,7 @@ import {
   createSiteApi,
   DEFAULT_USER_SITES_STORAGE_KEY,
   findParentId,
+  findTreeNode,
   flattenDirectories,
   collectNodeAndDescendantIds,
   hasDuplicateName,
@@ -33,8 +34,10 @@ import {
   mergeSites,
   normalizeSite,
   probeSiteConnection,
+  readEditorSelection,
   readUserSites,
   toFileSystemViewData,
+  writeEditorSelection,
   writeUserSites
 } from './siteApi';
 import ContentShareModal from './ContentShareModal';
@@ -100,11 +103,11 @@ const SiteFilePanel = ({
   onSitesChange,
   siteActionsOpen = true,
   userSitesStorageKey = DEFAULT_USER_SITES_STORAGE_KEY,
+  transformContentUrl = null,
   currentFile,
   onOpenFile,
   onCurrentFileChange,
   onActiveHostChange,
-  height = 500,
   refreshToken = 0,
   onCollapse
 }) => {
@@ -114,10 +117,16 @@ const SiteFilePanel = ({
   const [userSites, setUserSites] = useState(() => readUserSites(storageKey));
   const [activeHost, setActiveHost] = useState(() => {
     const merged = mergeSites(sites, readUserSites(storageKey));
+    const cachedHost = readEditorSelection(storageKey)?.activeHost;
+    if (cachedHost && merged.some(item => item.host === cachedHost)) {
+      return cachedHost;
+    }
     return merged[0]?.host;
   });
   const [tree, setTree] = useState([]);
   const [loading, setLoading] = useState(false);
+  // 当前 activeHost 的文件树是否已至少加载完成一次（避免空树时误清选择缓存）
+  const [treeLoadedHost, setTreeLoadedHost] = useState(null);
   const [createModal, setCreateModal] = useState(null);
   const [renameModal, setRenameModal] = useState(null);
   const [moveModal, setMoveModal] = useState(null);
@@ -125,6 +134,19 @@ const SiteFilePanel = ({
   const [contentShareModal, setContentShareModal] = useState(null);
   // host -> 'ok' | 'fail' | 'checking'
   const [siteStatus, setSiteStatus] = useState({});
+  // 同一站点下已尝试恢复的文件 key，避免重复打开覆盖未保存内容
+  const restoredFileRef = useRef(null);
+
+  const persistSelection = useRefCallback(next => {
+    const cached = readEditorSelection(storageKey) || {};
+    writeEditorSelection(
+      {
+        activeHost: next.activeHost !== undefined ? next.activeHost : cached.activeHost,
+        file: next.file !== undefined ? next.file : cached.file
+      },
+      storageKey
+    );
+  });
 
   const propSites = useMemo(
     () => (Array.isArray(sites) ? sites.map(normalizeSite).filter(item => item.host) : []),
@@ -149,9 +171,25 @@ const SiteFilePanel = ({
     return normalized;
   });
 
-  // storageKey 变更时从对应 key 重新加载用户站点
+  // storageKey 变更时从对应 key 重新加载用户站点与选中站点
   useEffect(() => {
-    setUserSites(readUserSites(storageKey));
+    const nextUserSites = readUserSites(storageKey);
+    setUserSites(nextUserSites);
+    const merged = mergeSites(
+      Array.isArray(sites) ? sites.map(normalizeSite).filter(item => item.host) : [],
+      nextUserSites
+    );
+    const cachedHost = readEditorSelection(storageKey)?.activeHost;
+    if (cachedHost && merged.some(item => item.host === cachedHost)) {
+      setActiveHost(cachedHost);
+    } else if (merged[0]) {
+      setActiveHost(merged[0].host);
+    } else {
+      setActiveHost(undefined);
+    }
+    restoredFileRef.current = null;
+    // 仅跟随 storageKey；sites 引用变化不应重置选中
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [storageKey]);
 
   const setHostStatus = useRefCallback((host, status) => {
@@ -189,33 +227,37 @@ const SiteFilePanel = ({
   const refreshTree = useRefCallback(async () => {
     if (!api || !activeHost) {
       setTree([]);
+      setTreeLoadedHost(null);
       return;
     }
+    const host = activeHost;
     setLoading(true);
-    if (!isLocalStorageHost(activeHost)) {
-      setHostStatus(activeHost, 'checking');
+    setTreeLoadedHost(null);
+    if (!isLocalStorageHost(host)) {
+      setHostStatus(host, 'checking');
     }
     try {
       const data = await api.getFolderTree();
-      if (!isLocalStorageHost(activeHost) && !isValidFolderTree(data)) {
-        setHostStatus(activeHost, 'fail');
+      if (!isLocalStorageHost(host) && !isValidFolderTree(data)) {
+        setHostStatus(host, 'fail');
         setTree([]);
         message.error(formatMessage({ id: 'MsgSiteTreeInvalid' }));
         return;
       }
-      if (!isLocalStorageHost(activeHost)) {
-        setHostStatus(activeHost, 'ok');
+      if (!isLocalStorageHost(host)) {
+        setHostStatus(host, 'ok');
       }
       setTree(Array.isArray(data) ? data : []);
     } catch (error) {
       console.error(error);
-      if (!isLocalStorageHost(activeHost)) {
-        setHostStatus(activeHost, 'fail');
+      if (!isLocalStorageHost(host)) {
+        setHostStatus(host, 'fail');
       }
       message.error(error.message || formatMessage({ id: 'MsgLoadTreeFail' }));
       setTree([]);
     } finally {
       setLoading(false);
+      setTreeLoadedHost(host);
     }
   });
 
@@ -223,6 +265,7 @@ const SiteFilePanel = ({
     if (!innerSites.length) {
       setActiveHost(undefined);
       setTree([]);
+      setTreeLoadedHost(null);
       return;
     }
     if (!innerSites.some(item => item.host === activeHost)) {
@@ -234,9 +277,93 @@ const SiteFilePanel = ({
     onActiveHostChange?.(activeHost || null);
   }, [activeHost, onActiveHostChange]);
 
+  // 切换站点后允许重新尝试恢复该站点下的缓存文件
+  useEffect(() => {
+    restoredFileRef.current = null;
+    setTreeLoadedHost(null);
+  }, [activeHost]);
+
+  // 站点选择写入本地缓存（站点不在列表时由上方 effect 纠正）
+  useEffect(() => {
+    if (!activeHost) {
+      return;
+    }
+    persistSelection({ activeHost });
+  }, [activeHost, persistSelection]);
+
   useEffect(() => {
     refreshTree();
   }, [activeHost, refreshTree, refreshToken]);
+
+  // 另存为等外部写入选择缓存后，同步站点选中
+  useEffect(() => {
+    if (!refreshToken) {
+      return;
+    }
+    const cachedHost = readEditorSelection(storageKey)?.activeHost;
+    if (!cachedHost || cachedHost === activeHost) {
+      return;
+    }
+    if (!innerSites.some(item => item.host === cachedHost)) {
+      return;
+    }
+    restoredFileRef.current = null;
+    setActiveHost(cachedHost);
+  }, [refreshToken, storageKey, activeHost, innerSites]);
+
+  // 树加载完成后尝试恢复缓存中的文件；文件不存在则忽略并清掉缓存文件
+  useEffect(() => {
+    if (!activeHost || loading || !api || treeLoadedHost !== activeHost) {
+      return;
+    }
+    const cachedFile = readEditorSelection(storageKey)?.file;
+    if (!cachedFile || cachedFile.siteHost !== activeHost) {
+      return;
+    }
+    const restoreKey = `${cachedFile.siteHost}\0${cachedFile.id}`;
+    if (restoredFileRef.current === restoreKey) {
+      return;
+    }
+    if (currentFile?.id === cachedFile.id && currentFile?.siteHost === activeHost) {
+      restoredFileRef.current = restoreKey;
+      return;
+    }
+    const node = findTreeNode(tree, cachedFile.id);
+    if (!node || node.type === 'directory') {
+      // 仅在树已加载完成后确认文件不存在，才忽略并清理缓存
+      persistSelection({ file: null });
+      restoredFileRef.current = restoreKey;
+      return;
+    }
+    restoredFileRef.current = restoreKey;
+    let cancelled = false;
+    (async () => {
+      try {
+        const file = await api.get(node.id);
+        if (cancelled) {
+          return;
+        }
+        const content = typeof file === 'string' ? file : file?.content ?? '';
+        onOpenFile?.({
+          siteHost: activeHost,
+          id: node.id,
+          name: node.name,
+          permission: node.permission || file?.permission || 'rw',
+          content
+        });
+        persistSelection({
+          activeHost,
+          file: { siteHost: activeHost, id: node.id, name: node.name }
+        });
+      } catch (error) {
+        console.error(error);
+        persistSelection({ file: null });
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [tree, treeLoadedHost, activeHost, loading, api, storageKey, currentFile, onOpenFile, persistSelection]);
 
   const viewData = useMemo(() => toFileSystemViewData(tree), [tree]);
 
@@ -276,6 +403,9 @@ const SiteFilePanel = ({
         permission: data.permission || file?.permission || 'rw',
         content
       });
+      const nextFile = { siteHost: activeHost, id: data.id, name: data.name };
+      persistSelection({ activeHost, file: nextFile });
+      restoredFileRef.current = `${activeHost}\0${data.id}`;
     } catch (error) {
       console.error(error);
       message.error(error.message || formatMessage({ id: 'MsgLoadFileFail' }));
@@ -384,6 +514,10 @@ const SiteFilePanel = ({
       await api.rename({ id: renameModal.id, name });
       if (currentFile?.id === renameModal.id && currentFile?.siteHost === activeHost) {
         onCurrentFileChange?.({ ...currentFile, name });
+        persistSelection({
+          activeHost,
+          file: { siteHost: activeHost, id: renameModal.id, name }
+        });
       }
       message.success(formatMessage({ id: 'MsgRenameSuccess' }));
       setRenameModal(null);
@@ -439,6 +573,8 @@ const SiteFilePanel = ({
           await api.remove({ ids: [data.id] });
           if (currentFile?.id === data.id && currentFile?.siteHost === activeHost) {
             onCurrentFileChange?.(null);
+            persistSelection({ activeHost, file: null });
+            restoredFileRef.current = null;
           }
           message.success(formatMessage({ id: 'MsgRemoveSuccess' }));
           await refreshTree();
@@ -561,7 +697,14 @@ const SiteFilePanel = ({
     setActiveHost(next.host);
     if (currentFile?.siteHost === originHost) {
       onCurrentFileChange?.({ ...currentFile, siteHost: next.host });
+      persistSelection({
+        activeHost: next.host,
+        file: { siteHost: next.host, id: currentFile.id, name: currentFile.name }
+      });
+    } else {
+      persistSelection({ activeHost: next.host });
     }
+    restoredFileRef.current = null;
     setSiteModal(null);
     message.success(formatMessage({ id: 'MsgSiteUpdateSuccess' }));
     if (originHost !== next.host) {
@@ -598,6 +741,8 @@ const SiteFilePanel = ({
         });
         if (currentFile?.siteHost === removedHost) {
           onCurrentFileChange?.(null);
+          persistSelection({ file: null });
+          restoredFileRef.current = null;
         }
         if (merged[0]) {
           setActiveHost(merged[0].host);
@@ -654,7 +799,7 @@ const SiteFilePanel = ({
   );
 
   return (
-    <div className={style['site-panel']} style={{ height: `${height + 120}px` }}>
+    <div className={style['site-panel']}>
       <Flex vertical gap={8} style={{ height: '100%' }}>
         <Flex justify="space-between" align="center" gap={8}>
           <Text strong ellipsis>
@@ -821,6 +966,7 @@ const SiteFilePanel = ({
         siteHost={contentShareModal?.siteHost}
         fileId={contentShareModal?.fileId}
         fileName={contentShareModal?.fileName}
+        transformContentUrl={transformContentUrl}
         onCancel={() => setContentShareModal(null)}
       />
     </div>

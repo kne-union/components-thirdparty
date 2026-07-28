@@ -5,6 +5,8 @@ const localeMessages = {
   ContentShareCreateSection: '新建地址',
   ContentShareCreateHint: '选择有效期后生成短链，访问可直出已保存内容。',
   ContentShareListSection: '已创建',
+  ContentShareSourceUrl: '内容地址',
+  ContentShareOpenUrl: '打开地址',
   ContentShareCount: '{count} 条',
   ContentShareFile: '{name}',
   ContentShareEmpty: '还没有内容地址，先在上方创建一个',

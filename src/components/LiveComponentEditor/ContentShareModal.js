@@ -29,14 +29,16 @@ const formatExpires = (expires, formatMessage) => {
 
 /**
  * 远程站点内容短链管理：创建（可选有效期）+ 复制 / 删除已有链接
+ * @param {function|null} transformContentUrl `(url) => string`，传入时在已创建列表额外展示转换后的打开地址；默认 null 不展示
  */
-const ContentShareModal = ({ open, siteHost, fileId, fileName, onCancel }) => {
+const ContentShareModal = ({ open, siteHost, fileId, fileName, transformContentUrl = null, onCancel }) => {
   const { formatMessage } = useIntl();
   const { message, modal } = App.useApp();
   const [loading, setLoading] = useState(false);
   const [creating, setCreating] = useState(false);
   const [shares, setShares] = useState([]);
   const [expiresIn, setExpiresIn] = useState(86400);
+  const enableTransform = typeof transformContentUrl === 'function';
 
   const loadShares = useRefCallback(async () => {
     if (!siteHost || !fileId) {
@@ -66,26 +68,44 @@ const ContentShareModal = ({ open, siteHost, fileId, fileName, onCancel }) => {
   }, [open, siteHost, fileId, loadShares]);
 
   const resolveShareUrl = share => {
-    const fromApi = toAbsoluteUrl(share?.url);
+    const fromApi = toAbsoluteUrl(share?.url, siteHost);
     if (fromApi) {
       return fromApi;
     }
     return getRemoteContentUrl(siteHost, share?.shorten);
   };
 
-  const handleCopy = useRefCallback(async share => {
+  const resolveDisplayUrl = share => {
     const url = resolveShareUrl(share);
-    if (!url) {
+    if (!url || !enableTransform) {
+      return url;
+    }
+    try {
+      return transformContentUrl(url) || url;
+    } catch (error) {
+      console.error(error);
+      return url;
+    }
+  };
+
+  const copyText = useRefCallback(async text => {
+    if (!text) {
       message.warning(formatMessage({ id: 'MsgNoContentUrl' }));
       return;
     }
     try {
-      await navigator.clipboard.writeText(url);
+      await navigator.clipboard.writeText(text);
       message.success(formatMessage({ id: 'MsgCopyContentUrlSuccess' }));
     } catch (error) {
       console.error(error);
       message.error(formatMessage({ id: 'MsgCopyFail' }));
     }
+  });
+
+  const handleCopy = useRefCallback(async share => {
+    const url = resolveShareUrl(share);
+    const displayUrl = enableTransform ? resolveDisplayUrl(share) : url;
+    await copyText(displayUrl || url);
   });
 
   const handleCreate = useRefCallback(async () => {
@@ -196,6 +216,7 @@ const ContentShareModal = ({ open, siteHost, fileId, fileName, onCancel }) => {
               <Flex vertical gap={8} className={style['content-share-list']}>
                 {shares.map(item => {
                   const url = resolveShareUrl(item);
+                  const openUrl = enableTransform ? resolveDisplayUrl(item) : null;
                   const forever = !item.expires;
                   return (
                     <div key={item.shorten || item.id} className={style['content-share-item']}>
@@ -222,12 +243,34 @@ const ContentShareModal = ({ open, siteHost, fileId, fileName, onCancel }) => {
                           onClick={() => handleRemove(item)}
                         />
                       </Flex>
-                      <Space.Compact className={style['content-share-url']}>
-                        <Input value={url || ''} readOnly />
-                        <Button icon={<CopyOutlined />} onClick={() => handleCopy(item)}>
-                          {formatMessage({ id: 'Copy' })}
-                        </Button>
-                      </Space.Compact>
+                      <Flex vertical gap={8}>
+                        <Flex vertical gap={4}>
+                          {openUrl ? (
+                            <Text type="secondary" className={style['content-share-url-label']}>
+                              {formatMessage({ id: 'ContentShareSourceUrl' })}
+                            </Text>
+                          ) : null}
+                          <Space.Compact className={style['content-share-url']}>
+                            <Input value={url || ''} readOnly />
+                            <Button icon={<CopyOutlined />} onClick={() => copyText(url)}>
+                              {formatMessage({ id: 'Copy' })}
+                            </Button>
+                          </Space.Compact>
+                        </Flex>
+                        {openUrl ? (
+                          <Flex vertical gap={4}>
+                            <Text type="secondary" className={style['content-share-url-label']}>
+                              {formatMessage({ id: 'ContentShareOpenUrl' })}
+                            </Text>
+                            <Space.Compact className={style['content-share-url']}>
+                              <Input value={openUrl} readOnly />
+                              <Button icon={<CopyOutlined />} onClick={() => copyText(openUrl)}>
+                                {formatMessage({ id: 'Copy' })}
+                              </Button>
+                            </Space.Compact>
+                          </Flex>
+                        ) : null}
+                      </Flex>
                     </div>
                   );
                 })}
