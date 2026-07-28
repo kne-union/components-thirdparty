@@ -474,6 +474,45 @@
   animation: live-locate-fade 1s ease forwards;
 }
 
+.preview-locate-selection {
+  position: absolute;
+  box-sizing: border-box;
+  pointer-events: auto;
+  border-radius: 4px;
+}
+
+.preview-locate-actions {
+  position: absolute;
+  right: 2px;
+  bottom: 2px;
+  opacity: 0;
+  pointer-events: auto;
+  transition: opacity 0.15s ease;
+  z-index: 2;
+  background: transparent;
+  transform: scale(0.8);
+  transform-origin: right bottom;
+
+  :global {
+    .ant-space-compact {
+      .ant-btn:first-child {
+        border-start-start-radius: 999px;
+        border-end-start-radius: 999px;
+      }
+
+      .ant-btn:last-child {
+        border-start-end-radius: 999px;
+        border-end-end-radius: 999px;
+      }
+    }
+  }
+}
+
+.preview-locate-selection:hover .preview-locate-actions,
+.preview-locate-actions:hover {
+  opacity: 0.8;
+}
+
 @keyframes live-locate-fade {
   0% {
     opacity: 1;

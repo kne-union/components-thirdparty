@@ -12,7 +12,9 @@ import {
   SaveOutlined,
   FormOutlined,
   MenuUnfoldOutlined,
-  MenuFoldOutlined
+  MenuFoldOutlined,
+  ArrowUpOutlined,
+  SelectOutlined
 } from '@ant-design/icons';
 import CodeEditor from '@components/CodeEditor';
 import LiveComponentView from '@components/LiveComponentView';
@@ -47,6 +49,9 @@ import {
   resolveElementsFromEditorPosition,
   resolveSourceFromPoint,
   findSameSourceElements,
+  findParentLiveSourceElement,
+  unionRects,
+  revealEditorPosition,
   scrollElementsIntoView
 } from './previewLocate';
 import style from './style.module.scss';
@@ -583,6 +588,83 @@ const LiveComponentEditorCore = createWithRemoteLoader({
           }
         });
 
+        const applySelectionHighlight = useRefCallback(({ line, column, elements }) => {
+          locateFromPreviewRef.current = true;
+          window.setTimeout(() => {
+            locateFromPreviewRef.current = false;
+          }, 200);
+          const els = elements?.length ? elements : [];
+          cursorElementsRef.current = els;
+          const panelRects = toPanelRects(measureHighlightRects(els));
+          setCursorRects(panelRects);
+          setFlashRects(panelRects);
+          if (flashTimerRef.current) {
+            window.clearTimeout(flashTimerRef.current);
+          }
+          flashTimerRef.current = window.setTimeout(() => {
+            setFlashRects([]);
+            flashTimerRef.current = null;
+          }, HIGHLIGHT_DURATION_MS);
+          if (line) {
+            setSelectedSource({ line, column: column || 1 });
+          }
+        });
+
+        const handleSelectParent = useRefCallback(event => {
+          event?.stopPropagation?.();
+          event?.preventDefault?.();
+          const current = cursorElementsRef.current?.[0];
+          const parent = findParentLiveSourceElement(current, previewRootRef.current);
+          if (!parent) {
+            message.info(formatMessage({ id: 'MsgNoParentSelection' }));
+            return;
+          }
+          revealEditorPosition(codeEditorRef.current, parent.line, parent.column);
+          let elements = findSameSourceElements(previewRootRef.current, parent.line, parent.column);
+          if (!elements.length) {
+            elements = [parent.element];
+          }
+          applySelectionHighlight({
+            line: parent.line,
+            column: parent.column,
+            elements
+          });
+        });
+
+        const handleSelectInEditor = useRefCallback(event => {
+          event?.stopPropagation?.();
+          event?.preventDefault?.();
+          if (!selectedSource?.line) {
+            return;
+          }
+          const sel = extractSelectionFromContent(content, selectedSource.line, selectedSource.column);
+          if (!sel?.code) {
+            message.info(formatMessage({ id: 'MsgLocateNoSource' }));
+            return;
+          }
+          const editor = codeEditorRef.current?.getEditor?.() || codeEditorRef.current;
+          if (!editor?.setSelection) {
+            return;
+          }
+          const range = {
+            startLineNumber: sel.startLine,
+            startColumn: sel.column || 1,
+            endLineNumber: sel.endLine,
+            endColumn: sel.endColumn || 1
+          };
+          locateFromPreviewRef.current = true;
+          window.setTimeout(() => {
+            locateFromPreviewRef.current = false;
+          }, 200);
+          editor.setSelection(range);
+          if (editor.revealRangeInCenter) {
+            editor.revealRangeInCenter(range);
+          } else if (editor.revealLineInCenter) {
+            editor.revealLineInCenter(range.startLineNumber);
+          }
+          editor.focus?.();
+        });
+
         const handleCodeEditorMount = useRefCallback(({ editor }) => {
           cursorDisposableRef.current?.dispose?.();
           if (!editor?.onDidChangeCursorPosition) {
@@ -758,6 +840,12 @@ const LiveComponentEditorCore = createWithRemoteLoader({
             />
           ));
 
+        const selectionUnionRect = useMemo(() => unionRects(cursorRects), [cursorRects]);
+        const canSelectParent = !!(
+          selectionUnionRect &&
+          findParentLiveSourceElement(cursorElementsRef.current?.[0], previewRootRef.current)
+        );
+
         const editor = (
           <div className={style['code-editor']}>
             <CodeEditor
@@ -810,10 +898,44 @@ const LiveComponentEditorCore = createWithRemoteLoader({
               </SimpleBar>
             </div>
             {sourceLocateActive && (
-              <div className={style['preview-locate-layer']} aria-hidden>
+              <div className={style['preview-locate-layer']} aria-hidden={!selectionUnionRect}>
                 {renderLocateOverlays(hoverRects, style['preview-locate-hover'])}
                 {renderLocateOverlays(cursorRects, style['preview-locate-cursor'])}
                 {renderLocateOverlays(flashRects, style['preview-locate-flash'])}
+                {selectionUnionRect ? (
+                  <div
+                    className={style['preview-locate-selection']}
+                    style={{
+                      top: selectionUnionRect.top,
+                      left: selectionUnionRect.left,
+                      width: Math.max(selectionUnionRect.width, 2),
+                      height: Math.max(selectionUnionRect.height, 2)
+                    }}>
+                    <div className={style['preview-locate-actions']}>
+                      <Space.Compact size="small">
+                        <Tooltip title={formatMessage({ id: 'SelectParent' })}>
+                          <Button
+                            type="primary"
+                            size="small"
+                            icon={<ArrowUpOutlined />}
+                            disabled={!canSelectParent}
+                            aria-label={formatMessage({ id: 'SelectParent' })}
+                            onClick={handleSelectParent}
+                          />
+                        </Tooltip>
+                        <Tooltip title={formatMessage({ id: 'SelectInEditor' })}>
+                          <Button
+                            type="primary"
+                            size="small"
+                            icon={<SelectOutlined />}
+                            aria-label={formatMessage({ id: 'SelectInEditor' })}
+                            onClick={handleSelectInEditor}
+                          />
+                        </Tooltip>
+                      </Space.Compact>
+                    </div>
+                  </div>
+                ) : null}
               </div>
             )}
           </div>
