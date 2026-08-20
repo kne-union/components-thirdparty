@@ -10,7 +10,7 @@ Echart 是基于 Apache ECharts 的图表组件，提供了丰富的数据可视
 
 - 支持所有 ECharts 图表类型
 - 自动响应式调整大小
-- 动态加载 ECharts 核心库
+- 动态加载 ECharts 核心库及词云扩展；词云请用 `Echart.WordCloud`
 - 支持自定义加载和错误状态
 - 高性能渲染
 - 丰富的配置选项
@@ -18,7 +18,7 @@ Echart 是基于 Apache ECharts 的图表组件，提供了丰富的数据可视
 
 ### 使用场景
 
-适用于需要数据可视化的各类应用，如数据报表、业务分析、监控面板、统计图表等场景。支持柱状图、折线图、饼图、散点图、地图等多种图表类型。
+适用于需要数据可视化的各类应用，如数据报表、业务分析、监控面板、统计图表等场景。支持柱状图、折线图、饼图、散点图、词云、地图等多种图表类型。
 
 ### 示例
 
@@ -227,6 +227,45 @@ render(<BaseExample />);
 
 ```
 
+- 词云
+- 使用 Echart.WordCloud，传入 data（name/value/color）即可，无需手写 custom series
+- _Echart(@components/Echart)
+
+```jsx
+const { default: Echart } = _Echart;
+
+const SKILL_COLORS = {
+  skill: '#10b981',
+  completeness: '#9333ea',
+  coherence: '#ef4444',
+  bloom: '#fb923c',
+  competency: '#10b981'
+};
+
+const WordCloudExample = () => {
+  const data = [
+    { name: 'Java', value: 300, color: SKILL_COLORS.skill, fontWeight: 600 },
+    { name: 'Python', value: 220, color: SKILL_COLORS.skill, fontWeight: 600 },
+    { name: 'React', value: 180, color: SKILL_COLORS.skill, fontWeight: 600 },
+    { name: '算法', value: 160, color: SKILL_COLORS.skill, fontWeight: 600 },
+    { name: 'Java·完整度', value: 42, color: SKILL_COLORS.completeness },
+    { name: 'Java·连贯性', value: 38, color: SKILL_COLORS.coherence },
+    { name: 'Java·深度', value: 55, color: SKILL_COLORS.bloom },
+    { name: 'Java·胜任力', value: 72, color: SKILL_COLORS.competency },
+    { name: 'Python·完整度', value: 36, color: SKILL_COLORS.completeness },
+    { name: 'Python·深度', value: 48, color: SKILL_COLORS.bloom },
+    { name: 'React·胜任力', value: 60, color: SKILL_COLORS.competency },
+    { name: 'MySQL', value: 120, color: SKILL_COLORS.skill, fontWeight: 600 },
+    { name: '沟通', value: 90, color: SKILL_COLORS.skill, fontWeight: 600 }
+  ];
+
+  return <Echart.WordCloud style={{ height: '320px' }} data={data} sizeRange={[14, 42]} />;
+};
+
+render(<WordCloudExample />);
+
+```
+
 ### API
 
 ### API 文档
@@ -285,6 +324,33 @@ const pieOption = {
     data: [{ value: 1048, name: '搜索引擎' }, { value: 735, name: '直接访问' }]
   }]
 };
+
+#### Echart.WordCloud
+
+简化词云调用。不必手写 `type: 'custom'` / `renderItem: 'wordCloud'` / `coordinateSystem: 'none'`。
+
+| 属性名 | 类型 | 默认值 | 说明 |
+|--------|------|--------|------|
+| data | array | [] | 词条。支持 `{ name, value, color, fontWeight }`、`[name, value, color]` |
+| shape | string | 'circle' | 云形状：circle / cardioid / diamond / triangle / pentagon / star |
+| sizeRange | [number, number] | [12, 36] | 字号范围 |
+| rotationRange | [number, number] | [0, 0] | 旋转角度范围（度） |
+| gridSize | number | 8 | 词间距网格 |
+| tooltip | boolean \| object | true | `true` 显示默认 tooltip；也可传入 ECharts tooltip 配置 |
+| option | object | - | 额外 ECharts option，会与生成配置合并 |
+| style / className / loading / error | 同 Echart | - | 透传给 Echart |
+
+```javascript
+const { default: Echart } = _Echart;
+
+<Echart.WordCloud
+  style={{ height: 320 }}
+  data={[
+    { name: '标签A', value: 120, color: '#5470c6' },
+    { name: '标签B', value: 80, color: '#91cc75' },
+    ['标签C', 60]
+  ]}
+/>
 ```
 
 #### 注意事项

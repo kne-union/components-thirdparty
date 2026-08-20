@@ -22,6 +22,17 @@
           "packageName": "@components/Echart"
         }
       ]
+    },
+    {
+      "title": "词云",
+      "description": "使用 Echart.WordCloud，传入 data（name/value/color）即可，无需手写 custom series",
+      "code": "./wordcloud.js",
+      "scope": [
+        {
+          "name": "_Echart",
+          "packageName": "@components/Echart"
+        }
+      ]
     }
   ]
 }
