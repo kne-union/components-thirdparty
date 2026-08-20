@@ -54,6 +54,33 @@ const pieOption = {
     data: [{ value: 1048, name: '搜索引擎' }, { value: 735, name: '直接访问' }]
   }]
 };
+
+#### Echart.WordCloud
+
+简化词云调用。不必手写 `type: 'custom'` / `renderItem: 'wordCloud'` / `coordinateSystem: 'none'`。
+
+| 属性名 | 类型 | 默认值 | 说明 |
+|--------|------|--------|------|
+| data | array | [] | 词条。支持 `{ name, value, color, fontWeight }`、`[name, value, color]` |
+| shape | string | 'circle' | 云形状：circle / cardioid / diamond / triangle / pentagon / star |
+| sizeRange | [number, number] | [12, 36] | 字号范围 |
+| rotationRange | [number, number] | [0, 0] | 旋转角度范围（度） |
+| gridSize | number | 8 | 词间距网格 |
+| tooltip | boolean \| object | true | `true` 显示默认 tooltip；也可传入 ECharts tooltip 配置 |
+| option | object | - | 额外 ECharts option，会与生成配置合并 |
+| style / className / loading / error | 同 Echart | - | 透传给 Echart |
+
+```javascript
+const { default: Echart } = _Echart;
+
+<Echart.WordCloud
+  style={{ height: 320 }}
+  data={[
+    { name: '标签A', value: 120, color: '#5470c6' },
+    { name: '标签B', value: 80, color: '#91cc75' },
+    ['标签C', 60]
+  ]}
+/>
 ```
 
 #### 注意事项
