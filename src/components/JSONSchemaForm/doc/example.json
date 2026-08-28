@@ -1,0 +1,235 @@
+{
+  "isFull": true,
+  "list": [
+    {
+      "title": "基础简历表单",
+      "description": "JSON Schema 含嵌套 object、array→list/itemBlocks、标量数组→multiField；左侧 Schema、右侧表单预览",
+      "code": "./base.js",
+      "scope": [
+        {
+          "name": "_JsonschemaForm",
+          "packageName": "@components/JSONSchemaForm",
+          "importStatement": "import * as _JsonschemaForm from \"@components/JSONSchemaForm\""
+        },
+        {
+          "name": "_JsonView",
+          "packageName": "@kne/json-view",
+          "importStatement": "import * as _JsonView from \"@kne/json-view\""
+        },
+        {
+          "packageName": "@kne/json-view/dist/index.css",
+          "importStatement": "import \"@kne/json-view/dist/index.css\""
+        },
+        {
+          "packageName": "@kne/form-creator/dist/index.css",
+          "importStatement": "import \"@kne/form-creator/dist/index.css\""
+        },
+        {
+          "packageName": "@kne/form-info/dist/index.css",
+          "importStatement": "import \"@kne/form-info/dist/index.css\""
+        },
+        {
+          "name": "antd",
+          "packageName": "antd",
+          "importStatement": "import antd from \"antd\""
+        }
+      ]
+    },
+    {
+      "title": "oneOf / anyOf 选项分支",
+      "description": "oneOf / anyOf 选项分支 + allOf 合并公共字段；左侧 Schema、右侧表单预览",
+      "code": "./choice.js",
+      "scope": [
+        {
+          "name": "_JsonschemaForm",
+          "packageName": "@components/JSONSchemaForm",
+          "importStatement": "import * as _JsonschemaForm from \"@components/JSONSchemaForm\""
+        },
+        {
+          "name": "_JsonView",
+          "packageName": "@kne/json-view",
+          "importStatement": "import * as _JsonView from \"@kne/json-view\""
+        },
+        {
+          "packageName": "@kne/json-view/dist/index.css",
+          "importStatement": "import \"@kne/json-view/dist/index.css\""
+        },
+        {
+          "packageName": "@kne/form-creator/dist/index.css",
+          "importStatement": "import \"@kne/form-creator/dist/index.css\""
+        },
+        {
+          "packageName": "@kne/form-info/dist/index.css",
+          "importStatement": "import \"@kne/form-info/dist/index.css\""
+        },
+        {
+          "name": "antd",
+          "packageName": "antd",
+          "importStatement": "import antd from \"antd\""
+        }
+      ]
+    },
+    {
+      "title": "format 与自定义 widget",
+      "description": "format 自动映射字段类型/规则；x-widget / ui:widget 指定字段组件；左侧 Schema、右侧表单预览",
+      "code": "./format-widget.js",
+      "scope": [
+        {
+          "name": "_JsonschemaForm",
+          "packageName": "@components/JSONSchemaForm",
+          "importStatement": "import * as _JsonschemaForm from \"@components/JSONSchemaForm\""
+        },
+        {
+          "name": "_JsonView",
+          "packageName": "@kne/json-view",
+          "importStatement": "import * as _JsonView from \"@kne/json-view\""
+        },
+        {
+          "packageName": "@kne/json-view/dist/index.css",
+          "importStatement": "import \"@kne/json-view/dist/index.css\""
+        },
+        {
+          "packageName": "@kne/form-creator/dist/index.css",
+          "importStatement": "import \"@kne/form-creator/dist/index.css\""
+        },
+        {
+          "packageName": "@kne/form-info/dist/index.css",
+          "importStatement": "import \"@kne/form-info/dist/index.css\""
+        },
+        {
+          "name": "antd",
+          "packageName": "antd",
+          "importStatement": "import antd from \"antd\""
+        }
+      ]
+    },
+    {
+      "title": "$ref 与 allOf",
+      "description": "同文档 $defs/$ref 内联展开；allOf 合并 properties 与 required；左侧 Schema、右侧表单预览",
+      "code": "./ref-allof.js",
+      "scope": [
+        {
+          "name": "_JsonschemaForm",
+          "packageName": "@components/JSONSchemaForm",
+          "importStatement": "import * as _JsonschemaForm from \"@components/JSONSchemaForm\""
+        },
+        {
+          "name": "_JsonView",
+          "packageName": "@kne/json-view",
+          "importStatement": "import * as _JsonView from \"@kne/json-view\""
+        },
+        {
+          "packageName": "@kne/json-view/dist/index.css",
+          "importStatement": "import \"@kne/json-view/dist/index.css\""
+        },
+        {
+          "packageName": "@kne/form-creator/dist/index.css",
+          "importStatement": "import \"@kne/form-creator/dist/index.css\""
+        },
+        {
+          "packageName": "@kne/form-info/dist/index.css",
+          "importStatement": "import \"@kne/form-info/dist/index.css\""
+        },
+        {
+          "name": "antd",
+          "packageName": "antd",
+          "importStatement": "import antd from \"antd\""
+        }
+      ]
+    },
+    {
+      "title": "仅转换 Schema",
+      "description": "jsonSchemaToFormCreatorSchema 转换结果；左侧 JSON Schema 输入、右侧 form-creator Schema 输出",
+      "code": "./convert.js",
+      "scope": [
+        {
+          "name": "_JsonschemaForm",
+          "packageName": "@components/JSONSchemaForm",
+          "importStatement": "import * as _JsonschemaForm from \"@components/JSONSchemaForm\""
+        },
+        {
+          "name": "_JsonView",
+          "packageName": "@kne/json-view",
+          "importStatement": "import * as _JsonView from \"@kne/json-view\""
+        },
+        {
+          "packageName": "@kne/json-view/dist/index.css",
+          "importStatement": "import \"@kne/json-view/dist/index.css\""
+        },
+        {
+          "name": "antd",
+          "packageName": "antd",
+          "importStatement": "import antd from \"antd\""
+        }
+      ]
+    },
+    {
+      "title": "超复杂综合场景",
+      "description": "企业项目立项：$ref/allOf、嵌套 object、list+itemBlocks、multiField、oneOf/anyOf、format/x-widget 等能力同屏演示",
+      "code": "./complex.js",
+      "scope": [
+        {
+          "name": "_JsonschemaForm",
+          "packageName": "@components/JSONSchemaForm",
+          "importStatement": "import * as _JsonschemaForm from \"@components/JSONSchemaForm\""
+        },
+        {
+          "name": "_JsonView",
+          "packageName": "@kne/json-view",
+          "importStatement": "import * as _JsonView from \"@kne/json-view\""
+        },
+        {
+          "packageName": "@kne/json-view/dist/index.css",
+          "importStatement": "import \"@kne/json-view/dist/index.css\""
+        },
+        {
+          "packageName": "@kne/form-creator/dist/index.css",
+          "importStatement": "import \"@kne/form-creator/dist/index.css\""
+        },
+        {
+          "packageName": "@kne/form-info/dist/index.css",
+          "importStatement": "import \"@kne/form-info/dist/index.css\""
+        },
+        {
+          "name": "antd",
+          "packageName": "antd",
+          "importStatement": "import antd from \"antd\""
+        }
+      ]
+    },
+    {
+      "title": "超多层列表嵌套",
+      "description": "多级 array/object 嵌套至讨论/回复/提及/链接；左侧 Schema、右侧带初始数据的表单",
+      "code": "./nested-deep.js",
+      "scope": [
+        {
+          "name": "_JsonschemaForm",
+          "packageName": "@components/JSONSchemaForm",
+          "importStatement": "import * as _JsonschemaForm from \"@components/JSONSchemaForm\""
+        },
+        {
+          "name": "_JsonView",
+          "packageName": "@kne/json-view",
+          "importStatement": "import * as _JsonView from \"@kne/json-view\""
+        },
+        {
+          "packageName": "@kne/json-view/dist/index.css",
+          "importStatement": "import \"@kne/json-view/dist/index.css\""
+        },
+        {
+          "packageName": "@kne/form-creator/dist/index.css",
+          "importStatement": "import \"@kne/form-creator/dist/index.css\""
+        },
+        {
+          "packageName": "@kne/form-info/dist/index.css",
+          "importStatement": "import \"@kne/form-info/dist/index.css\""
+        },
+        {
+          "name": "antd",
+          "packageName": "antd",
+          "importStatement": "import antd from \"antd\""
+        }
+      ]
+    }
+  ]
+}
