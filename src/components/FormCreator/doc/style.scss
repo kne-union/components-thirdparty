@@ -1,0 +1,8 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
+@include resp.mobile-container {
+  .example-driver-runner {
+    padding: 12px 16px 24px;
+    box-sizing: border-box;
+  }
+}
