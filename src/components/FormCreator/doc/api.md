@@ -1,12 +1,26 @@
+默认导出为 FormInfo 表单字段（`useDecorator`），可直接放进 `FormInfo.list`。脱离表单时用 `FormCreator.Field`。
+
 | 属性 | 类型 | 默认值 | 说明 |
 |----|----|-----|----|
+| name | string | - | 表单字段名（默认导出） |
+| label | string | - | 表单项标签（默认导出） |
 | value | object | - | 受控 Schema |
 | defaultValue | object | - | 非受控初始 Schema |
 | onChange | function(schema) | - | Schema 变更回调 |
 | showPreview | boolean | true | 是否显示右侧预览 |
 | className | string | - | 根节点类名 |
 | formProps | object | {} | 透传给预览区 Form / FormSteps 的属性 |
-| renderModal | function(props) | - | 自定义编辑弹窗渲染，透传给内部 FormModal（同 super-select / form-info） |
+| locale | string | 跟随全局 | `zh-CN` / `en-US`；扩展字段展示名与 `@kne/form-creator` UI 文案 |
+
+```js
+<FormInfo
+  list={[
+    <FormCreator name="schema" label="问卷内容" />
+  ]}
+/>
+
+<FormCreator.Field value={schema} onChange={setSchema} />
+```
 
 ### SchemaRenderer
 
@@ -215,6 +229,9 @@ preset({
 |------|------|------|
 | `rules` | `Record<string, RuleDef>` | key 为规则 token；`RuleDef` 含 `label` + `reg/message` 或 `validator` |
 | `fields` | `Record<string, FieldDef>` | key 为字段 type；见下方 FieldDef |
+| `locale` | string | 可选，默认 `zh-CN`；同步注册扩展字段的中英文展示名 |
+
+本包装层会为 Password、JSONEditor、CKEditor 等扩展字段按当前 `locale` 注册 `label` / `groupName`（文案见 `locale/zh-CN.js`、`locale/en-US.js`）。切换语言时 FormCreator 会重新 register。编辑器壳层文案由 `@kne/form-creator` 自身的 `form-creator` namespace 负责。
 
 **FieldDef** 常用字段：`label`、`component`、`groupName`、`defaultProps`、`propsSchema`、`valueSchema`、`hasOptions`、`hasFieldProps` 等。
 

@@ -1,0 +1,32 @@
+const localeMessages = {
+  GroupBasic: '基础字段',
+  GroupDateTime: '日期时间',
+  GroupRating: '评价组件',
+  GroupBusiness: '业务字段',
+  GroupUpload: '上传与媒体',
+  GroupThirdparty: '第三方组件',
+  FieldPassword: '密码',
+  FieldMonthPicker: '月份',
+  FieldWeekPicker: '周',
+  FieldDateRangePicker: '日期范围',
+  FieldTimeRangePicker: '时间范围',
+  FieldTimePicker: '时间',
+  FieldDatePickerToday: '日期（至今）',
+  FieldRate: '评分',
+  FieldSlider: '滑块',
+  FieldSalaryInput: '薪资输入',
+  FieldTypeDateRangePicker: '类型日期范围',
+  FieldMoneyInput: '金额',
+  FieldPhoneNumber: '手机号',
+  FieldUpload: '文件上传',
+  FieldAvatar: '头像',
+  FieldSignature: '签名',
+  FieldColorPicker: '颜色',
+  FieldAddressInput: '地址输入',
+  FieldInputUpperCase: '大写输入',
+  FieldJSONEditor: 'JSON 编辑器',
+  FieldCKEditor: '富文本编辑器',
+  PropIsMarkdown: 'Markdown 模式'
+};
+
+export default localeMessages;

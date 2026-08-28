@@ -1,4 +1,14 @@
-# FormCreator
+# form-creator
+
+### 描述
+
+配置式表单搭建组件，产出 Schema 并用 @kne/form-info 渲染
+
+### 安装
+
+```shell
+npm i --save @kne/form-creator
+```
 
 ### 概述
 
@@ -24,7 +34,7 @@
 
 - 配置式表单搭建(全屏)
 - 通过模块列表添加/编辑/排序，右侧实时预览；默认示例含列表嵌套与选项切换
-- _FormCreator(@components/FormCreator)[import * as _FormCreator from "@components/FormCreator"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"],_FormInfo(@kne/form-info)[import * as _FormInfo from "@kne/form-info"]
+- _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"],_FormInfo(@kne/form-info)[import * as _FormInfo from "@kne/form-info"]
 
 ```jsx
 const {default: FormCreator, defaultSchema, createBlock, createField, createStep, createChoiceOption} = _FormCreator;
@@ -416,7 +426,7 @@ render(<BaseExample />);
 
 - Schema 直接渲染表单
 - 传入已有 Schema，用 SchemaRenderer 直接展示可提交表单（运行时，不经过编辑器）
-- _FormCreator(@components/FormCreator)[import * as _FormCreator from "@components/FormCreator"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"]
+- _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"]
 
 ```jsx
 const { SchemaRenderer, createBlock, createField } = _FormCreator;
@@ -518,7 +528,7 @@ render(<SchemaRenderExample />);
 
 - 列表嵌套与选项切换
 - 列表每一条里可再放分组或子列表；选项切换支持单选/多选，每个选项可添加填写项
-- _FormCreator(@components/FormCreator)[import * as _FormCreator from "@components/FormCreator"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"]
+- _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"]
 
 ```jsx
 const { SchemaRenderer, createBlock, createField, createChoiceOption } = _FormCreator;
@@ -646,7 +656,7 @@ render(<NestedChoiceExample />);
 
 - 扩展组件与校验规则
 - 通过 preset({ rules, fields }) 一次扩展运行时校验、规则勾选面板与自定义填写项
-- _FormCreator(@components/FormCreator)[import * as _FormCreator from "@components/FormCreator"],_ReactFormAntd(@kne/react-form-antd)[import * as _ReactFormAntd from "@kne/react-form-antd"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"]
+- _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_ReactFormAntd(@kne/react-form-antd)[import * as _ReactFormAntd from "@kne/react-form-antd"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"]
 
 ```jsx
 const { default: FormCreator, preset, defaultSchema, createBlock, createField } = _FormCreator;
@@ -798,7 +808,7 @@ render(<PresetExtendExample />);
 
 - 生成提交数据 JSON Schema
 - schemaToDataSchema：对照表单提交结果与生成的 data schema（含 hidden、object/list、choice oneOf/anyOf）
-- _FormCreator(@components/FormCreator)[import * as _FormCreator from "@components/FormCreator"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"]
+- _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"]
 
 ```jsx
 const {
@@ -1034,7 +1044,7 @@ render(<SchemaToDataSchemaExample />);
 | formProps | object | {} | 透传给预览区 Form / FormSteps 的属性 |
 | renderModal | function(props) | - | 自定义编辑弹窗渲染，透传给内部 FormModal（同 super-select / form-info） |
 
-### SchemaRenderer
+#### SchemaRenderer
 
 传入 Schema 直接渲染可填写表单（运行时，不经过编辑器）。示例见「Schema 直接渲染表单」。
 
@@ -1078,7 +1088,7 @@ import { SchemaRenderer } from '@kne/form-creator';
 <SchemaRenderer schema={schema} actions={false} />
 ```
 
-### SchemaRendererInner
+#### SchemaRendererInner
 
 只渲染 Schema 区块内容，**不包外层 Form**，便于放入业务已有 `Form` 内。操作区相关 props 与 `SchemaRenderer` 相同。
 
@@ -1106,7 +1116,7 @@ import { Form, SubmitButton } from '@kne/form-info';
 </Form>
 ```
 
-### Schema 结构
+#### Schema 结构
 
 ```js
 {
@@ -1139,7 +1149,7 @@ import { Form, SubmitButton } from '@kne/form-info';
 ```
 
 `actions` 由 FormCreator 顶部「添加模块」旁的设置按钮弹窗配置，写入 Schema；`SchemaRenderer` 会读取并渲染居中操作按钮（组件 props 可覆盖 Schema）。
-### 区块类型
+#### 区块类型
 
 | kind | 说明 | 主要参数 |
 |------|------|----------|
@@ -1155,19 +1165,19 @@ import { Form, SubmitButton } from '@kne/form-info';
 
 兼容旧版：若仅有顶层 `list` 且无 `blocks`，会自动迁移为一个 `formInfo` 区块。
 
-### 字段类型
+#### 字段类型
 
 基础：Input、TextArea、InputNumber、Switch、Checkbox、DatePicker  
 选择：Select、RadioGroup、CheckboxGroup、SuperSelect、SuperSelectPlus
 
-### 工具方法
+#### 工具方法
 
 - `createBlock(kind)` / `createStep()` / `createChoiceOption()` / `normalizeSchema(schema)`
 - `schemaToDataSchema(schema)` 根据搭建 Schema 生成**提交数据**的 JSON Schema（见下节）
 - `preset({ rules, fields })` 一次注册扩展规则与填写项（推荐）
 - `parseRuleString(rule)` / `buildRuleString(config)` 校验规则字符串解析/组装
 
-### schemaToDataSchema
+#### schemaToDataSchema
 
 将搭建 Schema 转为描述表单提交数据形状的 JSON Schema（`type: 'object'`）。
 
@@ -1194,7 +1204,7 @@ const dataSchema = schemaToDataSchema(schema);
 - 字段值类型来自 registry 的 `valueSchema`；`rule` 含 `REQ` 时写入父 object 的 `required`（choice 支内同样生效）
 - 扩展字段在 `preset` / `registerField` 中声明 `valueSchema`（对象或 `(field) => schema`）；未声明则回退 `{ type: 'string' }`
 
-### preset（推荐）
+#### preset（推荐）
 
 应用入口调用一次，同时完成：
 
@@ -1283,7 +1293,7 @@ fields: {
 }
 ```
 
-### 扩展组件与校验（示例见「扩展组件与校验规则」）
+#### 扩展组件与校验（示例见「扩展组件与校验规则」）
 
 使用 `preset({ rules, fields })` 即可，无需再单独调用 react-form-antd 的 `preset`。
 

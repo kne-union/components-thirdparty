@@ -3,7 +3,6 @@ import { preset as fetchPreset } from '@kne/react-fetch';
 import { Spin, Empty, message } from 'antd';
 import axios from 'axios';
 import { preset as remoteLoaderPreset } from '@kne/remote-loader';
-import { initFormCreatorPreset } from '@components/FormCreator/preset';
 import omit from 'lodash/omit';
 
 window.PUBLIC_URL = window.runtimePublicUrl || process.env.PUBLIC_URL;
@@ -116,8 +115,6 @@ export const globalInit = async () => {
     colorPrimary: '#4F185A',
     colorPrimaryHover: '#702280'
   };
-
-  await initFormCreatorPreset({ themeToken });
 
   return {
     ajax,

@@ -48,7 +48,7 @@ export {
   FormCreator as BaseFormCreator
 } from '@kne/form-creator';
 
-export { preset, initFormCreatorPreset, getRenderModal } from './preset';
-export { createRenderModal } from './renderModal';
+export { preset, initFormCreatorPreset, ensureFormCreatorPreset } from './preset';
 export { default as buildExtendedFields, FORM_INFO_FIELD_KEYS } from './buildFields';
+export { default as withLocale, createFormatMessage } from './withLocale';
 export { default } from './FormCreatorView';
