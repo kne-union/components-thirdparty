@@ -1,0 +1,32 @@
+const localeMessages = {
+  GroupBasic: 'Basic Fields',
+  GroupDateTime: 'Date & Time',
+  GroupRating: 'Rating',
+  GroupBusiness: 'Business Fields',
+  GroupUpload: 'Upload & Media',
+  GroupThirdparty: 'Third-party',
+  FieldPassword: 'Password',
+  FieldMonthPicker: 'Month',
+  FieldWeekPicker: 'Week',
+  FieldDateRangePicker: 'Date Range',
+  FieldTimeRangePicker: 'Time Range',
+  FieldTimePicker: 'Time',
+  FieldDatePickerToday: 'Date (to present)',
+  FieldRate: 'Rate',
+  FieldSlider: 'Slider',
+  FieldSalaryInput: 'Salary',
+  FieldTypeDateRangePicker: 'Typed Date Range',
+  FieldMoneyInput: 'Amount',
+  FieldPhoneNumber: 'Phone Number',
+  FieldUpload: 'File Upload',
+  FieldAvatar: 'Avatar',
+  FieldSignature: 'Signature',
+  FieldColorPicker: 'Color',
+  FieldAddressInput: 'Address',
+  FieldInputUpperCase: 'Uppercase Input',
+  FieldJSONEditor: 'JSON Editor',
+  FieldCKEditor: 'Rich Text Editor',
+  PropIsMarkdown: 'Markdown Mode'
+};
+
+export default localeMessages;
