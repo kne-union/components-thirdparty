@@ -111,11 +111,13 @@ export const globalInit = async () => {
     }
   });
 
+  const themeToken = {
+    colorPrimary: '#4F185A',
+    colorPrimaryHover: '#702280'
+  };
+
   return {
     ajax,
-    themeToken: {
-      colorPrimary: '#4F185A',
-      colorPrimaryHover: '#702280'
-    }
+    themeToken
   };
 };
