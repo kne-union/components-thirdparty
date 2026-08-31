@@ -34,7 +34,7 @@ npm i --save @kne/form-creator
 
 - 配置式表单搭建(全屏)
 - 通过模块列表添加/编辑/排序，右侧实时预览；默认示例含列表嵌套与选项切换
-- _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"],_FormInfo(@kne/form-info)[import * as _FormInfo from "@kne/form-info"]
+- _FormCreator(@kne/current-lib_form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/current-lib_form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"],_FormInfo(@kne/form-info)[import * as _FormInfo from "@kne/form-info"]
 
 ```jsx
 const {default: FormCreator, defaultSchema, createBlock, createField, createStep, createChoiceOption} = _FormCreator;
@@ -426,7 +426,7 @@ render(<BaseExample />);
 
 - Schema 直接渲染表单
 - 传入已有 Schema，用 SchemaRenderer 直接展示可提交表单（运行时，不经过编辑器）
-- _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"]
+- _FormCreator(@kne/current-lib_form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/current-lib_form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"]
 
 ```jsx
 const { SchemaRenderer, createBlock, createField } = _FormCreator;
@@ -528,7 +528,7 @@ render(<SchemaRenderExample />);
 
 - 列表嵌套与选项切换
 - 列表每一条里可再放分组或子列表；选项切换支持单选/多选，每个选项可添加填写项
-- _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"]
+- _FormCreator(@kne/current-lib_form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/current-lib_form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"]
 
 ```jsx
 const { SchemaRenderer, createBlock, createField, createChoiceOption } = _FormCreator;
@@ -656,7 +656,7 @@ render(<NestedChoiceExample />);
 
 - 扩展组件与校验规则
 - 通过 preset({ rules, fields }) 一次扩展运行时校验、规则勾选面板与自定义填写项
-- _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_ReactFormAntd(@kne/react-form-antd)[import * as _ReactFormAntd from "@kne/react-form-antd"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"]
+- _FormCreator(@kne/current-lib_form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/current-lib_form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_ReactFormAntd(@kne/react-form-antd)[import * as _ReactFormAntd from "@kne/react-form-antd"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"]
 
 ```jsx
 const { default: FormCreator, preset, defaultSchema, createBlock, createField } = _FormCreator;
@@ -808,7 +808,7 @@ render(<PresetExtendExample />);
 
 - 生成提交数据 JSON Schema
 - schemaToDataSchema：对照表单提交结果与生成的 data schema（含 hidden、object/list、choice oneOf/anyOf）
-- _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"]
+- _FormCreator(@kne/current-lib_form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/current-lib_form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"]
 
 ```jsx
 const {
@@ -1032,6 +1032,206 @@ render(<SchemaToDataSchemaExample />);
 
 ```
 
+- 扩展添加模块旁的按钮
+- extraToolbar：在「添加模块」和设置按钮后面追加自定义操作
+- _FormCreator(@kne/current-lib_form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/current-lib_form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],antd(antd)[import antd from "antd"]
+
+```jsx
+const { default: FormCreator, defaultSchema, createBlock, createField } = _FormCreator;
+const { useState } = React;
+const { Alert, Button, Space, Typography, message } = antd;
+const { Text } = Typography;
+
+const ExtraToolbarExample = () => {
+  const [schema, setSchema] = useState(() => ({
+    ...defaultSchema(),
+    blocks: [
+      createBlock('formInfo', {
+        title: '基本信息',
+        column: 2,
+        list: [
+          createField({ type: 'Input', name: 'name', label: '姓名', rule: 'REQ', props: { placeholder: '请输入姓名' } }),
+          createField({ type: 'Input', name: 'mobile', label: '手机号', rule: 'REQ TEL', props: { placeholder: '请输入手机号' } })
+        ]
+      })
+    ]
+  }));
+
+  return (
+    <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      <Alert
+        type="info"
+        showIcon
+        message="扩展工具栏按钮"
+        description={
+          <span>
+            「添加模块」旁的设置按钮后面可通过 <Text code>extraToolbar</Text> 追加自定义按钮（ReactNode，或
+            <Text code>{'({ schema }) => ReactNode'}</Text>）。
+          </span>
+        }
+      />
+      <FormCreator
+        value={schema}
+        onChange={setSchema}
+        extraToolbar={
+          <Space size={8}>
+            <Button
+              size="small"
+              onClick={() => {
+                const text = JSON.stringify(schema, null, 2);
+                if (navigator.clipboard?.writeText) {
+                  navigator.clipboard.writeText(text).then(() => message.success('已复制 Schema JSON'));
+                } else {
+                  message.info(text);
+                }
+              }}
+            >
+              复制 Schema
+            </Button>
+            <Button size="small" onClick={() => message.info('这里可以接导入 / 预览等业务逻辑')}>
+              导入
+            </Button>
+          </Space>
+        }
+      />
+    </Space>
+  );
+};
+
+render(<ExtraToolbarExample />);
+
+```
+
+- 按 Schema 展示提交数据
+- SchemaContent：根据搭建 Schema 与字段 valueSchema，用 InfoPage（同 FormInfo 布局）展示提交结果
+- _FormCreator(@kne/current-lib_form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/current-lib_form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],antd(antd)[import antd from "antd"]
+
+```jsx
+const { SchemaRenderer, SchemaContent, createBlock, createField, createChoiceOption } = _FormCreator;
+const { useState } = React;
+const { Alert, Card, Col, Row, Space, Typography } = antd;
+const { Text } = Typography;
+
+const demoSchema = {
+  actions: {
+    showSubmit: true,
+    showReset: true,
+    submitText: '提交并展示',
+    resetText: '重置'
+  },
+  blocks: [
+    createBlock('formInfo', {
+      title: '员工信息',
+      subtitle: '提交后按各字段 valueSchema 展示',
+      column: 2,
+      list: [
+        createField({ type: 'Input', name: 'name', label: '姓名', rule: 'REQ', props: { placeholder: '请输入姓名' } }),
+        createField({ type: 'Input', name: 'mobile', label: '手机号', rule: 'REQ TEL', props: { placeholder: '请输入手机号' } }),
+        createField({
+          type: 'Select',
+          name: 'gender',
+          label: '性别',
+          rule: 'REQ',
+          props: {
+            placeholder: '请选择',
+            options: [
+              { label: '男', value: 'male' },
+              { label: '女', value: 'female' }
+            ]
+          }
+        }),
+        createField({ type: 'Switch', name: 'agree', label: '同意协议' }),
+        createField({ type: 'DatePicker', name: 'joinDate', label: '入职日期', props: { placeholder: '请选择日期' } }),
+        createField({ type: 'TextArea', name: 'remark', label: '备注', block: true, props: { rows: 2, placeholder: '选填' } })
+      ]
+    }),
+    createBlock('list', {
+      title: '项目经历',
+      name: 'projects',
+      addText: '添加项目',
+      list: [
+        createField({ type: 'Input', name: 'projectName', label: '项目名', rule: 'REQ' }),
+        createField({ type: 'Input', name: 'role', label: '角色' })
+      ]
+    }),
+    createBlock('choice', {
+      title: '客户类型',
+      mode: 'single',
+      selectorName: 'customerType',
+      selectorInData: true,
+      options: [
+        createChoiceOption({
+          id: 'enterprise',
+          title: '企业',
+          list: [createField({ type: 'Input', name: 'companyName', label: '公司名', rule: 'REQ' })]
+        }),
+        createChoiceOption({
+          id: 'person',
+          title: '个人',
+          list: [createField({ type: 'Input', name: 'idName', label: '姓名', rule: 'REQ' })]
+        })
+      ]
+    })
+  ]
+};
+
+const demoData = {
+  name: '张三',
+  mobile: '13800138000',
+  gender: 'male',
+  agree: true,
+  joinDate: '2024-03-01',
+  remark: '可远程办公',
+  projects: [
+    { projectName: '招聘门户改版', role: '前端' },
+    { projectName: '表单搭建器', role: '全栈' }
+  ],
+  customerType: 'enterprise',
+  companyName: '示例科技有限公司'
+};
+
+const SchemaContentExample = () => {
+  const [data, setData] = useState(demoData);
+
+  return (
+    <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      <Alert
+        type="info"
+        showIcon
+        message="SchemaContent"
+        description={
+          <span>
+            按搭建 Schema 的分组结构展示提交数据；字段展示形态由各填写项的 <Text code>valueSchema</Text>
+            （如 string / number / boolean / enum）决定。布局与 FormInfo 相同，使用 InfoPage.Part + Content。
+          </span>
+        }
+      />
+      <Row gutter={[16, 16]}>
+        <Col xs={24} lg={12}>
+          <Card size="small" title="填写并提交" bordered>
+            <SchemaRenderer
+              schema={demoSchema}
+              formProps={{
+                data: demoData,
+                onSubmit: values => setData(values)
+              }}
+            />
+          </Card>
+        </Col>
+        <Col xs={24} lg={12}>
+          <Card size="small" title="数据展示（SchemaContent）" bordered>
+            <SchemaContent schema={demoSchema} data={data} />
+          </Card>
+        </Col>
+      </Row>
+    </Space>
+  );
+};
+
+render(<SchemaContentExample />);
+
+```
+
 ### API
 
 | 属性 | 类型 | 默认值 | 说明 |
@@ -1042,6 +1242,21 @@ render(<SchemaToDataSchemaExample />);
 | showPreview | boolean | true | 是否显示右侧预览 |
 | className | string | - | 根节点类名 |
 | formProps | object | {} | 透传给预览区 Form / FormSteps 的属性 |
+| renderModal | function(props) | - | 自定义编辑弹窗渲染，透传给内部 FormModal（同 super-select / form-info） |
+| extraToolbar | ReactNode \| function({ schema }) | - | 追加在「添加模块」与设置按钮后面的自定义按钮区 |
+
+```js
+<FormCreator
+  value={schema}
+  onChange={setSchema}
+  extraToolbar={
+    <Button size="small" onClick={() => {}}>复制 Schema</Button>
+  }
+/>
+
+// 需要读当前 Schema 时用函数
+<FormCreator extraToolbar={({ schema }) => <Button size="small">导出</Button>} />
+```
 
 #### SchemaRenderer
 
@@ -1053,6 +1268,10 @@ render(<SchemaToDataSchemaExample />);
 | formProps | object | {} | 透传给内部 `Form`（如 `onSubmit`、`data`） |
 | preview | boolean | false | 预览态（字段预览行为） |
 | className | string | - | 根 Form 类名 |
+| bodyClassName | string | - | 字段区域（`.schema-body`）额外 className，便于外部改样式 |
+| footerClassName | string | - | Footer 操作区（`.schema-actions`）额外 className |
+| buttonFooter | boolean | false | 为 true 时用 `@kne/button-group` 的 `ButtonFooter` 包裹 Footer（移动端贴底）；默认关闭 |
+| buttonFooterProps | object | - | 透传给 `ButtonFooter`（如 `placement`、`target`、`className`） |
 | children | ReactNode | - | 追加到表单内容与操作区之间 |
 | showActions | boolean | true | 是否展示提交/重置操作区（默认开启，可不传） |
 | actions | ReactNode \| false | - | 自定义操作区；不传则按 Schema `actions` / 默认居中「提交/重置」；`false` 隐藏 |
@@ -1085,6 +1304,16 @@ import { SchemaRenderer } from '@kne/form-creator';
 <SchemaRenderer schema={schema} showActions={false} />
 // 或
 <SchemaRenderer schema={schema} actions={false} />
+
+// 字段区 / Footer 自定义 className；移动端 Footer 贴底（默认关闭）
+<SchemaRenderer
+  schema={schema}
+  bodyClassName="my-form-fields"
+  footerClassName="my-form-footer"
+  buttonFooter
+  buttonFooterProps={{ placement: 'bottom' }}
+  formProps={{ onSubmit: console.log }}
+/>
 ```
 
 #### SchemaRendererInner
@@ -1099,6 +1328,7 @@ import { SchemaRenderer } from '@kne/form-creator';
 | children | ReactNode | - | 追加内容 |
 | showActions | boolean | true | 是否展示提交/重置操作区（默认开启，可不传） |
 | actions / showSubmit / showReset / submitText / resetText / \*ButtonProps | - | - | 同 SchemaRenderer |
+| bodyClassName / footerClassName / buttonFooter / buttonFooterProps | - | - | 同 SchemaRenderer |
 
 ```js
 import { SchemaRendererInner } from '@kne/form-creator';
@@ -1113,6 +1343,29 @@ import { Form, SubmitButton } from '@kne/form-info';
   <SchemaRendererInner schema={schema} showActions={false} />
   <SubmitButton>提交</SubmitButton>
 </Form>
+```
+
+#### SchemaContent
+
+按搭建 Schema 的分组结构展示**已提交数据**（只读）。字段展示形态由各填写项的 `valueSchema` 决定（boolean → 是/否，enum → 选项文案，日期按 `format`）。布局与 FormInfo 相同，使用 `@kne/info-page` 的 Part + Content。示例见「按 Schema 展示提交数据」。
+
+| 属性 | 类型 | 默认值 | 说明 |
+|----|----|-----|----|
+| schema | object | - | 搭建 Schema |
+| data | object | - | 提交数据；为 `null` / `undefined` 时展示空状态 |
+| className | string | - | 根节点类名 |
+| empty | ReactNode | - | 自定义空状态；不传则用默认 Empty |
+
+`SchemaContentInner` 只渲染分组内容，**不包**外层 `InfoPage`，便于放入业务已有详情页。
+
+```js
+import { SchemaContent, SchemaContentInner } from '@kne/form-creator';
+
+<SchemaContent schema={schema} data={submitData} />
+
+<InfoPage>
+  <SchemaContentInner schema={schema} data={submitData} />
+</InfoPage>
 ```
 
 #### Schema 结构
@@ -1147,7 +1400,7 @@ import { Form, SubmitButton } from '@kne/form-info';
 }
 ```
 
-`actions` 由 FormCreator 顶部「添加模块」旁的设置按钮弹窗配置，写入 Schema；`SchemaRenderer` 会读取并渲染居中操作按钮（组件 props 可覆盖 Schema）。
+`actions` 由 FormCreator 顶部「添加模块」旁的设置按钮弹窗配置，写入 Schema；`SchemaRenderer` 会读取并渲染居中操作按钮（组件 props 可覆盖 Schema）。设置按钮后面可用 `extraToolbar` 追加自定义按钮。
 #### 区块类型
 
 | kind | 说明 | 主要参数 |
@@ -1173,6 +1426,7 @@ import { Form, SubmitButton } from '@kne/form-info';
 
 - `createBlock(kind)` / `createStep()` / `createChoiceOption()` / `normalizeSchema(schema)`
 - `schemaToDataSchema(schema)` 根据搭建 Schema 生成**提交数据**的 JSON Schema（见下节）
+- `SchemaContent` / `SchemaContentInner` 按 Schema + 字段 `valueSchema` 只读展示提交数据
 - `preset({ rules, fields })` 一次注册扩展规则与填写项（推荐）
 - `parseRuleString(rule)` / `buildRuleString(config)` 校验规则字符串解析/组装
 

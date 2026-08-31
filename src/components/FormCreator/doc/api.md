@@ -11,6 +11,7 @@
 | className | string | - | 根节点类名 |
 | formProps | object | {} | 透传给预览区 Form / FormSteps 的属性 |
 | locale | string | 跟随全局 | `zh-CN` / `en-US`；扩展字段展示名与 `@kne/form-creator` UI 文案 |
+| extraToolbar | ReactNode \| function({ schema }) | - | 追加在「添加模块」与设置按钮后面的自定义按钮区 |
 
 ```js
 <FormInfo
@@ -20,6 +21,10 @@
 />
 
 <FormCreator.Field value={schema} onChange={setSchema} />
+
+<FormCreator.Field
+  extraToolbar={<Button size="small">复制 Schema</Button>}
+/>
 ```
 
 ### SchemaRenderer
@@ -32,6 +37,10 @@
 | formProps | object | {} | 透传给内部 `Form`（如 `onSubmit`、`data`） |
 | preview | boolean | false | 预览态（字段预览行为） |
 | className | string | - | 根 Form 类名 |
+| bodyClassName | string | - | 字段区域（`.schema-body`）额外 className，便于外部改样式 |
+| footerClassName | string | - | Footer 操作区（`.schema-actions`）额外 className |
+| buttonFooter | boolean | false | 为 true 时用 `@kne/button-group` 的 `ButtonFooter` 包裹 Footer（移动端贴底）；默认关闭 |
+| buttonFooterProps | object | - | 透传给 `ButtonFooter`（如 `placement`、`target`、`className`） |
 | children | ReactNode | - | 追加到表单内容与操作区之间 |
 | showActions | boolean | true | 是否展示提交/重置操作区（默认开启，可不传） |
 | actions | ReactNode \| false | - | 自定义操作区；不传则按 Schema `actions` / 默认居中「提交/重置」；`false` 隐藏 |
@@ -64,6 +73,16 @@ import { SchemaRenderer } from '@kne/form-creator';
 <SchemaRenderer schema={schema} showActions={false} />
 // 或
 <SchemaRenderer schema={schema} actions={false} />
+
+// 字段区 / Footer 自定义 className；移动端 Footer 贴底（默认关闭）
+<SchemaRenderer
+  schema={schema}
+  bodyClassName="my-form-fields"
+  footerClassName="my-form-footer"
+  buttonFooter
+  buttonFooterProps={{ placement: 'bottom' }}
+  formProps={{ onSubmit: console.log }}
+/>
 ```
 
 ### SchemaRendererInner
@@ -78,6 +97,7 @@ import { SchemaRenderer } from '@kne/form-creator';
 | children | ReactNode | - | 追加内容 |
 | showActions | boolean | true | 是否展示提交/重置操作区（默认开启，可不传） |
 | actions / showSubmit / showReset / submitText / resetText / \*ButtonProps | - | - | 同 SchemaRenderer |
+| bodyClassName / footerClassName / buttonFooter / buttonFooterProps | - | - | 同 SchemaRenderer |
 
 ```js
 import { SchemaRendererInner } from '@kne/form-creator';
@@ -92,6 +112,29 @@ import { Form, SubmitButton } from '@kne/form-info';
   <SchemaRendererInner schema={schema} showActions={false} />
   <SubmitButton>提交</SubmitButton>
 </Form>
+```
+
+### SchemaContent
+
+按搭建 Schema 的分组结构展示**已提交数据**（只读）。字段展示形态由各填写项的 `valueSchema` 决定（boolean → 是/否，enum → 选项文案，日期按 `format`）。布局与 FormInfo 相同，使用 `@kne/info-page` 的 Part + Content。示例见「按 Schema 展示提交数据」。
+
+| 属性 | 类型 | 默认值 | 说明 |
+|----|----|-----|----|
+| schema | object | - | 搭建 Schema |
+| data | object | - | 提交数据；为 `null` / `undefined` 时展示空状态 |
+| className | string | - | 根节点类名 |
+| empty | ReactNode | - | 自定义空状态；不传则用默认 Empty |
+
+`SchemaContentInner` 只渲染分组内容，**不包**外层 `InfoPage`，便于放入业务已有详情页。
+
+```js
+import { SchemaContent, SchemaContentInner } from '@kne/form-creator';
+
+<SchemaContent schema={schema} data={submitData} />
+
+<InfoPage>
+  <SchemaContentInner schema={schema} data={submitData} />
+</InfoPage>
 ```
 
 ### Schema 结构
@@ -126,7 +169,7 @@ import { Form, SubmitButton } from '@kne/form-info';
 }
 ```
 
-`actions` 由 FormCreator 顶部「添加模块」旁的设置按钮弹窗配置，写入 Schema；`SchemaRenderer` 会读取并渲染居中操作按钮（组件 props 可覆盖 Schema）。
+`actions` 由 FormCreator 顶部「添加模块」旁的设置按钮弹窗配置，写入 Schema；`SchemaRenderer` 会读取并渲染居中操作按钮（组件 props 可覆盖 Schema）。设置按钮后面可用 `extraToolbar` 追加自定义按钮。
 ### 区块类型
 
 | kind | 说明 | 主要参数 |
@@ -152,6 +195,7 @@ import { Form, SubmitButton } from '@kne/form-info';
 
 - `createBlock(kind)` / `createStep()` / `createChoiceOption()` / `normalizeSchema(schema)`
 - `schemaToDataSchema(schema)` 根据搭建 Schema 生成**提交数据**的 JSON Schema（见下节）
+- `SchemaContent` / `SchemaContentInner` 按 Schema + 字段 `valueSchema` 只读展示提交数据
 - `preset({ rules, fields })` 一次注册扩展规则与填写项（推荐）
 - `parseRuleString(rule)` / `buildRuleString(config)` 校验规则字符串解析/组装
 

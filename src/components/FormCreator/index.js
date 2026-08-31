@@ -45,6 +45,8 @@ export {
   schemaToDataSchema,
   SchemaRenderer,
   SchemaRendererInner,
+  SchemaContent,
+  SchemaContentInner,
   FormCreator as BaseFormCreator
 } from '@kne/form-creator';
 
