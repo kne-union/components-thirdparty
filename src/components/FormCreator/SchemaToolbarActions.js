@@ -9,13 +9,9 @@ import {
 } from '@ant-design/icons';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
-import {
-  copySchemaToClipboard,
-  downloadSchemaFile,
-  parseSchemaJson
-} from '@kne/form-creator';
 import useRefCallback from '@kne/use-ref-callback';
 import withLocale from './withLocale';
+import { copySchemaToClipboard, downloadSchemaFile, parseSchemaJson } from './schemaIO';
 import style from './style.module.scss';
 
 const SchemaToolbarActions = withLocale(

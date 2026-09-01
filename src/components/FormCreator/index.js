@@ -47,14 +47,10 @@ export {
   SchemaRendererInner,
   SchemaContent,
   SchemaContentInner,
-  SchemaImportExport,
-  serializeSchema,
-  parseSchemaJson,
-  downloadSchemaFile,
-  copySchemaToClipboard,
   FormCreator as BaseFormCreator
 } from '@kne/form-creator';
 
+export { serializeSchema, parseSchemaJson, downloadSchemaFile, copySchemaToClipboard } from './schemaIO';
 export { preset, initFormCreatorPreset, ensureFormCreatorPreset } from './preset';
 export { default as buildExtendedFields, FORM_INFO_FIELD_KEYS } from './buildFields';
 export { default as withLocale, createFormatMessage } from './withLocale';
