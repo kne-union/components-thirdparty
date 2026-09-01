@@ -34,7 +34,7 @@ npm i --save @kne/form-creator
 
 - 配置式表单搭建(全屏)
 - 通过模块列表添加/编辑/排序，右侧实时预览；默认示例含列表嵌套与选项切换
-- _FormCreator(@kne/current-lib_form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/current-lib_form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"],_FormInfo(@kne/form-info)[import * as _FormInfo from "@kne/form-info"]
+- _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"],_FormInfo(@kne/form-info)[import * as _FormInfo from "@kne/form-info"]
 
 ```jsx
 const {default: FormCreator, defaultSchema, createBlock, createField, createStep, createChoiceOption} = _FormCreator;
@@ -422,11 +422,12 @@ const BaseExample = () => {
 
 render(<BaseExample />);
 
+
 ```
 
 - Schema 直接渲染表单
 - 传入已有 Schema，用 SchemaRenderer 直接展示可提交表单（运行时，不经过编辑器）
-- _FormCreator(@kne/current-lib_form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/current-lib_form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"]
+- _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"]
 
 ```jsx
 const { SchemaRenderer, createBlock, createField } = _FormCreator;
@@ -524,11 +525,12 @@ const SchemaRenderExample = () => {
 
 render(<SchemaRenderExample />);
 
+
 ```
 
 - 列表嵌套与选项切换
 - 列表每一条里可再放分组或子列表；选项切换支持单选/多选，每个选项可添加填写项
-- _FormCreator(@kne/current-lib_form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/current-lib_form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"]
+- _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"]
 
 ```jsx
 const { SchemaRenderer, createBlock, createField, createChoiceOption } = _FormCreator;
@@ -652,11 +654,12 @@ const NestedChoiceExample = () => {
 
 render(<NestedChoiceExample />);
 
+
 ```
 
 - 扩展组件与校验规则
 - 通过 preset({ rules, fields }) 一次扩展运行时校验、规则勾选面板与自定义填写项
-- _FormCreator(@kne/current-lib_form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/current-lib_form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_ReactFormAntd(@kne/react-form-antd)[import * as _ReactFormAntd from "@kne/react-form-antd"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"]
+- _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_ReactFormAntd(@kne/react-form-antd)[import * as _ReactFormAntd from "@kne/react-form-antd"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"]
 
 ```jsx
 const { default: FormCreator, preset, defaultSchema, createBlock, createField } = _FormCreator;
@@ -804,11 +807,12 @@ const PresetExtendExample = () => {
 
 render(<PresetExtendExample />);
 
+
 ```
 
 - 生成提交数据 JSON Schema
 - schemaToDataSchema：对照表单提交结果与生成的 data schema（含 hidden、object/list、choice oneOf/anyOf）
-- _FormCreator(@kne/current-lib_form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/current-lib_form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"]
+- _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"]
 
 ```jsx
 const {
@@ -1030,11 +1034,12 @@ const SchemaToDataSchemaExample = () => {
 
 render(<SchemaToDataSchemaExample />);
 
+
 ```
 
 - 扩展添加模块旁的按钮
 - extraToolbar：在「添加模块」和设置按钮后面追加自定义操作
-- _FormCreator(@kne/current-lib_form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/current-lib_form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],antd(antd)[import antd from "antd"]
+- _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],antd(antd)[import antd from "antd"]
 
 ```jsx
 const { default: FormCreator, defaultSchema, createBlock, createField } = _FormCreator;
@@ -1100,11 +1105,12 @@ const ExtraToolbarExample = () => {
 
 render(<ExtraToolbarExample />);
 
+
 ```
 
 - 按 Schema 展示提交数据
 - SchemaContent：根据搭建 Schema 与字段 valueSchema，用 InfoPage（同 FormInfo 布局）展示提交结果
-- _FormCreator(@kne/current-lib_form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/current-lib_form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],antd(antd)[import antd from "antd"]
+- _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],antd(antd)[import antd from "antd"]
 
 ```jsx
 const { SchemaRenderer, SchemaContent, createBlock, createField, createChoiceOption } = _FormCreator;
@@ -1229,6 +1235,268 @@ const SchemaContentExample = () => {
 };
 
 render(<SchemaContentExample />);
+
+
+```
+
+- Schema 导入导出
+- 复制 / 导出 / 导入收进圆形「更多」下拉，与扩展操作样式一致
+- _FormCreator(@components/FormCreator),antd(antd)
+
+```jsx
+const { default: FormCreator, defaultSchema, createBlock, createField } = _FormCreator;
+const { useState } = React;
+const { Alert, Space, Typography } = antd;
+const { Text } = Typography;
+
+const SchemaImportExportExample = () => {
+  const [schema, setSchema] = useState(() => ({
+    ...defaultSchema(),
+    blocks: [
+      createBlock('formInfo', {
+        title: '基本信息',
+        column: 2,
+        list: [
+          createField({ type: 'Input', name: 'name', label: '姓名', rule: 'REQ', props: { placeholder: '请输入姓名' } }),
+          createField({ type: 'Input', name: 'mobile', label: '手机号', rule: 'REQ TEL', props: { placeholder: '请输入手机号' } })
+        ]
+      })
+    ]
+  }));
+
+  return (
+    <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      <Alert
+        type="info"
+        showIcon
+        message="Schema 导入导出"
+        description={
+          <span>
+            默认开启导入导出：复制、导出、导入（粘贴 / 剪贴板 / 文件）收进「添加模块」旁圆形「更多」下拉，样式与扩展操作一致。传{' '}
+            <Text code>schemaImportExport={'{false}'}</Text> 可关闭。
+          </span>
+        }
+      />
+      <FormCreator.Field
+        value={schema}
+        onChange={setSchema}
+        schemaImportExport={{ downloadFileName: 'questionnaire-schema.json' }}
+      />
+    </Space>
+  );
+};
+
+render(<SchemaImportExportExample />);
+
+```
+
+- 模版列表与保存
+- 左侧 FileSystemView；文件夹用 GroupFolder API（groupList/create/save/remove），模版用 list/saveTemplate
+- _FormCreator(@components/FormCreator),antd(antd)
+
+```jsx
+const { default: FormCreator, defaultSchema, createBlock, createField } = _FormCreator;
+const { useMemo, useRef, useState } = React;
+const { Alert, Space, Typography } = antd;
+const { Text, Paragraph } = Typography;
+
+const buildDemoSchema = title => ({
+  ...defaultSchema(),
+  blocks: [
+    createBlock('formInfo', {
+      title,
+      column: 2,
+      list: [
+        createField({ type: 'Input', name: 'name', label: '姓名', rule: 'REQ', props: { placeholder: '请输入姓名' } }),
+        createField({ type: 'Input', name: 'mobile', label: '手机号', rule: 'REQ TEL', props: { placeholder: '请输入手机号' } })
+      ]
+    })
+  ]
+});
+
+const TemplateApisExample = () => {
+  const [schema, setSchema] = useState(() => buildDemoSchema('当前问卷'));
+  const [folders, setFolders] = useState(() => [
+    { id: 1, code: 'onboard', name: '入职模版', children: [] },
+    { id: 2, code: 'survey', name: '调研', children: [] }
+  ]);
+  const [templates, setTemplates] = useState(() => [
+    { id: 'tpl-basic', name: '基础信息', parentId: 1, schema: buildDemoSchema('基础信息模版') },
+    {
+      id: 'tpl-feedback',
+      name: '满意度',
+      parentId: 2,
+      schema: {
+        ...defaultSchema(),
+        blocks: [
+          createBlock('formInfo', {
+            title: '满意度',
+            list: [createField({ type: 'TextArea', name: 'feedback', label: '意见', props: { rows: 3 } })]
+          })
+        ]
+      }
+    }
+  ]);
+  const foldersRef = useRef(folders);
+  const templatesRef = useRef(templates);
+  foldersRef.current = folders;
+  templatesRef.current = templates;
+
+  const apis = useMemo(
+    () => ({
+      groupList: {
+        loader: async () => foldersRef.current
+      },
+      create: async ({ data }) => {
+        const item = {
+          id: Date.now(),
+          code: &#96;folder_${Date.now()}&#96;,
+          name: data.name,
+          parentId: data.parentId ?? null,
+          children: []
+        };
+        const append = (nodes, parentId) => {
+          if (parentId == null) {
+            return [...nodes, item];
+          }
+          return (nodes || []).map(node => {
+            if (node.id === parentId || node.code === parentId) {
+              return { ...node, children: [...(node.children || []), item] };
+            }
+            if (node.children?.length) {
+              return { ...node, children: append(node.children, parentId) };
+            }
+            return node;
+          });
+        };
+        const next = append(foldersRef.current, data.parentId);
+        foldersRef.current = next;
+        setFolders(next);
+        return item;
+      },
+      save: async ({ data }) => {
+        const walk = nodes =>
+          (nodes || []).map(node => {
+            if (node.id === data.id || node.code === data.code) {
+              return { ...node, name: data.name };
+            }
+            if (node.children?.length) {
+              return { ...node, children: walk(node.children) };
+            }
+            return node;
+          });
+        const next = walk(foldersRef.current);
+        foldersRef.current = next;
+        setFolders(next);
+        return data;
+      },
+      remove: async ({ data }) => {
+        const walk = nodes =>
+          (nodes || [])
+            .filter(node => node.id !== data.id && node.code !== data.code)
+            .map(node => ({ ...node, children: walk(node.children || []) }));
+        const next = walk(foldersRef.current);
+        foldersRef.current = next;
+        setFolders(next);
+      },
+      list: async () => templatesRef.current,
+      saveTemplate: async ({ data }) => {
+        const item = {
+          id: &#96;tpl-${Date.now()}&#96;,
+          name: data.name,
+          parentId: data.parentId,
+          schema: data.schema
+        };
+        const next = [...templatesRef.current, item];
+        templatesRef.current = next;
+        setTemplates(next);
+        return item;
+      }
+    }),
+    []
+  );
+
+  return (
+    <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      <Alert
+        type="info"
+        showIcon
+        message="模版列表与保存"
+        description={
+          <div>
+            <Paragraph style={{ marginBottom: 4 }}>
+              左侧为 <Text code>FileSystemView</Text>；文件夹走 GroupFolder API（
+              <Text code>groupList / create / save / remove</Text>
+              ），模版走 <Text code>list / saveTemplate</Text>。
+            </Paragraph>
+            <Paragraph style={{ marginBottom: 0 }}>本示例为内存 mock，可换成真实 ajax 配置。</Paragraph>
+          </div>
+        }
+      />
+      <FormCreator.Field value={schema} onChange={setSchema} groupType="demo" apis={apis} />
+    </Space>
+  );
+};
+
+render(<TemplateApisExample />);
+
+```
+
+- 扩展添加模块旁的按钮
+- extraToolbar 操作列表并入圆形「更多」下拉，与导入导出等扩展操作一致
+- _FormCreator(@components/FormCreator),antd(antd)
+
+```jsx
+const { default: FormCreator, defaultSchema, createBlock, createField } = _FormCreator;
+const { useState } = React;
+const { Alert, Space, Typography, message } = antd;
+const { Text } = Typography;
+
+const ExtraToolbarExample = () => {
+  const [schema, setSchema] = useState(() => ({
+    ...defaultSchema(),
+    blocks: [
+      createBlock('formInfo', {
+        title: '基本信息',
+        column: 2,
+        list: [
+          createField({ type: 'Input', name: 'name', label: '姓名', rule: 'REQ', props: { placeholder: '请输入姓名' } }),
+          createField({ type: 'Input', name: 'mobile', label: '手机号', rule: 'REQ TEL', props: { placeholder: '请输入手机号' } })
+        ]
+      })
+    ]
+  }));
+
+  return (
+    <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      <Alert
+        type="info"
+        showIcon
+        message="扩展工具栏按钮"
+        description={
+          <span>
+            「添加模块」旁通过圆形「更多」下拉收纳扩展操作。传入 <Text code>extraToolbar</Text> 操作列表（或
+            <Text code>{'({ schema }) => list'}</Text>
+            ）会与导入导出、保存等一并进入下拉，与当前工具栏交互一致。
+          </span>
+        }
+      />
+      <FormCreator.Field
+        value={schema}
+        onChange={setSchema}
+        extraToolbar={[
+          {
+            key: 'custom-action',
+            children: '自定义操作',
+            onClick: () => message.info('自定义业务按钮')
+          }
+        ]}
+      />
+    </Space>
+  );
+};
+
+render(<ExtraToolbarExample />);
 
 ```
 
