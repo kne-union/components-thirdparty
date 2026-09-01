@@ -11,7 +11,51 @@
 | className | string | - | 根节点类名 |
 | formProps | object | {} | 透传给预览区 Form / FormSteps 的属性 |
 | locale | string | 跟随全局 | `zh-CN` / `en-US`；扩展字段展示名与 `@kne/form-creator` UI 文案 |
-| extraToolbar | ReactNode \| function({ schema }) | - | 追加在「添加模块」与设置按钮后面的自定义按钮区 |
+| extraToolbar | ButtonGroupItem[] \| function({ schema }) | - | 扩展操作列表（或返回列表的函数），并入圆形「更多」下拉 |
+| schemaImportExport | boolean \| object | true | 启用导入导出（复制 / 导出 / 导入）；传 `false` 关闭；与 extraToolbar 数组、保存模版同属「更多」下拉 |
+| apis | object | - | 模版与文件夹接口；有 `groupList` 时显示左侧 FileSystemView；有 `saveTemplate` 时显示「保存为模版」 |
+| groupType | string | form-creator-template | 传给 Group 文件夹 API 的 `type` |
+| valueKey / labelKey | string | code / name | 与 GroupFolder 一致 |
+
+### apis
+
+文件夹部分与 `components-admin:GroupFolder` / `GroupFolderField` **完全一致**：
+
+| 字段 | 类型 | 说明 |
+|----|----|-----|
+| groupList | function \| { loader } \| ajaxConfig | 分组树（`output: 'tree'`） |
+| create | function \| ajaxConfig | 新建文件夹 |
+| save | function \| ajaxConfig | 更新文件夹 |
+| remove | function \| ajaxConfig | 删除文件夹 |
+
+模版部分：
+
+| 字段 | 类型 | 说明 |
+|----|----|-----|
+| list | function \| ajaxConfig | 模版列表（挂到对应 `parentId` 目录下显示为文件） |
+| get | function \| ajaxConfig | 可选；列表项无 schema 时按 id 拉取 |
+| saveTemplate | function \| ajaxConfig | 保存当前 Schema 为模版；`{ name, parentId, schema }`，`parentId` 为 null 表示根 |
+
+分组节点字段：`id` / `code` / `name` / `children`（同 Group）。保存弹窗「保存到文件夹」使用 `GroupFolderField`（`isPopup` 单选下拉），并可在有 `create`/`save` 时新建文件夹。
+
+```js
+<FormCreator.Field
+  value={schema}
+  onChange={setSchema}
+  groupType="questionnaire"
+  apis={{
+    groupList: { loader: async () => mockGroups },
+    create: { url: '/api/group', method: 'POST' },
+    save: { url: '/api/group', method: 'POST' },
+    remove: { url: '/api/group/remove', method: 'POST' },
+    list: async () => mockTemplates,
+    saveTemplate: async ({ name, parentId, schema }) => {
+      await createTemplate({ name, parentId, schema });
+    }
+  }}
+/>
+```
+
 
 ```js
 <FormInfo
@@ -22,10 +66,34 @@
 
 <FormCreator.Field value={schema} onChange={setSchema} />
 
+{/* 自定义操作并入「更多」下拉（推荐） */}
 <FormCreator.Field
-  extraToolbar={<Button size="small">复制 Schema</Button>}
+  extraToolbar={[
+    { key: 'custom', children: '自定义操作', onClick: () => {} }
+  ]}
 />
+
+{/* 问卷场景默认开启导入导出；不需要时可关闭 */}
+<FormCreator.Field schemaImportExport={false} />
+
+{/* 仅保留复制与导出 */}
+<FormCreator.Field schemaImportExport={{ showImport: false, showUpload: false }} />
 ```
+
+### SchemaImportExport
+
+`@kne/form-creator` 提供的 Schema 导入导出组件，本包装层已 re-export。可单独用于 `extraToolbar` 或业务页面。
+
+| 属性 | 类型 | 默认值 | 说明 |
+|----|----|-----|----|
+| schema | object | - | 当前 Schema |
+| onImport | function(schema) | - | 导入成功回调 |
+| showCopy / showDownload / showImport / showUpload | boolean | true | 各能力开关；`showImport` 与 `showUpload` 合并为「更多」里一项「导入内容」，弹窗内分别提供粘贴/剪贴板与选文件 |
+| downloadFileName | string | form-schema.json | 下载文件名 |
+
+扩展操作（导入导出、保存为模版）在本包装层用 `ButtonGroup` 收进下拉：`showLength={0}`，触发器为圆形 Icon 按钮。
+
+工具方法：`serializeSchema`、`parseSchemaJson`、`downloadSchemaFile`、`copySchemaToClipboard`。
 
 ### SchemaRenderer
 
@@ -169,7 +237,7 @@ import { SchemaContent, SchemaContentInner } from '@kne/form-creator';
 }
 ```
 
-`actions` 由 FormCreator 顶部「添加模块」旁的设置按钮弹窗配置，写入 Schema；`SchemaRenderer` 会读取并渲染居中操作按钮（组件 props 可覆盖 Schema）。设置按钮后面可用 `extraToolbar` 追加自定义按钮。
+`actions` 由 FormCreator 顶部「添加模块」旁的设置按钮弹窗配置，写入 Schema；`SchemaRenderer` 会读取并渲染居中操作按钮（组件 props 可覆盖 Schema）。扩展操作（导入导出、保存模版、`extraToolbar` 数组）统一收进圆形「更多」下拉。
 ### 区块类型
 
 | kind | 说明 | 主要参数 |

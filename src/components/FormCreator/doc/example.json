@@ -1,3 +1,50 @@
 {
-  "reference": "@kne/form-creator"
+  "reference": "@kne/form-creator",
+  "list": [
+    {
+      "title": "Schema 导入导出",
+      "description": "复制 / 导出 / 导入收进圆形「更多」下拉，与扩展操作样式一致",
+      "code": "./schema-import-export.js",
+      "scope": [
+        {
+          "name": "_FormCreator",
+          "packageName": "@components/FormCreator"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        }
+      ]
+    },
+    {
+      "title": "模版列表与保存",
+      "description": "左侧 FileSystemView；文件夹用 GroupFolder API（groupList/create/save/remove），模版用 list/saveTemplate",
+      "code": "./template-apis.js",
+      "scope": [
+        {
+          "name": "_FormCreator",
+          "packageName": "@components/FormCreator"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        }
+      ]
+    },
+    {
+      "title": "扩展添加模块旁的按钮",
+      "description": "extraToolbar 操作列表并入圆形「更多」下拉，与导入导出等扩展操作一致",
+      "code": "./extra-toolbar.js",
+      "scope": [
+        {
+          "name": "_FormCreator",
+          "packageName": "@components/FormCreator"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        }
+      ]
+    }
+  ]
 }

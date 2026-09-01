@@ -47,10 +47,31 @@ export {
   SchemaRendererInner,
   SchemaContent,
   SchemaContentInner,
+  SchemaImportExport,
+  serializeSchema,
+  parseSchemaJson,
+  downloadSchemaFile,
+  copySchemaToClipboard,
   FormCreator as BaseFormCreator
 } from '@kne/form-creator';
 
 export { preset, initFormCreatorPreset, ensureFormCreatorPreset } from './preset';
 export { default as buildExtendedFields, FORM_INFO_FIELD_KEYS } from './buildFields';
 export { default as withLocale, createFormatMessage } from './withLocale';
+export { default as TemplateListPanel } from './TemplateListPanel';
+export { default as SchemaToolbarActions } from './SchemaToolbarActions';
+export { default as FormCreatorField } from './FormCreatorField';
+export {
+  invokeApi,
+  resolveGroupTreeData,
+  normalizeTemplateList,
+  getGroupNodeKey,
+  groupTreeToDirectories,
+  mergeTemplatesIntoFileSystemView,
+  extractSchemaFromPayload,
+  resolveTemplateParentId,
+  mergeTemplateIntoSchema,
+  resolveGroupApis,
+  isDirectoryNode
+} from './templateApi';
 export { default } from './FormCreatorView';

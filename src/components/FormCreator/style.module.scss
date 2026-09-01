@@ -1,0 +1,70 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
+.form-creator-shell {
+  display: flex;
+  gap: 12px;
+  align-items: stretch;
+  min-height: 480px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.form-creator-shell-with-templates {
+  .creator-pane {
+    flex: 1 1 0;
+    min-width: 0;
+  }
+}
+
+.creator-pane {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+
+.template-pane {
+  flex: 0 0 260px;
+  width: 260px;
+  max-width: 100%;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  padding: 12px;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #f0f0f0;
+  overflow: hidden;
+}
+
+.template-pane-header {
+  margin-bottom: 8px;
+  flex-shrink: 0;
+}
+
+.template-pane-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: auto;
+}
+
+/* 与 form-creator 工具栏设置按钮同尺寸 */
+.toolbar-more-btn {
+  width: 30px !important;
+  min-width: 30px !important;
+  height: 30px !important;
+  padding: 0 !important;
+  display: inline-flex !important;
+  align-items: center;
+  justify-content: center;
+}
+
+@include resp.mobile-container {
+  .form-creator-shell-with-templates {
+    flex-direction: column;
+  }
+
+  .template-pane {
+    flex: 0 0 auto;
+    width: 100%;
+    max-height: 240px;
+  }
+}
