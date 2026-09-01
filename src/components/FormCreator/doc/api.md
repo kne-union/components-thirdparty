@@ -80,20 +80,13 @@
 <FormCreator.Field schemaImportExport={{ showImport: false, showUpload: false }} />
 ```
 
-### SchemaImportExport
+### Schema 导入导出（本包装层）
 
-`@kne/form-creator` 提供的 Schema 导入导出组件，本包装层已 re-export。可单独用于 `extraToolbar` 或业务页面。
+导入导出由本包装层实现（`SchemaToolbarActions` + `schemaIO`），不依赖 `@kne/form-creator` 内置功能。`@kne/form-creator` 只提供 `extraToolbar` 扩展点。
 
-| 属性 | 类型 | 默认值 | 说明 |
-|----|----|-----|----|
-| schema | object | - | 当前 Schema |
-| onImport | function(schema) | - | 导入成功回调 |
-| showCopy / showDownload / showImport / showUpload | boolean | true | 各能力开关；`showImport` 与 `showUpload` 合并为「更多」里一项「导入内容」，弹窗内分别提供粘贴/剪贴板与选文件 |
-| downloadFileName | string | form-schema.json | 下载文件名 |
+通过 `schemaImportExport` 配置开关；扩展操作（导入导出、保存为模版）用 `ButtonGroup` 收进下拉：`showLength={0}`，触发器为圆形 Icon 按钮。
 
-扩展操作（导入导出、保存为模版）在本包装层用 `ButtonGroup` 收进下拉：`showLength={0}`，触发器为圆形 Icon 按钮。
-
-工具方法：`serializeSchema`、`parseSchemaJson`、`downloadSchemaFile`、`copySchemaToClipboard`。
+工具方法（本包导出）：`serializeSchema`、`parseSchemaJson`、`downloadSchemaFile`、`copySchemaToClipboard`。
 
 ### SchemaRenderer
 
