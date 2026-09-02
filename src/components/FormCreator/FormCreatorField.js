@@ -4,6 +4,7 @@ import useRefCallback from '@kne/use-ref-callback';
 import BaseFormCreator, { createFieldId, defaultSchema, normalizeSchema } from '@kne/form-creator';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
+import { useIsMobile } from '@kne/responsive-utils';
 import { ensureFormCreatorPreset } from './preset';
 import withLocale from './withLocale';
 import TemplateListPanel from './TemplateListPanel';
@@ -28,6 +29,7 @@ const FormCreatorField = withLocale(
       'components-core:Global@usePreset',
       'components-core:FormInfo',
       'components-core:FormInfo@useFormModal',
+      'components-core:Modal@createModalRender',
       'components-admin:GroupSelect@GroupFolderField'
     ]
   })(
@@ -44,12 +46,52 @@ const FormCreatorField = withLocale(
       renderModal: _renderModal,
       ...props
     }) => {
-      const [usePreset, FormInfo, useFormModal, GroupFolderField] = remoteModules;
+      const [usePreset, FormInfo, useFormModal, createModalRender, GroupFolderField] = remoteModules;
       const preset = usePreset();
       const ajax = preset?.ajax;
       const { formatMessage, locale } = useIntl();
+      const isMobile = useIsMobile();
       const { message } = App.useApp();
       const formModal = useFormModal();
+      const renderModalBase = useMemo(
+        () => createModalRender({ footerButtons: [], bodyScroll: true }),
+        [createModalRender]
+      );
+      const defaultRenderModal = useRefCallback(
+        ({
+          onCancel,
+          footer,
+          modalRender,
+          formProps,
+          saveText,
+          autoClose,
+          cancelText,
+          width: _width,
+          ...rest
+        }) => {
+          if (formProps?.onSubmit) {
+            return (
+              <FormInfo.FormModal
+                {...rest}
+                formProps={formProps}
+                onClose={onCancel}
+                okText={saveText}
+                cancelText={cancelText}
+                autoClose={autoClose}
+              />
+            );
+          }
+
+          const { children, ...modalRest } = rest;
+          return renderModalBase({
+            ...modalRest,
+            onClose: onCancel,
+            footer: typeof footer === 'function' ? footer() : footer,
+            modalRender,
+            children
+          });
+        }
+      );
       const { Input } = FormInfo.fields;
 
       const groupApis = useMemo(() => resolveGroupApis(apis), [apis]);
@@ -253,7 +295,8 @@ const FormCreatorField = withLocale(
         }
         const modalApi = formModal({
           title: formatMessage({ id: 'SaveTemplateTitle' }),
-          size: 'small',
+          size: 'default',
+          bodyScroll: true,
           formProps: {
             data: {
               name: '',
@@ -345,14 +388,24 @@ const FormCreatorField = withLocale(
       }
 
       const creator = (
-        <BaseFormCreator
-          {...props}
-          value={schema}
-          onChange={updateSchema}
-          locale={props.locale || locale}
-          schemaImportExport={false}
-          extraToolbar={toolbarExtra}
-        />
+        <div
+          className={[
+            style['form-creator-responsive-root'],
+            showFolderPane && style['form-creator-responsive-root-nested']
+          ]
+            .filter(Boolean)
+            .join(' ')}
+        >
+          <BaseFormCreator
+            {...props}
+            value={schema}
+            onChange={updateSchema}
+            locale={props.locale || locale}
+            schemaImportExport={false}
+            extraToolbar={toolbarExtra}
+            renderModal={_renderModal || defaultRenderModal}
+          />
+        </div>
       );
 
       if (!showFolderPane) {
@@ -360,21 +413,31 @@ const FormCreatorField = withLocale(
       }
 
       return (
-        <div className={`${style['form-creator-shell']} ${style['form-creator-shell-with-templates']}`}>
-          <TemplateListPanel
-            tree={viewTree}
-            loading={listLoading}
-            onReload={() => setListRefreshToken(token => token + 1)}
-            resolveSchema={resolveTemplateSchema}
-            onApply={handleApplyTemplate}
-            canAddFolder={canAddFolder}
-            canEditFolder={canEditFolder}
-            canRemoveFolder={canRemoveFolder}
-            onAddFolder={parentNode => openFolderForm({ parentNode })}
-            onRenameFolder={node => openFolderForm({ editing: node })}
-            onRemoveFolder={handleRemoveFolder}
-          />
-          <div className={style['creator-pane']}>{creator}</div>
+        <div className={style['form-creator-shell-boundary']}>
+          <div
+            className={[
+              style['form-creator-shell'],
+              style['form-creator-shell-with-templates'],
+              isMobile && style['is-mobile']
+            ]
+              .filter(Boolean)
+              .join(' ')}
+          >
+            <TemplateListPanel
+              tree={viewTree}
+              loading={listLoading}
+              onReload={() => setListRefreshToken(token => token + 1)}
+              resolveSchema={resolveTemplateSchema}
+              onApply={handleApplyTemplate}
+              canAddFolder={canAddFolder}
+              canEditFolder={canEditFolder}
+              canRemoveFolder={canRemoveFolder}
+              onAddFolder={parentNode => openFolderForm({ parentNode })}
+              onRenameFolder={node => openFolderForm({ editing: node })}
+              onRemoveFolder={handleRemoveFolder}
+            />
+            <div className={style['creator-pane']}>{creator}</div>
+          </div>
         </div>
       );
     }

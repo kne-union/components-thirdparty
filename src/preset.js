@@ -80,7 +80,7 @@ export const globalInit = async () => {
     ...registry,
     remote: 'components-core',
     // BizUnit isNext 依赖 Filter.useUrlFilterValue（core >= 0.5.x）
-    defaultVersion: '0.5.49'
+    defaultVersion: '0.6.0'
   };
   remoteLoaderPreset({
     remotes: {
