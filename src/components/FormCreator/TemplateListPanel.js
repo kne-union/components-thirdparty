@@ -173,17 +173,19 @@ const TemplateListPanel = ({
         </Space>
       </Flex>
       <div className={style['template-pane-body']}>
-        <Spin spinning={loading || actionLoading}>
-          {tree.length ? (
-            <FileSystemView
-              data={tree}
-              menuItems={menuItems}
-              defaultExpandAll
-              onFileClick={data => handlePreview(data)}
-            />
-          ) : (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={formatMessage({ id: 'TemplateListEmpty' })} />
-          )}
+        <Spin spinning={loading || actionLoading} wrapperClassName={style['template-pane-spin']}>
+          <div className={style['template-pane-content']}>
+            {tree.length ? (
+              <FileSystemView
+                data={tree}
+                menuItems={menuItems}
+                defaultExpandAll
+                onFileClick={data => handlePreview(data)}
+              />
+            ) : (
+              <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={formatMessage({ id: 'TemplateListEmpty' })} />
+            )}
+          </div>
         </Spin>
       </div>
       <Modal
