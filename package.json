@@ -1,6 +1,6 @@
 {
   "name": "@kne-components/components-thirdparty",
-  "version": "0.1.41",
+  "version": "0.1.42",
   "description": "用于封装一些体积较大的需要使用时再加载的第三方库",
   "scripts": {
     "init": "husky",
@@ -10,7 +10,8 @@
     "test": "craco test --coverage",
     "eject": "react-scripts eject",
     "prettier": "prettier --config .prettierrc --write '{src/**/*}.{js,jsx,ts,tsx,json,css,scss}'",
-    "lint-staged": "npx lint-staged"
+    "lint-staged": "npx lint-staged",
+    "build:docs": "modules-dev-build-docs"
   },
   "husky": {
     "hooks": {

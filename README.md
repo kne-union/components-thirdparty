@@ -20,7 +20,7 @@ npm run start
 | [Echart](docs/Echart.md) | ### 组件概述 Echart 是基于 Apache ECharts 的图表组件，提供了丰富的数据可视化功能。该组件封装了 ECharts 的初始化、配置更新和响应式调整等核心功能，简化了图表的使用流程。 ### 主要特性 - 支持所有… |
 | [FormCreator](docs/FormCreator.md) | 配置式表单搭建组件：通过字段列表 UI 产出 Schema，并用 `@kne/form-info` 实时预览与运行时渲染。 |
 | [JSONEditor](docs/JSONEditor.md) | JSON数据编辑器，支持代码编辑与预览切换，可作为表单字段使用。 |
-| [JSONSchemaForm](docs/JSONSchemaForm.md) | 将 JSON Schema 转换为 `@kne/form-creator` Schema，并用 `SchemaRenderer` 渲染可提交表单。 |
+| [JSONSchemaForm](docs/JSONSchemaForm.md) | ### 项目概述 `@kne/jsonschema-form` 将 **JSON Schema** 转换为 `@kne/form-creator` Schema，并用 `SchemaRenderer` 渲染可提交表单。v1 以… |
 | [LiveComponentEditor](docs/LiveComponentEditor.md) | ### 组件概述 LiveComponentEditor 是一个实时的组件编辑器，允许用户在运行时动态编辑和预览 React 组件。该组件提供了代码编辑、参数配置、作用域管理等功能，并支持多种布局模式。 ### 主要特性 -… |
 | [LiveComponentsAdmin](docs/LiveComponentsAdmin.md) | # LiveComponentsAdmin 管理 Live 组件远程站点及其文件内容。 - 列表：`components-admin:BizUnit` 对接站点 CRUD / 开闭 - 详情：`LiveComponentEditor`… |
 | [LiveComponentView](docs/LiveComponentView.md) | 动态 React 组件渲染器：解析 `LiveComponentEditor` 导出的 `content` 配置，经 Babel 转译后在运行环境中执行 JSX，用于内容预览、文档演示及 CKEditor 交互组件阅读态。 ###… |
