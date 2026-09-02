@@ -1,1 +1,6 @@
+#!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
+npm run build:docs
+git add docs README.md src/components/*/README.md
 npm run lint-staged
