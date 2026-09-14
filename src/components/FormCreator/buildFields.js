@@ -34,44 +34,49 @@ export const FORM_INFO_FIELD_KEYS = [
 ];
 
 const FIELD_META = {
-  Password: { labelId: 'FieldPassword', groupId: 'GroupBasic', valueSchema: { type: 'string' } },
-  MonthPicker: { labelId: 'FieldMonthPicker', groupId: 'GroupDateTime', valueSchema: { type: 'string' } },
-  WeekPicker: { labelId: 'FieldWeekPicker', groupId: 'GroupDateTime', valueSchema: { type: 'string' } },
+  Password: { labelId: 'FieldPassword', groupId: 'GroupBasic', valueSchema: { type: 'string', format: 'password' } },
+  MonthPicker: { labelId: 'FieldMonthPicker', groupId: 'GroupDateTime', valueSchema: { type: 'string', format: 'month' } },
+  WeekPicker: { labelId: 'FieldWeekPicker', groupId: 'GroupDateTime', valueSchema: { type: 'string', format: 'week' } },
   DateRangePicker: {
     labelId: 'FieldDateRangePicker',
     groupId: 'GroupDateTime',
-    valueSchema: { type: 'array', items: { type: 'string' }, minItems: 2, maxItems: 2 }
+    valueSchema: { type: 'array', items: { type: 'string', format: 'date' }, minItems: 2, maxItems: 2 }
   },
   TimeRangePicker: {
     labelId: 'FieldTimeRangePicker',
     groupId: 'GroupDateTime',
-    valueSchema: { type: 'array', items: { type: 'string' }, minItems: 2, maxItems: 2 }
+    valueSchema: { type: 'array', items: { type: 'string', format: 'time' }, minItems: 2, maxItems: 2 }
   },
-  TimePicker: { labelId: 'FieldTimePicker', groupId: 'GroupDateTime', valueSchema: { type: 'string' } },
+  TimePicker: { labelId: 'FieldTimePicker', groupId: 'GroupDateTime', valueSchema: { type: 'string', format: 'time' } },
   DatePickerToday: {
     labelId: 'FieldDatePickerToday',
     groupId: 'GroupDateTime',
-    valueSchema: { type: 'array', items: { type: 'string' } }
+    valueSchema: { type: 'array', items: { type: 'string', format: 'date' }, display: 'date-to-today' }
   },
   Rate: { labelId: 'FieldRate', groupId: 'GroupRating', valueSchema: { type: 'number' } },
   Slider: { labelId: 'FieldSlider', groupId: 'GroupRating', valueSchema: { type: 'number' } },
-  SalaryInput: { labelId: 'FieldSalaryInput', groupId: 'GroupBusiness', valueSchema: { type: 'number' } },
+  SalaryInput: { labelId: 'FieldSalaryInput', groupId: 'GroupBusiness', valueSchema: { type: 'number', display: 'money' } },
   TypeDateRangePicker: {
     labelId: 'FieldTypeDateRangePicker',
     groupId: 'GroupDateTime',
-    valueSchema: { type: 'object' }
+    valueSchema: { type: 'object', display: 'typed-date-range' }
   },
-  MoneyInput: { labelId: 'FieldMoneyInput', groupId: 'GroupBusiness', valueSchema: { type: 'number' } },
-  PhoneNumber: { labelId: 'FieldPhoneNumber', groupId: 'GroupBusiness', valueSchema: { type: 'object' } },
+  MoneyInput: { labelId: 'FieldMoneyInput', groupId: 'GroupBusiness', valueSchema: { type: 'number', display: 'money' } },
+  PhoneNumber: {
+    labelId: 'FieldPhoneNumber',
+    groupId: 'GroupBusiness',
+    defaultProps: { format: 'string' },
+    valueSchema: { type: 'string', display: 'phone' }
+  },
   Upload: {
     labelId: 'FieldUpload',
     groupId: 'GroupUpload',
     defaults: { block: true },
-    valueSchema: { type: 'array', items: { type: 'object' } }
+    valueSchema: { type: 'array', items: { type: 'object', display: 'file' } }
   },
-  Avatar: { labelId: 'FieldAvatar', groupId: 'GroupUpload', valueSchema: { type: 'object' } },
-  Signature: { labelId: 'FieldSignature', groupId: 'GroupUpload', valueSchema: { type: 'object' } },
-  ColorPicker: { labelId: 'FieldColorPicker', groupId: 'GroupBasic', valueSchema: { type: 'string' } },
+  Avatar: { labelId: 'FieldAvatar', groupId: 'GroupUpload', valueSchema: { type: 'object', display: 'file' } },
+  Signature: { labelId: 'FieldSignature', groupId: 'GroupUpload', valueSchema: { type: 'object', display: 'file' } },
+  ColorPicker: { labelId: 'FieldColorPicker', groupId: 'GroupBasic', valueSchema: { type: 'string', format: 'color' } },
   AddressInput: { labelId: 'FieldAddressInput', groupId: 'GroupBusiness', valueSchema: { type: 'string' } },
   InputUpperCase: { labelId: 'FieldInputUpperCase', groupId: 'GroupBasic', valueSchema: { type: 'string' } }
 };
@@ -102,7 +107,7 @@ const buildThirdpartyFields = formatMessage => ({
     component: JSONEditor,
     defaults: { block: true },
     defaultProps: {},
-    valueSchema: { type: 'string' }
+    valueSchema: { type: 'string', format: 'json' }
   },
   CKEditor: {
     label: resolveMessage(formatMessage, 'FieldCKEditor'),
@@ -110,7 +115,7 @@ const buildThirdpartyFields = formatMessage => ({
     component: CKEditor,
     defaults: { block: true },
     defaultProps: {},
-    valueSchema: { type: 'string' },
+    valueSchema: { type: 'string', display: 'html' },
     propsSchema: [
       {
         name: 'isMarkdown',
