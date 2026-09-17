@@ -63,7 +63,7 @@ export const EchartCanvas = ({ data, option, className, ...props }) => {
   const ref = useResize(() => {
     if (instanceRef.current) {
       instanceRef.current.resize();
-      if (ref.current && (ref.current.clientWidth > 0 && ref.current.clientHeight > 0) && optionRef.current) {
+      if (ref.current && ref.current.clientWidth > 0 && ref.current.clientHeight > 0 && optionRef.current) {
         instanceRef.current.setOption(optionRef.current);
       }
     }
@@ -74,19 +74,44 @@ export const EchartCanvas = ({ data, option, className, ...props }) => {
       return;
     }
     instanceRef.current = echarts.init(ref.current);
+    if (optionRef.current && ref.current.clientWidth > 0 && ref.current.clientHeight > 0) {
+      instanceRef.current.setOption(optionRef.current);
+    }
     return () => {
       instanceRef.current && instanceRef.current.dispose();
       instanceRef.current = null;
     };
   }, [echarts, ref]);
   useEffect(() => {
-    if (!instanceRef.current) {
+    if (!option) {
       return;
     }
-    if (ref.current && (ref.current.clientWidth === 0 || ref.current.clientHeight === 0)) {
-      return;
-    }
-    instanceRef.current.setOption(option);
+
+    let cancelled = false;
+    let tries = 0;
+
+    const apply = () => {
+      if (cancelled || !ref.current) {
+        return;
+      }
+
+      if (!instanceRef.current || ref.current.clientWidth === 0 || ref.current.clientHeight === 0) {
+        if (tries < 60) {
+          tries += 1;
+          requestAnimationFrame(apply);
+        }
+        return;
+      }
+
+      instanceRef.current.resize();
+      instanceRef.current.setOption(option);
+    };
+
+    apply();
+
+    return () => {
+      cancelled = true;
+    };
   }, [option, ref]);
   return <div className={classNames(style['echart-container'], className)} {...props} ref={ref} />;
 };

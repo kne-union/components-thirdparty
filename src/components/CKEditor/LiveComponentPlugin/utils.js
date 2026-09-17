@@ -14,6 +14,43 @@ export const getSelectedLiveComponent = selection => {
   return null;
 };
 
+const findLiveComponentSectionInAncestors = node => {
+  let parent = node;
+
+  while (parent) {
+    if (
+      parent.is?.('element', 'section') &&
+      (parent.hasClass(LIVE_COMPONENT_CLASS) || parent.hasAttribute(LIVE_COMPONENT_DATA_ATTR))
+    ) {
+      return parent;
+    }
+    parent = parent.parent;
+  }
+
+  return null;
+};
+
+export const getLiveComponentWidgetFromViewSelection = viewSelection => {
+  const selected = viewSelection.getSelectedElement?.();
+
+  if (
+    selected?.is('element', 'section') &&
+    (selected.hasClass(LIVE_COMPONENT_CLASS) || selected.hasAttribute(LIVE_COMPONENT_DATA_ATTR))
+  ) {
+    return selected;
+  }
+
+  for (const position of [viewSelection.focus, viewSelection.anchor]) {
+    const section = findLiveComponentSectionInAncestors(position?.parent);
+
+    if (section) {
+      return section;
+    }
+  }
+
+  return null;
+};
+
 export const readLiveComponentContentFromView = viewElement => {
   const content = viewElement.getAttribute(LIVE_COMPONENT_DATA_ATTR);
 

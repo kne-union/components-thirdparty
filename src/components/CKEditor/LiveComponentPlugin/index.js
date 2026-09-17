@@ -8,6 +8,7 @@ import {
   LIVE_COMPONENT_VIEWER_CLASS
 } from './constants';
 import liveComponentIcon from './icon';
+import { insertCornerEditButton } from '../shared/insertCornerEditButton';
 import { openLiveComponentDialog } from './openLiveComponentDialog';
 import { mountLiveComponentInHost, remountLiveComponentInHost } from './mountLiveComponentView';
 import { getSelectedLiveComponent, isLiveComponentSection, readLiveComponentContentFromView } from './utils';
@@ -45,6 +46,16 @@ const createLiveComponentSectionView = (editor, modelElement, { writer, asWidget
   writer.insert(writer.createPositionAt(section, 0), viewerHost);
 
   const i18n = editor.config.get('ckeditorI18n') || {};
+
+  insertCornerEditButton(writer, section, {
+    label: i18n.liveComponentEditAction || '编辑',
+    onEdit: () => {
+      editor.model.change(modelWriter => {
+        modelWriter.setSelection(modelElement, 'on');
+      });
+      openLiveComponentDialogForEditor(editor, modelElement.getAttribute('content') || '');
+    }
+  });
 
   return toWidget(section, writer, { label: i18n.liveComponentLabel || '交互组件' });
 };
@@ -181,8 +192,7 @@ class LiveComponentEditing extends Plugin {
 
     editor.conversion.for('editingDowncast').elementToElement({
       model: LIVE_COMPONENT_MODEL,
-      view: (modelElement, conversionApi) =>
-        createLiveComponentSectionView(editor, modelElement, { writer: conversionApi.writer, asWidget: true })
+      view: (modelElement, conversionApi) => createLiveComponentSectionView(editor, modelElement, { writer: conversionApi.writer, asWidget: true })
     });
 
     editor.conversion.for('editingDowncast').add(dispatcher => {
@@ -233,16 +243,22 @@ class LiveComponentEditing extends Plugin {
 
 const openLiveComponentDialogForEditor = (editor, initialValue) => {
   const cfg = editor.config.get('liveComponent') || {};
+  const editorCfg = cfg.editor || {};
 
   const i18n = editor.config.get('ckeditorI18n') || {};
 
   openLiveComponentDialog({
-    title: initialValue
-      ? i18n.liveComponentEditTitle || '编辑交互组件'
-      : i18n.liveComponentInsertTitle || '插入交互组件',
+    title: initialValue ? i18n.liveComponentEditTitle || '编辑交互组件' : i18n.liveComponentInsertTitle || '插入交互组件',
     defaultValue: initialValue,
-    editorHeight: cfg.editor?.height,
-    editorLibs: cfg.editor?.libs,
+    editorHeight: editorCfg.height,
+    editorLibs: editorCfg.libs,
+    sites: editorCfg.sites ?? cfg.sites,
+    siteActionsOpen: editorCfg.siteActionsOpen ?? cfg.siteActionsOpen,
+    userSitesStorageKey: editorCfg.userSitesStorageKey ?? cfg.userSitesStorageKey,
+    sitePanelWidth: editorCfg.width ?? cfg.width,
+    onSitesChange: editorCfg.onSitesChange ?? cfg.onSitesChange,
+    transformContentUrl: editorCfg.transformContentUrl ?? cfg.transformContentUrl,
+    enableSourceLocate: editorCfg.enableSourceLocate ?? cfg.enableSourceLocate,
     onSubmit: content => {
       if (!content) {
         return;
@@ -273,7 +289,6 @@ class LiveComponentUI extends Plugin {
 
     editor.ui.componentFactory.add('insertLiveComponent', locale => {
       const button = new ButtonView(locale);
-      const selection = editor.model.document.selection;
       const i18n = editor.config.get('ckeditorI18n') || {};
 
       button.set({
@@ -285,7 +300,7 @@ class LiveComponentUI extends Plugin {
       button.bind('isEnabled').to(editor.commands.get('insertLiveComponent'), 'isEnabled');
 
       button.on('execute', () => {
-        const selected = getSelectedLiveComponent(selection);
+        const selected = getSelectedLiveComponent(editor.model.document.selection);
 
         openLiveComponentDialogForEditor(editor, selected?.getAttribute('content') || '');
       });

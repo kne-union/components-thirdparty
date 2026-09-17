@@ -1,7 +1,7 @@
 const { default: CKEditor } = _CKEditor;
 const { Flex, Card, Space, Typography, Divider, message } = antd;
 const { useState } = React;
-const { Title, Paragraph } = Typography;
+const { Title, Paragraph, Text } = Typography;
 
 const initData = `<h2>
     交互组件示例
@@ -12,6 +12,20 @@ const initData = `<h2>
 <p>
     点击工具栏「交互组件」按钮，在弹窗中使用 LiveComponentEditor 编写组件，确认后以特殊标签插入文档。
 </p>`;
+
+const liveComponentConfig = {
+  height: 400,
+  libs: { lodash, dayjs },
+  editor: {
+    height: 560,
+    libs: { lodash, dayjs },
+    sites: [
+      { host: 'localStorage:live-component-demo', name: '本地演示' },
+      { host: 'localStorage:live-component-demo-2', name: '本地演示 2' }
+    ],
+    siteActionsOpen: true
+  }
+};
 
 const BaseExample = () => {
   const [content, setContent] = useState(initData);
@@ -25,27 +39,20 @@ const BaseExample = () => {
           <div>
             <Title level={4}>交互组件</Title>
             <Paragraph type="secondary">
-              插入后保存为 section 标签；编辑区与 CKEditor.Content 预览均通过 LiveComponentView 渲染。双击已插入组件可再次编辑。
+              通过 <Text code>config.liveComponent</Text> 配置预览与插入弹窗（含多站点文件面板）；编辑区与
+              CKEditor.Content 预览均通过 LiveComponentView 渲染。双击已插入组件可再次编辑。
             </Paragraph>
           </div>
           <CKEditor.Field
             value={content}
             onChange={setContent}
-            config={{ message: messageApi }}
-            liveComponent={{
-              height: 400,
-              libs: { lodash, dayjs },
-              editor: { height: 520, libs: { lodash, dayjs } }
+            config={{
+              message: messageApi,
+              liveComponent: liveComponentConfig
             }}
           />
           <Divider orientation="left">内容预览</Divider>
-          <CKEditor.Content
-            liveComponent={{
-              height: 400,
-              libs: { lodash, dayjs }
-            }}>
-            {content}
-          </CKEditor.Content>
+          <CKEditor.Content liveComponent={liveComponentConfig}>{content}</CKEditor.Content>
         </Space>
       </Card>
     </Flex>

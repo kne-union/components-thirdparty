@@ -1186,7 +1186,6 @@ const demoData = {
   mobile: '13800138000',
   gender: 'male',
   agree: true,
-  joinDate: '2024-03-01',
   remark: '可远程办公',
   projects: [
     { projectName: '招聘门户改版', role: '前端' },
@@ -1235,6 +1234,128 @@ const SchemaContentExample = () => {
 };
 
 render(<SchemaContentExample />);
+
+
+```
+
+- FormInfo 包装为表单字段
+- 用 form-info 的 FormModal + useDecorator 把 FormCreator 做成字段；复现外层 Part 嵌套导致模块标题变成二级标签
+- _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_FormInfo(@kne/form-info)[import * as _FormInfo from "@kne/form-info"],(@kne/form-info/dist/index.css)[import "@kne/form-info/dist/index.css"],antd(antd)[import antd from "antd"]
+
+```jsx
+const { default: FormCreator, defaultSchema, createBlock, createField } = _FormCreator;
+const { default: FormInfo, FormModal, Input, hooks } = _FormInfo;
+const { useState } = React;
+const { Alert, Button, Space, Typography } = antd;
+const { Text, Paragraph } = Typography;
+const { useDecorator } = hooks;
+
+/**
+ * 业务侧常见写法：把 FormCreator 用 form-info 的 useDecorator 包成表单字段，
+ * 再放进 FormModal / FormInfo。外层 Part（常 no-title）会套住内层 Schema 的 FormInfo Part，
+ * InfoPage 会把内层标题渲染成「二级标签」胶囊样式。
+ */
+const FormCreatorField = props => {
+  const render = useDecorator(Object.assign({ block: true }, props));
+  return render(FormCreator);
+};
+
+const demoSchema = {
+  ...defaultSchema(),
+  blocks: [
+    createBlock('formInfo', {
+      title: '在校时间',
+      bordered: true,
+      column: 2,
+      list: [
+        createField({
+          type: 'TextArea',
+          name: 'multiLine',
+          label: '多行文本',
+          block: true,
+          props: { placeholder: '请输入多行文本', rows: 3 }
+        }),
+        createField({
+          type: 'Input',
+          name: 'decimal',
+          label: '小数点保留两位',
+          props: { placeholder: '请输入小数点保留两位' }
+        }),
+        createField({
+          type: 'Switch',
+          name: 'enabled',
+          label: '开关'
+        }),
+        createField({
+          type: 'Select',
+          name: 'select',
+          label: '下拉选择',
+          props: {
+            placeholder: '请选择下拉选择',
+            options: [
+              { label: '选项 A', value: 'a' },
+              { label: '选项 B', value: 'b' }
+            ]
+          }
+        })
+      ]
+    })
+  ]
+};
+
+const FormInfoFieldExample = () => {
+  const [open, setOpen] = useState(false);
+  const [schema, setSchema] = useState(demoSchema);
+
+  return (
+    <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      <Alert
+        type="warning"
+        showIcon
+        message="嵌套 Part：顶层模块自动重设一级标题"
+        description={
+          <div>
+            <Paragraph style={{ marginBottom: 8 }}>
+              业务里用 <Text code>FormModal</Text> + <Text code>FormInfo</Text> 包一层，再把 <Text code>FormCreator</Text>{' '}
+              用 <Text code>useDecorator</Text> 做成字段时，外层 Part 会让内层模块标题变成二级胶囊。
+            </Paragraph>
+            <Paragraph style={{ marginBottom: 0 }}>
+              Schema 顶层模块会自动挂上 <Text code>InfoPage.partRootClassName</Text>
+              ，标题从一级色条重新起算；模块内再嵌套仍为二级。
+            </Paragraph>
+          </div>
+        }
+      />
+      <Button type="primary" onClick={() => setOpen(true)}>
+        打开业务弹窗（FormCreator 作字段）
+      </Button>
+      <FormModal
+        title="编辑表单配置"
+        open={open}
+        onCancel={() => setOpen(false)}
+        width={960}
+        formProps={{
+          data: { name: '示例项目', schema },
+          onSubmit: data => {
+            setSchema(data.schema || demoSchema);
+            return true;
+          }
+        }}
+      >
+        {/* 无 title → Part.no-title，内层 Schema 的 FormInfo 标题会走 InfoPage 二级标签样式 */}
+        <FormInfo
+          column={1}
+          list={[
+            <Input key="name" name="name" label="配置名称" rule="REQ" />,
+            <FormCreatorField key="schema" name="schema" label="表单搭建" block />
+          ]}
+        />
+      </FormModal>
+    </Space>
+  );
+};
+
+render(<FormInfoFieldExample />);
 
 
 ```
@@ -1615,7 +1736,7 @@ import { Form, SubmitButton } from '@kne/form-info';
 
 #### SchemaContent
 
-按搭建 Schema 的分组结构展示**已提交数据**（只读）。字段展示形态由各填写项的 `valueSchema` 决定（boolean → 是/否，enum → 选项文案，日期按 `format`）。布局与 FormInfo 相同，使用 `@kne/info-page` 的 Part + Content。示例见「按 Schema 展示提交数据」。
+按搭建 Schema 的分组结构展示**已提交数据**（只读）。字段展示形态由各填写项 `valueSchema` 的 `type` / `format` / `display` 决定（boolean → 是/否，enum → 选项文案，日期按 `format`，对象按 `display`）。可用 `formatDisplayValue` 覆盖。布局与 FormInfo 相同，使用 `@kne/info-page` 的 Part + Content。示例见「按 Schema 展示提交数据」。
 
 | 属性 | 类型 | 默认值 | 说明 |
 |----|----|-----|----|
@@ -1669,6 +1790,8 @@ import { SchemaContent, SchemaContentInner } from '@kne/form-creator';
 ```
 
 `actions` 由 FormCreator 顶部「添加模块」旁的设置按钮弹窗配置，写入 Schema；`SchemaRenderer` 会读取并渲染居中操作按钮（组件 props 可覆盖 Schema）。设置按钮后面可用 `extraToolbar` 追加自定义按钮。
+
+顶层模块渲染时会自动挂上 `InfoPage.partRootClassName`，嵌入外层 FormInfo Part 时标题从一级重新起算；模块内再嵌套仍为二级胶囊。
 #### 区块类型
 
 | kind | 说明 | 主要参数 |
@@ -1676,7 +1799,7 @@ import { SchemaContent, SchemaContentInner } from '@kne/form-creator';
 | formInfo | 表单信息区块 | title, subtitle, column, gap, bordered, list, **blocks** |
 | list | 动态列表 | name, title, important, bordered, maxLength, list, **itemBlocks** |
 | tableList | 表格列表 | name, title, bordered, maxLength, list（不支持子模块） |
-| object | 对象分组 | name, title, column, gap, list（字段名渲染为 `name.field`）, **blocks** |
+| object | 对象分组 | name, title, column, gap, bordered, list（字段名渲染为 `name.field`）, **blocks** |
 | choice | 选项分支 | title, **mode**(`single`\|`multiple`), **minLength** / **maxLength**（仅多选：最少/最多选几项）, selectorName, selectorInData, options[{ title, list, **blocks** }] |
 | multiField | 同类型多值 | name, label, fieldType, addText（不支持子模块） |
 | steps | 步骤表单 | title, subtitle, bordered, autoStep, items[{ title, column, list, **blocks** }] |
@@ -1773,9 +1896,13 @@ preset({
 | `rules` | `Record<string, RuleDef>` | key 为规则 token；`RuleDef` 含 `label` + `reg/message` 或 `validator` |
 | `fields` | `Record<string, FieldDef>` | key 为字段 type；见下方 FieldDef |
 
-**FieldDef** 常用字段：`label`、`component`、`groupName`、`defaultProps`、`propsSchema`、`valueSchema`、`hasOptions`、`hasFieldProps` 等。
+**FieldDef** 常用字段：`label`、`component`、`groupName`、`defaultProps`、`propsSchema`、`valueSchema`、`formatDisplayValue`、`hasOptions`、`hasFieldProps` 等。
 
-- `valueSchema`：该类型**提交值**的 JSON Schema 片段；可为对象，或 `(field) => schema`（可按 props 细化）。供 `schemaToDataSchema` 使用；缺省回退 `{ type: 'string' }`。
+- `valueSchema`：该类型**提交值**的 JSON Schema 片段；可为对象，或 `(field) => schema`（可按 props 细化）。供 `schemaToDataSchema` 与 **SchemaContent 预览**使用；缺省回退 `{ type: 'string' }`。
+  - `type`：`string` / `number` / `boolean` / `object` / `array`
+  - `format`（可选）：`date` / `month` / `week` / `time` / `date-time` / `year` / `quarter` / `password` / `color` / `json`
+  - `display`（可选）：`option`（取 label）/ `phone` / `file`（`components-core:File@FileLink`，图片用 `components-core:Image` 缩略图）/ `typed-date-range` / `date-to-today` / `html` / `money`
+- `formatDisplayValue`：`(value, field, { formatMessage }) => string`，有则覆盖 `valueSchema` 默认预览。
 
 扩展填写项时，用 `fields` 内的 `propsSchema` 声明可编辑的额外参数（写入字段 `props`），编辑器会按声明自动生成「填写项设置」表单：
 
