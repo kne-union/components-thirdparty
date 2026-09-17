@@ -2,7 +2,21 @@ import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import LiveComponentDialog from './LiveComponentDialog';
 
-export const openLiveComponentDialog = ({ title, defaultValue, editorHeight, editorLibs, onSubmit, onCancel } = {}) => {
+export const openLiveComponentDialog = ({
+  title,
+  defaultValue,
+  editorHeight,
+  editorLibs,
+  sites,
+  siteActionsOpen,
+  userSitesStorageKey,
+  sitePanelWidth,
+  onSitesChange,
+  transformContentUrl,
+  enableSourceLocate,
+  onSubmit,
+  onCancel
+} = {}) => {
   const host = document.createElement('div');
 
   host.className = 'ck-live-component-dialog-root';
@@ -32,6 +46,13 @@ export const openLiveComponentDialog = ({ title, defaultValue, editorHeight, edi
       defaultValue,
       editorHeight,
       editorLibs,
+      sites,
+      siteActionsOpen,
+      userSitesStorageKey,
+      sitePanelWidth,
+      onSitesChange,
+      transformContentUrl,
+      enableSourceLocate,
       onOk: handleOk,
       onCancel: handleCancel
     })

@@ -37,7 +37,7 @@
     },
     {
       "title": "自定义配置",
-      "description": "通过 config.toolbar 分层：简单（文字样式与基础排版）、标准（日常最常用）、全部（与默认工具栏一致）",
+      "description": "工具栏分层：简单、标准、富媒体模版、邮件模版（含样式与邮件兼容预设）、全部",
       "code": "./custom.js",
       "scope": [
         {
@@ -86,7 +86,7 @@
     },
     {
       "title": "交互组件",
-      "description": "弹窗使用 LiveComponentEditor 编辑，以 section 特殊标签插入，LiveComponentView 渲染",
+      "description": "弹窗内嵌支持多站点的 LiveComponentEditor；以 section 特殊标签插入，LiveComponentView 渲染",
       "code": "./liveComponent.js",
       "scope": [
         {
@@ -134,6 +134,40 @@
         {
           "name": "_CKEditor",
           "packageName": "@components/CKEditor"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        }
+      ]
+    },
+    {
+      "title": "邮件模版变量",
+      "description": "插入 lodash 模版变量：编辑态显示 label 芯片，getData 输出可配置的插值/转义语法",
+      "code": "./templateVariable.js",
+      "scope": [
+        {
+          "name": "_CKEditor",
+          "packageName": "@components/CKEditor"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        }
+      ]
+    },
+    {
+      "title": "FormCreator 表单",
+      "description": "config.formCreator 配置编辑区；Content 用 formCreator.formProps 给所有表单 Form 传参",
+      "code": "./formCreator.js",
+      "scope": [
+        {
+          "name": "_CKEditor",
+          "packageName": "@components/CKEditor"
+        },
+        {
+          "name": "_FormCreator",
+          "packageName": "@components/FormCreator"
         },
         {
           "name": "antd",

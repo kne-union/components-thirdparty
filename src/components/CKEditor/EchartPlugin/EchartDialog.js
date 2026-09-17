@@ -5,7 +5,7 @@ import JSONEditor from '@components/JSONEditor';
 // 弹窗内须用 Field：默认 JSONEditor 依赖 FormInfo.useDecorator，脱离表单会报错
 import withLocale from '../withLocale';
 import { DEFAULT_ECHART_OPTION_TEXT } from './constants';
-import { parseEchartOptionText } from './optionCodec';
+import { normalizeEchartOptionText, parseEchartOptionText } from './optionCodec';
 
 const EchartDialog = withLocale(({ open, title, defaultValue, onOk, onCancel }) => {
   const { formatMessage } = useIntl();
@@ -19,9 +19,10 @@ const EchartDialog = withLocale(({ open, title, defaultValue, onOk, onCancel }) 
 
   const handleOk = () => {
     try {
-      parseEchartOptionText(value, { fallbackToDefault: false });
+      const normalized = normalizeEchartOptionText(value);
+      parseEchartOptionText(normalized, { fallbackToDefault: false });
       setError(null);
-      onOk?.(value.trim());
+      onOk?.(normalized);
     } catch (e) {
       setError(e.message || formatMessage({ id: 'EchartOptionInvalid' }));
     }
@@ -39,7 +40,17 @@ const EchartDialog = withLocale(({ open, title, defaultValue, onOk, onCancel }) 
       onCancel={onCancel}
       onOk={handleOk}
     >
-      <JSONEditor.Field value={value} onChange={next => setValue(next ?? '')} />
+      <JSONEditor.Field
+        value={value}
+        onChange={next => {
+          // Monaco 初始化可能先抛空串，避免冲掉默认 option
+          if ((next == null || String(next).trim() === '') && String(initialValue).trim()) {
+            return;
+          }
+
+          setValue(next ?? '');
+        }}
+      />
       {error && (
         <Typography.Text type="danger" style={{ display: 'block', marginTop: 8 }}>
           {error}

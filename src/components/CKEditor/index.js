@@ -69,18 +69,22 @@ import Model3dPlugin from './Model3dPlugin';
 import VideoPlugin from './VideoPlugin';
 import LiveComponentPlugin from './LiveComponentPlugin';
 import EchartPlugin from './EchartPlugin';
+import TemplateVariablePlugin from './TemplateVariablePlugin';
+import FormCreatorPlugin from './FormCreatorPlugin';
+import EmailStylePlugin from './emailStylePlugin';
 import { syncContentVideoLayout } from './VideoPlugin/utils';
 import { createDefaultMediaToolbar } from './shared/mediaWidget/constants';
 import whenModelViewerReady from '../../common/loadModelViewer';
 import { useToolbarDropdownMaxWidth } from './toolbarDropdownMaxWidth';
 import { syncModelViewerLayout } from '../../common/modelViewerMount';
 import { enhanceModel3dContentPreview, teardownModel3dContentPreview } from './model3dContentPreview';
-import {
-  enhanceLiveComponentContentPreview,
-  teardownLiveComponentContentPreview
-} from './LiveComponentPlugin/liveComponentContentPreview';
+import { enhanceLiveComponentContentPreview, teardownLiveComponentContentPreview } from './LiveComponentPlugin/liveComponentContentPreview';
 import { enhanceEchartContentPreview, teardownEchartContentPreview } from './echartContentPreview';
-import { resolveLiveComponentOptions, resolveModel3dOptions } from './mediaPreviewOptions';
+import {
+  enhanceFormCreatorContentPreview,
+  teardownFormCreatorContentPreview
+} from './FormCreatorPlugin/formCreatorContentPreview';
+import { resolveLiveComponentOptions, resolveModel3dOptions, resolveFormCreatorOptions } from './mediaPreviewOptions';
 import { applyModelViewerOptions } from '../../common/modelViewerOptions';
 import useControlValue from '@kne/use-control-value';
 import { useIntl } from '@kne/react-intl';
@@ -149,7 +153,16 @@ const defaultPlugins = [
   OssUploadAdapterPlugin
 ];
 
-const richTextPlugins = [...defaultPlugins, Model3dPlugin, VideoPlugin, LiveComponentPlugin, EchartPlugin];
+const richTextPlugins = [
+  ...defaultPlugins,
+  Model3dPlugin,
+  VideoPlugin,
+  LiveComponentPlugin,
+  EchartPlugin,
+  TemplateVariablePlugin,
+  FormCreatorPlugin,
+  EmailStylePlugin
+];
 
 const defaultConfig = {
   toolbar: {
@@ -186,6 +199,7 @@ const defaultConfig = {
       'videoUpload',
       'insertLiveComponent',
       'insertEchart',
+      'insertFormCreator',
       'blockQuote',
       'insertTable',
       'codeBlock',
@@ -436,12 +450,19 @@ const defaultConfig = {
         classes: ['component-box', 'ck-live-component'],
         styles: true,
         attributes: ['data-live-component']
+      },
+      {
+        name: 'section',
+        classes: ['component-box', 'ck-form-creator'],
+        styles: true,
+        attributes: ['data-form-creator-schema']
       }
     ]
   },
   modelUpload: {},
   videoUpload: {},
   liveComponent: {},
+  formCreator: {},
   model3d: {
     toolbar: createDefaultMediaToolbar({
       stylePrefix: 'model3dStyle',
@@ -470,166 +491,186 @@ const defaultConfig = {
   }
 };
 
-const CKEditorField = withLocale(({
-  className,
-  style: customStyle,
-  isMarkdown,
-  config,
-  plugins: customPlugins = [],
-  locale: customLocale,
-  uploadAdapter,
-  liveComponent: liveComponentProp,
-  model3d: model3dProp,
-  ...props
-}) => {
-  const { formatMessage } = useIntl();
-  const ckeditorI18n = useMemo(() => buildCKEditorI18n(formatMessage), [formatMessage]);
-  const [value, onChange] = useControlValue(props);
-  const wrapperRef = useRef(null);
-  const measuredToolbarDropdownMaxWidth = useToolbarDropdownMaxWidth(wrapperRef);
-  const contextLocale = useGlobalValue('locale');
-  const { apis } = usePreset();
-  const locale = customLocale || contextLocale;
-  const plugins = useMemo(() => {
-    const basePlugins = isMarkdown ? defaultPlugins : richTextPlugins;
-    const list = [
-      ...basePlugins,
-      ...customPlugins.filter(
-        plugin =>
-          !isMarkdown ||
-          (plugin !== Model3dPlugin &&
-            plugin !== VideoPlugin &&
-            plugin !== LiveComponentPlugin &&
-            plugin !== EchartPlugin)
-      )
-    ];
+const CKEditorField = withLocale(
+  ({
+    className,
+    style: customStyle,
+    isMarkdown,
+    config,
+    plugins: customPlugins = [],
+    locale: customLocale,
+    uploadAdapter,
+    liveComponent: liveComponentProp,
+    formCreator: formCreatorProp,
+    model3d: model3dProp,
+    ...props
+  }) => {
+    const { formatMessage } = useIntl();
+    const ckeditorI18n = useMemo(() => buildCKEditorI18n(formatMessage), [formatMessage]);
+    const [value, onChange] = useControlValue(props);
+    const wrapperRef = useRef(null);
+    const measuredToolbarDropdownMaxWidth = useToolbarDropdownMaxWidth(wrapperRef);
+    const contextLocale = useGlobalValue('locale');
+    const { apis } = usePreset();
+    const locale = customLocale || contextLocale;
+    const plugins = useMemo(() => {
+      const basePlugins = isMarkdown ? defaultPlugins : richTextPlugins;
+      const list = [
+        ...basePlugins,
+        ...customPlugins.filter(
+          plugin =>
+            !isMarkdown ||
+            (plugin !== Model3dPlugin &&
+              plugin !== VideoPlugin &&
+              plugin !== LiveComponentPlugin &&
+              plugin !== EchartPlugin &&
+              plugin !== FormCreatorPlugin)
+        )
+      ];
 
-    if (isMarkdown) {
-      list.push(Markdown);
-    }
-
-    return list;
-  }, [isMarkdown, customPlugins]);
-
-  const liveComponentConfig = useMemo(
-    () => resolveLiveComponentOptions(defaultConfig.liveComponent, config?.liveComponent, liveComponentProp),
-    [config?.liveComponent, liveComponentProp]
-  );
-
-  const model3dConfig = useMemo(
-    () =>
-      resolveModel3dOptions(defaultConfig.model3d, config?.model3d, {
-        ...model3dProp,
-        preview: {
-          ...(model3dProp?.preview || {}),
-          i18n: ckeditorI18n
-        }
-      }),
-    [config?.model3d, model3dProp, ckeditorI18n]
-  );
-
-  const editorConfig = useMemo(() => {
-    const merged = merge({}, defaultConfig, config, {
-      liveComponent: liveComponentConfig,
-      model3d: { ...model3dConfig, i18n: ckeditorI18n },
-      ckeditorI18n
-    });
-
-    // lodash.merge 会按索引合并数组，导致自定义 toolbar.items 无法整体替换默认项
-    if (Array.isArray(config?.toolbar?.items)) {
-      merged.toolbar = {
-        ...merged.toolbar,
-        items: config.toolbar.items
-      };
-    }
-
-    if (!isMarkdown) {
-      return merged;
-    }
-
-    const toolbarItems = (merged.toolbar?.items ?? defaultConfig.toolbar.items).filter(
-      item =>
-        item !== 'model3dUpload' &&
-        item !== 'videoUpload' &&
-        item !== 'insertLiveComponent' &&
-        item !== 'insertEchart'
-    );
-    const {
-      model3d: _model3d,
-      modelUpload: _modelUpload,
-      videoUpload: _videoUpload,
-      mediaVideo: _mediaVideo,
-      liveComponent: _liveComponent,
-      ...rest
-    } = merged;
-
-    return {
-      ...rest,
-      toolbar: {
-        ...merged.toolbar,
-        items: toolbarItems
+      if (isMarkdown) {
+        list.push(Markdown);
       }
-    };
-  }, [isMarkdown, config, liveComponentConfig, model3dConfig, ckeditorI18n]);
 
-  const wrapperStyle = useMemo(() => {
-    if (!measuredToolbarDropdownMaxWidth) {
-      return customStyle || undefined;
-    }
+      return list;
+    }, [isMarkdown, customPlugins]);
 
-    return {
-      ...(customStyle || {}),
-      '--ck-toolbar-dropdown-max-width': measuredToolbarDropdownMaxWidth
-    };
-  }, [customStyle, measuredToolbarDropdownMaxWidth]);
+    const liveComponentConfig = useMemo(
+      () => resolveLiveComponentOptions(defaultConfig.liveComponent, config?.liveComponent, liveComponentProp),
+      [config?.liveComponent, liveComponentProp]
+    );
 
-  return (
-    <div ref={wrapperRef} className={classnames(className, style['editor'])} style={wrapperStyle}>
-      <CKEditor5
-        editor={ClassicEditor}
-        data={value}
-        config={merge({}, editorConfig, {
-          licenseKey: 'GPL',
-          plugins,
-          ckeditorI18n,
-          translations: [locale === 'zh-CN' ? coreTranslationsZh : coreTranslationsEn],
-          uploadAdapter: Object.assign(
-            {},
-            {
-              upload: apis?.file?.upload,
-              uploadUrl: apis?.file?.uploadUrl
-            },
-            uploadAdapter
-          ),
-          ...(isMarkdown
-            ? {}
-            : {
-                modelUpload: Object.assign(
-                  {},
-                  {
-                    upload: apis?.file?.upload
-                  },
-                  uploadAdapter,
-                  config?.modelUpload
-                ),
-                videoUpload: Object.assign(
-                  {},
-                  {
-                    upload: apis?.file?.upload
-                  },
-                  uploadAdapter,
-                  config?.videoUpload
-                )
-              })
-        })}
-        onChange={(event, editor) => {
-          const data = editor.getData();
-          onChange(data);
-        }}
-      />
-    </div>
-  );
-});
+    const formCreatorConfig = useMemo(
+      () => resolveFormCreatorOptions(defaultConfig.formCreator, config?.formCreator, formCreatorProp),
+      [config?.formCreator, formCreatorProp]
+    );
+
+    const model3dConfig = useMemo(
+      () =>
+        resolveModel3dOptions(defaultConfig.model3d, config?.model3d, {
+          ...model3dProp,
+          preview: {
+            ...(model3dProp?.preview || {}),
+            i18n: ckeditorI18n
+          }
+        }),
+      [config?.model3d, model3dProp, ckeditorI18n]
+    );
+
+    const editorConfig = useMemo(() => {
+      const merged = merge({}, defaultConfig, config, {
+        liveComponent: liveComponentConfig,
+        formCreator: formCreatorConfig,
+        model3d: { ...model3dConfig, i18n: ckeditorI18n },
+        ckeditorI18n
+      });
+
+      // lodash.merge 会按索引合并数组，导致自定义 toolbar.items 无法整体替换默认项
+      if (Array.isArray(config?.toolbar?.items)) {
+        merged.toolbar = {
+          ...merged.toolbar,
+          items: config.toolbar.items
+        };
+      }
+
+      // 同上：自定义 style.definitions 需整体替换（邮件模版等场景）
+      if (Array.isArray(config?.style?.definitions)) {
+        merged.style = {
+          ...merged.style,
+          definitions: config.style.definitions
+        };
+      }
+
+      if (!isMarkdown) {
+        return merged;
+      }
+
+      const toolbarItems = (merged.toolbar?.items ?? defaultConfig.toolbar.items).filter(
+        item =>
+          item !== 'model3dUpload' &&
+          item !== 'videoUpload' &&
+          item !== 'insertLiveComponent' &&
+          item !== 'insertEchart' &&
+          item !== 'insertFormCreator'
+      );
+      const {
+        model3d: _model3d,
+        modelUpload: _modelUpload,
+        videoUpload: _videoUpload,
+        mediaVideo: _mediaVideo,
+        liveComponent: _liveComponent,
+        formCreator: _formCreator,
+        ...rest
+      } = merged;
+
+      return {
+        ...rest,
+        toolbar: {
+          ...merged.toolbar,
+          items: toolbarItems
+        }
+      };
+    }, [isMarkdown, config, liveComponentConfig, formCreatorConfig, model3dConfig, ckeditorI18n]);
+
+    const wrapperStyle = useMemo(() => {
+      if (!measuredToolbarDropdownMaxWidth) {
+        return customStyle || undefined;
+      }
+
+      return {
+        ...(customStyle || {}),
+        '--ck-toolbar-dropdown-max-width': measuredToolbarDropdownMaxWidth
+      };
+    }, [customStyle, measuredToolbarDropdownMaxWidth]);
+
+    return (
+      <div ref={wrapperRef} className={classnames(className, style['editor'])} style={wrapperStyle}>
+        <CKEditor5
+          editor={ClassicEditor}
+          data={value}
+          config={merge({}, editorConfig, {
+            licenseKey: 'GPL',
+            plugins,
+            ckeditorI18n,
+            translations: [locale === 'zh-CN' ? coreTranslationsZh : coreTranslationsEn],
+            uploadAdapter: Object.assign(
+              {},
+              {
+                upload: apis?.file?.upload,
+                uploadUrl: apis?.file?.uploadUrl
+              },
+              uploadAdapter
+            ),
+            ...(isMarkdown
+              ? {}
+              : {
+                  modelUpload: Object.assign(
+                    {},
+                    {
+                      upload: apis?.file?.upload
+                    },
+                    uploadAdapter,
+                    config?.modelUpload
+                  ),
+                  videoUpload: Object.assign(
+                    {},
+                    {
+                      upload: apis?.file?.upload
+                    },
+                    uploadAdapter,
+                    config?.videoUpload
+                  )
+                })
+          })}
+          onChange={(event, editor) => {
+            const data = editor.getData();
+            onChange(data);
+          }}
+        />
+      </div>
+    );
+  }
+);
 
 const CKEditor = createWithRemoteLoader({
   modules: ['components-core:FormInfo@hooks']
@@ -642,12 +683,16 @@ const CKEditor = createWithRemoteLoader({
 
 CKEditor.Field = CKEditorField;
 
-const CKContent = ({ className, children, liveComponent: liveComponentProp, model3d: model3dProp }) => {
+const CKContent = ({
+  className,
+  children,
+  liveComponent: liveComponentProp,
+  formCreator: formCreatorProp,
+  model3d: model3dProp
+}) => {
   const ref = useRef(null);
-  const liveComponentOptions = useMemo(
-    () => resolveLiveComponentOptions(liveComponentProp),
-    [liveComponentProp]
-  );
+  const liveComponentOptions = useMemo(() => resolveLiveComponentOptions(liveComponentProp), [liveComponentProp]);
+  const formCreatorOptions = useMemo(() => resolveFormCreatorOptions(formCreatorProp), [formCreatorProp]);
   const model3dOptions = useMemo(() => resolveModel3dOptions(model3dProp), [model3dProp]);
 
   useLayoutEffect(() => {
@@ -662,6 +707,7 @@ const CKContent = ({ className, children, liveComponent: liveComponentProp, mode
     container.querySelectorAll('figure.ck-video').forEach(syncContentVideoLayout);
     enhanceLiveComponentContentPreview(container, liveComponentOptions);
     enhanceEchartContentPreview(container);
+    enhanceFormCreatorContentPreview(container, formCreatorOptions);
 
     const setupModel3dPreview = () => {
       if (cancelled) {
@@ -714,8 +760,9 @@ const CKContent = ({ className, children, liveComponent: liveComponentProp, mode
       teardownModel3dContentPreview(container);
       teardownLiveComponentContentPreview(container);
       teardownEchartContentPreview(container);
+      teardownFormCreatorContentPreview(container);
     };
-  }, [children, liveComponentOptions, model3dOptions]);
+  }, [children, liveComponentOptions, formCreatorOptions, model3dOptions]);
 
   return <div ref={ref} className={classnames('ck ck-content', className)} dangerouslySetInnerHTML={{ __html: children }} />;
 };
@@ -723,5 +770,7 @@ const CKContent = ({ className, children, liveComponent: liveComponentProp, mode
 CKEditor.Content = CKContent;
 
 export { formatToolbarDropdownMaxWidth, getToolbarDropdownMaxWidthStyle, useToolbarDropdownMaxWidth } from './toolbarDropdownMaxWidth';
+export { EMAIL_STYLE_DEFINITIONS, EMAIL_TOOLBAR_ITEMS, EMAIL_STYLE_CSS } from './emailStyles';
+export { toEmailHtml } from './emailExport';
 
 export default CKEditor;

@@ -156,14 +156,14 @@
       display: block;
       width: 100%;
       height: var(--echart-height);
-      min-height: 0 !important;
+      min-height: var(--echart-height);
       overflow: hidden;
     }
 
     .ck-echart-viewer {
       display: block;
       width: 100%;
-      height: 100%;
+      height: var(--echart-height);
       min-height: var(--echart-height);
       position: relative;
     }
@@ -958,3 +958,93 @@ html.ck-model3d-overlay-open {
     min-height: 200px;
   }
 }
+
+.ck-editor__editable section.ck-form-creator,
+.ck.ck-content section.ck-form-creator {
+  display: block;
+  margin: 1em 0;
+  min-height: 200px;
+  padding: 12px;
+  box-sizing: border-box;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+  border-radius: 8px;
+  background: #fafafa;
+
+  .ck-form-creator-viewer {
+    display: block;
+    width: 100%;
+    min-height: 200px;
+  }
+}
+
+/* 交互组件 / FormCreator：选中框右上角编辑按钮 */
+.ck-editor__editable section.ck-live-component.ck-widget,
+.ck-editor__editable section.ck-form-creator.ck-widget {
+  position: relative;
+
+  > .ck-section-widget-edit {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    z-index: 10;
+    display: inline-flex;
+    line-height: 0;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+
+    .ant-btn {
+      box-shadow: 0 1px 4px rgba(22, 119, 255, 0.35);
+    }
+  }
+
+  &:hover > .ck-section-widget-edit,
+  &.ck-widget_selected > .ck-section-widget-edit {
+    opacity: 1;
+    pointer-events: auto;
+  }
+}
+
+.ck-editor__editable.ck-read-only {
+  section.ck-live-component.ck-widget > .ck-section-widget-edit,
+  section.ck-form-creator.ck-widget > .ck-section-widget-edit {
+    display: none;
+  }
+}
+
+/* 邮件模版变量（TemplateVariablePlugin） */
+.ck-editor__editable span.ck-template-variable,
+.ck.ck-content span.ck-template-variable {
+  display: inline-flex;
+  align-items: center;
+  max-width: 100%;
+  margin: 0 2px;
+  padding: 0 8px;
+  border-radius: 999px;
+  border: 1px solid transparent;
+  font-size: 0.92em;
+  line-height: 1.6;
+  white-space: nowrap;
+  vertical-align: baseline;
+  user-select: none;
+  cursor: default;
+  box-sizing: border-box;
+}
+
+.ck-editor__editable span.ck-template-variable.ck-template-variable--interpolate,
+.ck.ck-content span.ck-template-variable.ck-template-variable--interpolate {
+  color: #0958d9;
+  background: #e6f4ff;
+  border-color: #91caff;
+}
+
+.ck-editor__editable span.ck-template-variable.ck-template-variable--escape,
+.ck.ck-content span.ck-template-variable.ck-template-variable--escape {
+  color: #d46b08;
+  background: #fff7e6;
+  border-color: #ffd591;
+}
+
+/* 邮件模版样式不在此处维护：声明集中在 emailStyles.js 的 EMAIL_STYLE_PRESETS，
+   编辑态 CSS 由 EmailStylePlugin 从同一数据源派生后运行时注入，发信用的 inline style
+   也来自同一份声明，避免编辑 / 保存 / 发信三处各写一遍。 */

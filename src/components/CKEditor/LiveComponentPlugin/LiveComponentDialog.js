@@ -5,17 +5,34 @@ import LiveComponentEditor from '@components/LiveComponentEditor';
 import withLocale from '../withLocale';
 
 const LiveComponentDialog = withLocale(
-  ({ open, title, defaultValue, editorHeight = 520, editorLibs, onOk, onCancel }) => {
+  ({
+    open,
+    title,
+    defaultValue,
+    editorHeight = 520,
+    editorLibs,
+    sites,
+    siteActionsOpen,
+    userSitesStorageKey,
+    sitePanelWidth,
+    onSitesChange,
+    transformContentUrl,
+    enableSourceLocate,
+    onOk,
+    onCancel
+  }) => {
     const { formatMessage } = useIntl();
     const editorRef = useRef(null);
     const latestValueRef = useRef(defaultValue || '');
     const dialogTitle = title ?? formatMessage({ id: 'LiveComponentDialogTitle' });
+    const hasSites = Array.isArray(sites);
+    const modalWidth = hasSites ? 'min(1400px, 98vw)' : 'min(1200px, 96vw)';
 
     return (
       <Modal
         open={open}
         title={dialogTitle}
-        width="min(1200px, 96vw)"
+        width={modalWidth}
         destroyOnClose
         centered
         okText={formatMessage({ id: 'ModalOk' })}
@@ -32,6 +49,13 @@ const LiveComponentDialog = withLocale(
           defaultValue={defaultValue}
           height={editorHeight}
           libs={editorLibs}
+          sites={sites}
+          siteActionsOpen={siteActionsOpen}
+          userSitesStorageKey={userSitesStorageKey}
+          width={sitePanelWidth}
+          onSitesChange={onSitesChange}
+          transformContentUrl={transformContentUrl}
+          enableSourceLocate={enableSourceLocate}
           onChange={value => {
             latestValueRef.current = value;
           }}

@@ -1,4 +1,4 @@
-const { default: CKEditor } = _CKEditor;
+const { default: CKEditor, EMAIL_STYLE_DEFINITIONS, EMAIL_TOOLBAR_ITEMS } = _CKEditor;
 const { Flex, Card, Space, Typography, Radio, Divider, Alert } = antd;
 const { useState } = React;
 const { Title } = Typography;
@@ -37,6 +37,7 @@ const FULL_TOOLBAR_ITEMS = [
   'videoUpload',
   'insertLiveComponent',
   'insertEchart',
+  'insertFormCreator',
   'blockQuote',
   'insertTable',
   'codeBlock',
@@ -52,6 +53,8 @@ const FULL_TOOLBAR_ITEMS = [
 /**
  * 简单：文字样式 + 基础排版（列表 / 对齐 / 缩进）
  * 标准：日常最常用（结构、列表、链接、对齐、图片、表格、代码块等）
+ * 富媒体模版：撤销/重做置顶，其后图片 / 视频 / 3D / 图表 / 交互组件 / 表单，其余与标准类似
+ * 邮件模版：模版变量优先，含样式（邮件兼容常用样式），配合邮件常用排版与表格
  * 全部：组件默认工具栏全量能力
  */
 const TOOLBAR_PRESETS = {
@@ -111,6 +114,65 @@ const TOOLBAR_PRESETS = {
           'codeBlock',
           '|',
           'removeFormat'
+        ]
+      }
+    }
+  },
+  richMedia: {
+    label: '富媒体模版',
+    hint: '撤销/重做置顶；其后为图片、视频、3D、图表、交互组件、表单；其余与标准档类似',
+    config: {
+      toolbar: {
+        items: [
+          'undo',
+          'redo',
+          '|',
+          'imageUpload',
+          'videoUpload',
+          'model3dUpload',
+          'insertEchart',
+          'insertLiveComponent',
+          'insertFormCreator',
+          '|',
+          'heading',
+          '|',
+          'bold',
+          'italic',
+          'underline',
+          'strikethrough',
+          'link',
+          '|',
+          'bulletedList',
+          'numberedList',
+          '|',
+          'alignment',
+          'outdent',
+          'indent',
+          '|',
+          'blockQuote',
+          'insertTable',
+          'codeBlock',
+          '|',
+          'removeFormat'
+        ]
+      }
+    }
+  },
+  emailTemplate: {
+    label: '邮件模版',
+    hint: '撤销置顶；模版变量 + 样式（按段落可选元素分组：正文/标题1-3/引用/列表/分割线/表格，均为邮件客户端兼容写法）',
+    config: {
+      toolbar: {
+        items: EMAIL_TOOLBAR_ITEMS
+      },
+      style: {
+        definitions: EMAIL_STYLE_DEFINITIONS
+      },
+      templateVariable: {
+        variables: [
+          { name: 'userName', label: '用户名' },
+          { name: 'companyName', label: '公司名' },
+          { name: 'rawHtml', label: '原始HTML', kind: 'escape' }
         ]
       }
     }
