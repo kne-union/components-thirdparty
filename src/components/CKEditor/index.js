@@ -1,7 +1,9 @@
-import { useLayoutEffect, useMemo, useRef } from 'react';
+import { Fragment, useLayoutEffect, useMemo, useRef } from 'react';
+import { message } from 'antd';
 import { CKEditor as CKEditor5 } from '@ckeditor/ckeditor5-react';
 import { ClassicEditor } from 'ckeditor5';
 import { createWithRemoteLoader } from '@kne/remote-loader';
+import useRefCallback from '@kne/use-ref-callback';
 import {
   Alignment,
   Autoformat,
@@ -70,8 +72,10 @@ import VideoPlugin from './VideoPlugin';
 import LiveComponentPlugin from './LiveComponentPlugin';
 import EchartPlugin from './EchartPlugin';
 import TemplateVariablePlugin from './TemplateVariablePlugin';
+import TemplateConditionPlugin from './TemplateConditionPlugin';
 import FormCreatorPlugin from './FormCreatorPlugin';
 import EmailStylePlugin from './emailStylePlugin';
+
 import { syncContentVideoLayout } from './VideoPlugin/utils';
 import { createDefaultMediaToolbar } from './shared/mediaWidget/constants';
 import whenModelViewerReady from '../../common/loadModelViewer';
@@ -80,10 +84,7 @@ import { syncModelViewerLayout } from '../../common/modelViewerMount';
 import { enhanceModel3dContentPreview, teardownModel3dContentPreview } from './model3dContentPreview';
 import { enhanceLiveComponentContentPreview, teardownLiveComponentContentPreview } from './LiveComponentPlugin/liveComponentContentPreview';
 import { enhanceEchartContentPreview, teardownEchartContentPreview } from './echartContentPreview';
-import {
-  enhanceFormCreatorContentPreview,
-  teardownFormCreatorContentPreview
-} from './FormCreatorPlugin/formCreatorContentPreview';
+import { enhanceFormCreatorContentPreview, teardownFormCreatorContentPreview } from './FormCreatorPlugin/formCreatorContentPreview';
 import { resolveLiveComponentOptions, resolveModel3dOptions, resolveFormCreatorOptions } from './mediaPreviewOptions';
 import { applyModelViewerOptions } from '../../common/modelViewerOptions';
 import useControlValue from '@kne/use-control-value';
@@ -160,6 +161,7 @@ const richTextPlugins = [
   LiveComponentPlugin,
   EchartPlugin,
   TemplateVariablePlugin,
+  TemplateConditionPlugin,
   FormCreatorPlugin,
   EmailStylePlugin
 ];
@@ -491,7 +493,7 @@ const defaultConfig = {
   }
 };
 
-const CKEditorField = withLocale(
+const CKEditorFieldView = withLocale(
   ({
     className,
     style: customStyle,
@@ -503,6 +505,8 @@ const CKEditorField = withLocale(
     liveComponent: liveComponentProp,
     formCreator: formCreatorProp,
     model3d: model3dProp,
+    openCompareValueModal,
+    openConditionEditorModal,
     ...props
   }) => {
     const { formatMessage } = useIntl();
@@ -582,6 +586,11 @@ const CKEditorField = withLocale(
       }
 
       if (!isMarkdown) {
+        merged.templateCondition = {
+          ...(merged.templateCondition || {}),
+          openCompareValueModal,
+          openConditionEditorModal
+        };
         return merged;
       }
 
@@ -610,7 +619,7 @@ const CKEditorField = withLocale(
           items: toolbarItems
         }
       };
-    }, [isMarkdown, config, liveComponentConfig, formCreatorConfig, model3dConfig, ckeditorI18n]);
+    }, [isMarkdown, config, liveComponentConfig, formCreatorConfig, model3dConfig, ckeditorI18n, openCompareValueModal, openConditionEditorModal]);
 
     const wrapperStyle = useMemo(() => {
       if (!measuredToolbarDropdownMaxWidth) {
@@ -672,6 +681,200 @@ const CKEditorField = withLocale(
   }
 );
 
+const CKEditorField = createWithRemoteLoader({
+  modules: ['components-core:FormInfo', 'components-core:FormInfo@useFormModal', 'components-core:FormInfo@TableList']
+})(({ remoteModules, ...props }) => {
+  const [FormInfo, useFormModal, TableList] = remoteModules;
+  const formModal = useFormModal();
+  const TableListComponent = TableList || FormInfo?.TableList;
+  const openCompareValueModal = useRefCallback(({ title, defaultValue, onSubmit }) => {
+    const { Input } = FormInfo.fields;
+    const modalApi = formModal({
+      title: title || '比较值',
+      size: 'small',
+      formProps: {
+        data: { value: defaultValue ?? '' },
+        onSubmit: data => {
+          onSubmit?.(String(data?.value ?? ''));
+          modalApi.close();
+        }
+      },
+      children: <FormInfo column={1} list={[<Input name="value" label={title || '比较值'} rule="REQ" />]} />
+    });
+  });
+
+  const openConditionEditorModal = useRefCallback(
+    ({ title, data, variables, operators, operatorLabels, maxClauses, i18n, onSubmit }) => {
+      const { Input, Select } = FormInfo.fields;
+      const joinerLabel = i18n?.templateConditionJoinerLabel || '连接方式';
+      const clausesLabel = i18n?.templateConditionClausesLabel || '条件列表';
+      const addText = i18n?.templateConditionAddClause || '添加条件';
+      const variableLabel = i18n?.templateConditionClauseSubject || '变量';
+      const operatorLabel = i18n?.templateConditionClauseOperator || '算子';
+      const valueLabel = i18n?.templateConditionValuePrompt || '比较值';
+
+      const variableOptions = (variables || [])
+        .filter(item => item?.name)
+        .map(item => ({ label: item.label || item.name, value: item.name }));
+      const operatorOptions = (operators || []).map(op => ({
+        label: operatorLabels?.[op] || op,
+        value: op
+      }));
+      const joinerOptions = [
+        { label: i18n?.templateConditionJoinerAnd || '且', value: 'and' },
+        { label: i18n?.templateConditionJoinerOr || '或', value: 'or' }
+      ];
+
+      const initialClauses = Array.isArray(data?.clauses) && data.clauses.length
+        ? data.clauses.map(item => ({
+            subject: item.subject || variableOptions[0]?.value || '',
+            operator: item.operator || 'filled',
+            value: item.value ?? ''
+          }))
+        : [
+            {
+              subject: variableOptions[0]?.value || '',
+              operator: 'filled',
+              value: ''
+            }
+          ];
+
+      const modalApi = formModal({
+        title: title || i18n?.templateConditionEdit || '编辑条件',
+        size: 'default',
+        formProps: {
+          data: {
+            joiner: data?.joiner === 'or' ? 'or' : 'and',
+            clauses: initialClauses
+          },
+          onSubmit: formData => {
+            const needsValue = op => op === 'eq' || op === 'neq';
+            const clauses = (Array.isArray(formData?.clauses) ? formData.clauses : [])
+              .map(item => {
+                const operator = item?.operator || 'filled';
+                return {
+                  subject: String(item?.subject || '').trim(),
+                  operator,
+                  value: needsValue(operator) ? (item?.value == null ? '' : String(item.value)) : ''
+                };
+              })
+              .filter(item => item.subject);
+            if (!clauses.length) {
+              return false;
+            }
+            const missingValue = clauses.find(item => needsValue(item.operator) && !String(item.value || '').trim());
+            if (missingValue) {
+              message.error(i18n?.templateConditionValueRequired || '请填写比较值');
+              return false;
+            }
+            onSubmit?.({
+              joiner: formData?.joiner === 'or' ? 'or' : 'and',
+              clauses
+            });
+            modalApi.close();
+          }
+        },
+        children: (
+          <Fragment>
+            <FormInfo
+              column={1}
+              list={[
+                <Select name="joiner" label={joinerLabel} rule="REQ" options={joinerOptions} />
+              ]}
+            />
+            {TableListComponent ? (
+              <TableListComponent
+                name="clauses"
+                title={clausesLabel}
+                minLength={1}
+                maxLength={maxClauses || 5}
+                addText={addText}
+                list={[
+                  <Select name="subject" fieldKey="subject" label={variableLabel} rule="REQ" options={variableOptions} />,
+                  <Select
+                    name="operator"
+                    fieldKey="operator"
+                    label={operatorLabel}
+                    rule="REQ"
+                    options={operatorOptions}
+                    onChange={(value, contextApi) => {
+                      if (value === 'eq' || value === 'neq') {
+                        return;
+                      }
+                      const index = contextApi?.groupArgs?.[0]?.index;
+                      if (index == null || typeof contextApi?.openApi?.setFieldValue !== 'function') {
+                        return;
+                      }
+                      contextApi.openApi.setFieldValue({ name: 'value', groupName: 'clauses', groupIndex: index }, '');
+                    }}
+                  />,
+                  <Input
+                    name="value"
+                    fieldKey="value"
+                    label={valueLabel}
+                    setExtraProps={({ props, contextApi }) => {
+                      const index = contextApi?.groupArgs?.[0]?.index;
+                      const op = contextApi?.formData?.clauses?.[index]?.operator;
+                      const needsValue = op === 'eq' || op === 'neq';
+                      return {
+                        ...props,
+                        disabled: !needsValue
+                      };
+                    }}
+                  />
+                ]}
+              />
+            ) : (
+              <FormInfo
+                title={clausesLabel}
+                column={1}
+                list={[
+                  <Select name="clauses.0.subject" label={variableLabel} rule="REQ" options={variableOptions} />,
+                  <Select
+                    name="clauses.0.operator"
+                    label={operatorLabel}
+                    rule="REQ"
+                    options={operatorOptions}
+                    onChange={(value, contextApi) => {
+                      if (value === 'eq' || value === 'neq') {
+                        return;
+                      }
+                      if (typeof contextApi?.openApi?.setFieldValue !== 'function') {
+                        return;
+                      }
+                      contextApi.openApi.setFieldValue({ name: 'clauses.0.value' }, '');
+                    }}
+                  />,
+                  <Input
+                    name="clauses.0.value"
+                    label={valueLabel}
+                    setExtraProps={({ props, contextApi }) => {
+                      const op = contextApi?.formData?.clauses?.[0]?.operator;
+                      const needsValue = op === 'eq' || op === 'neq';
+                      return {
+                        ...props,
+                        disabled: !needsValue
+                      };
+                    }}
+                  />
+                ]}
+              />
+            )}
+          </Fragment>
+        )
+      });
+    }
+  );
+
+  return (
+    <CKEditorFieldView
+      {...props}
+      openCompareValueModal={openCompareValueModal}
+      openConditionEditorModal={openConditionEditorModal}
+    />
+  );
+});
+
 const CKEditor = createWithRemoteLoader({
   modules: ['components-core:FormInfo@hooks']
 })(({ remoteModules, ...props }) => {
@@ -683,13 +886,7 @@ const CKEditor = createWithRemoteLoader({
 
 CKEditor.Field = CKEditorField;
 
-const CKContent = ({
-  className,
-  children,
-  liveComponent: liveComponentProp,
-  formCreator: formCreatorProp,
-  model3d: model3dProp
-}) => {
+const CKContent = ({ className, children, liveComponent: liveComponentProp, formCreator: formCreatorProp, model3d: model3dProp }) => {
   const ref = useRef(null);
   const liveComponentOptions = useMemo(() => resolveLiveComponentOptions(liveComponentProp), [liveComponentProp]);
   const formCreatorOptions = useMemo(() => resolveFormCreatorOptions(formCreatorProp), [formCreatorProp]);
@@ -772,5 +969,14 @@ CKEditor.Content = CKContent;
 export { formatToolbarDropdownMaxWidth, getToolbarDropdownMaxWidthStyle, useToolbarDropdownMaxWidth } from './toolbarDropdownMaxWidth';
 export { EMAIL_STYLE_DEFINITIONS, EMAIL_TOOLBAR_ITEMS, EMAIL_STYLE_CSS } from './emailStyles';
 export { toEmailHtml } from './emailExport';
+export {
+  resolveTemplateConditionSettings,
+  unwrapTemplateConditionSpans,
+  findUnbalancedTemplateTags,
+  validateTemplateHtml,
+  buildConditionExpression,
+  formatConditionBadge,
+  findConditionMatches
+} from './TemplateConditionPlugin/conditionSyntax';
 
 export default CKEditor;

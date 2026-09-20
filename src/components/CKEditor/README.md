@@ -2,13 +2,14 @@
 
 ### 概述
 
-基于 CKEditor 5 的富文本编辑器封装，面向表单与内容生产场景，提供完整工具栏、图片/表格编辑、Markdown 输出，以及 3D 模型、视频、交互组件、FormCreator 表单、邮件模版变量等富媒体能力。
+基于 CKEditor 5 的富文本编辑器封装，面向表单与内容生产场景，提供完整工具栏、图片/表格编辑、Markdown 输出，以及 3D 模型、视频、交互组件、FormCreator 表单、邮件模版变量与行内条件等富媒体能力。
 
 ### 主要特性
 
 - **双模式**：富文本（HTML）与 Markdown（`isMarkdown`），Markdown 下自动剔除 3D、视频、交互组件、图表、表单相关工具与配置
 - **富媒体插件**：GLB 3D 模型（`@google/model-viewer`）、HTML5 视频、LiveComponent（`LiveComponentEditor` 编辑 + `LiveComponentView` 渲染）、FormCreator（搭建器编辑 + `SchemaRenderer` 渲染）
 - **邮件模版变量**：`TemplateVariablePlugin` 支持插入 lodash 插值/转义变量，编辑态显示 label 芯片，`getData` 输出可配置模版语法
+- **邮件模版条件**：`TemplateConditionPlugin` 默认插入单条件壳（真值/假值/有值/空值/等于/不等于 + 可选否则）；「编辑条件」弹窗可添加扁平且/或多谓词；可选把 if / else 切成块级（`data-template-condition-layout`）
 - **统一上传**：图片、3D、视频共用 `uploadAdapter` / `preset.apis.file`，未配置 `upload` 时回退 base64
 - **预览增强**：`CKEditor.Content` 同步视频尺寸、挂载交互组件/表单/图表、3D 全屏预览（含移动端 overlay）
 - **工具栏适配**：`CKEditor.Field` 按容器宽度设置 `--ck-toolbar-dropdown-max-width`，避免「显示更多」下拉过宽
@@ -19,7 +20,7 @@
 - 需要嵌入 3D 产品模型或说明视频的营销/帮助文档
 - 需要可配置、可复用的交互区块（LiveComponent）的运营页面
 - 需要在富文本中嵌入可填写表单（FormCreator / SchemaRenderer）的场景
-- 邮件/通知等 lodash 模版内容编写
+- 邮件/通知等 lodash 模版内容编写（变量与条件）
 - 技术文档等需要 Markdown 源码编辑与输出的场景
 
 
@@ -314,7 +315,7 @@ const TOOLBAR_PRESETS = {
   },
   emailTemplate: {
     label: '邮件模版',
-    hint: '撤销置顶；模版变量 + 样式（按段落可选元素分组：正文/标题1-3/引用/列表/分割线/表格，均为邮件客户端兼容写法）',
+    hint: '撤销置顶；模版变量 + 模版条件 + 样式（按段落可选元素分组：正文/标题1-3/引用/列表/分割线/表格，均为邮件客户端兼容写法）',
     config: {
       toolbar: {
         items: EMAIL_TOOLBAR_ITEMS
@@ -328,6 +329,10 @@ const TOOLBAR_PRESETS = {
           { name: 'companyName', label: '公司名' },
           { name: 'rawHtml', label: '原始HTML', kind: 'escape' }
         ]
+      },
+      templateCondition: {
+        operators: ['truthy', 'falsy', 'filled', 'empty', 'eq', 'neq'],
+        allowElse: true
       }
     }
   },
@@ -344,9 +349,7 @@ const TOOLBAR_PRESETS = {
 
 const CustomConfigExample = () => {
   const [toolbarType, setToolbarType] = useState('simple');
-  const [content, setContent] = useState(
-    &#96;<h2>自定义配置示例</h2>\n<p>切换下方档位，工具栏按钮数量会明显变化。</p>&#96;
-  );
+  const [content, setContent] = useState(&#96;<h2>自定义配置示例</h2>\n<p>切换下方档位，工具栏按钮数量会明显变化。</p>&#96;);
 
   const preset = TOOLBAR_PRESETS[toolbarType];
   const toolbarItemCount = preset.config.toolbar.items.filter(item => item !== '|').length;
@@ -363,12 +366,7 @@ const CustomConfigExample = () => {
               </Radio.Button>
             ))}
           </Radio.Group>
-          <Alert
-            type="info"
-            showIcon
-            message={&#96;当前：${preset.label}（${toolbarItemCount} 个工具按钮）&#96;}
-            description={preset.hint}
-          />
+          <Alert type="info" showIcon message={&#96;当前：${preset.label}（${toolbarItemCount} 个工具按钮）&#96;} description={preset.hint} />
           <CKEditor.Field key={toolbarType} config={preset.config} value={content} onChange={setContent} />
           <Divider orientation="left">内容预览</Divider>
           <CKEditor.Content key={&#96;preview-${toolbarType}&#96;}>{content}</CKEditor.Content>
@@ -755,6 +753,72 @@ render(<BaseExample />);
 
 ```
 
+- 邮件模版条件
+- 行内条件（真值/假值/有值/空值/等于/不等于 + 可选否则）。块级写在条件最外层 span 的 data-template-condition-layout 上，内部仍是 lodash if/else
+- _CKEditor(@components/CKEditor),antd(antd)
+
+```jsx
+const { default: CKEditor, EMAIL_STYLE_DEFINITIONS, EMAIL_TOOLBAR_ITEMS } = _CKEditor;
+const { Flex, Card, Space, Typography, Divider } = antd;
+const { useState } = React;
+const { Title, Paragraph, Text } = Typography;
+
+const templateVariableConfig = {
+  variables: [
+    { name: 'userName', label: '用户名' },
+    { name: 'couponCode', label: '优惠码' },
+    { name: 'companyName', label: '公司名' }
+  ]
+};
+
+const templateConditionConfig = {
+  operators: ['truthy', 'falsy', 'filled', 'empty', 'eq', 'neq'],
+  allowElse: true,
+  allowNesting: true
+};
+
+const initData = &#96;<p>亲爱的<% if (userName == 'VIP') { %>尊贵的<%= userName %><% } else { %>朋友<% } %>，您好！</p><p>使用优惠码<% if (couponCode != null && couponCode !== '') { %><%= couponCode %>可享折扣<% } %>。</p>&#96;;
+
+const BaseExample = () => {
+  const [content, setContent] = useState(initData);
+
+  return (
+    <Flex vertical gap={16}>
+      <Card>
+        <Space direction="vertical" style={{ width: '100%' }} size="middle">
+          <div>
+            <Title level={4}>邮件模版条件</Title>
+            <Paragraph type="secondary">
+              工具栏「条件」插入行内**单条件**壳；选中后浮动条可编辑条件（弹窗内可「添加条件」做扁平且/或）、切换否则，或切成块级。块级里可以选标题和样式，也可以再套一层条件；切回行内时会去掉块级标签和回车换行，只保留文字、变量和仍为行内的嵌套条件。
+              <Text code>getData</Text> 在条件最外层保留属性（含 <Text code>data-template-condition-clauses</Text> / <Text code>joiner</Text>），内部仍是 lodash <Text code>{'<% if %>'}</Text>。
+            </Paragraph>
+          </div>
+          <CKEditor.Field
+            value={content}
+            onChange={setContent}
+            config={{
+              toolbar: { items: EMAIL_TOOLBAR_ITEMS },
+              style: { definitions: EMAIL_STYLE_DEFINITIONS },
+              templateVariable: templateVariableConfig,
+              templateCondition: templateConditionConfig
+            }}
+          />
+          <Divider orientation="left">getData / onChange 原始内容</Divider>
+          <Text code style={{ whiteSpace: 'pre-wrap', display: 'block' }}>
+            {content}
+          </Text>
+          <Divider orientation="left">内容预览</Divider>
+          <CKEditor.Content>{content}</CKEditor.Content>
+        </Space>
+      </Card>
+    </Flex>
+  );
+};
+
+render(<BaseExample />);
+
+```
+
 - FormCreator 表单
 - config.formCreator 配置编辑区；Content 用 formCreator.formProps 给所有表单 Form 传参
 - _CKEditor(@components/CKEditor),_FormCreator(@components/FormCreator),antd(antd)
@@ -899,20 +963,20 @@ render(<BaseExample />);
 
 #### 属性说明
 
-| 属性名        | 说明                                                                                                                                                      | 类型     | 默认值                                      |
-| ------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- | -------- | ------------------------------------------- |
-| className     | 外层容器类名                                                                                                                                              | string   | -                                           |
-| style         | 外层容器样式；内部会合并 `--ck-toolbar-dropdown-max-width`                                                                                                | object   | -                                           |
+| 属性名        | 说明                                                                                                                                                                                 | 类型     | 默认值                                      |
+| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- | ------------------------------------------- |
+| className     | 外层容器类名                                                                                                                                                                         | string   | -                                           |
+| style         | 外层容器样式；内部会合并 `--ck-toolbar-dropdown-max-width`                                                                                                                           | object   | -                                           |
 | isMarkdown    | 是否 Markdown 模式。为 `true` 时不加载 3D、视频、交互组件、图表、表单插件，并从工具栏移除 `model3dUpload`、`videoUpload`、`insertLiveComponent`、`insertEchart`、`insertFormCreator` | boolean  | false                                       |
-| config        | CKEditor 5 配置，与内置 `defaultConfig` 深合并                                                                                                            | object   | 见下方 config                               |
-| plugins       | 追加的 CKEditor 插件类                                                                                                                                    | array    | []                                          |
-| locale        | 界面语言，`zh-CN` 或 `en` 等；未传时使用 `@kne/global-context` 的 `locale`                                                                                | string   | 上下文 locale                               |
-| uploadAdapter | 图片上传与粘贴转存；富文本下亦作为 `modelUpload` / `videoUpload` 的默认合并源                                                                             | object   | `preset.apis.file` 的 `upload`、`uploadUrl` |
-| liveComponent | **兼容简写**。与 `config.liveComponent` 合并；推荐直接写在 `config.liveComponent`（见下表）                                                              | object   | `{}`                                        |
-| formCreator   | **兼容简写**。与 `config.formCreator` 合并；推荐直接写在 `config.formCreator`（见下表）                                                                  | object   | `{}`                                        |
-| model3d       | 3D 模型预览扩展参数，与 `config.model3d` 合并，见下表                                                                                                     | object   | 见 `defaultConfig.model3d`                  |
-| value         | 编辑器 HTML / Markdown 内容                                                                                                                               | string   | -                                           |
-| onChange      | 内容变化回调 `(html: string) => void`                                                                                                                     | function | -                                           |
+| config        | CKEditor 5 配置，与内置 `defaultConfig` 深合并                                                                                                                                       | object   | 见下方 config                               |
+| plugins       | 追加的 CKEditor 插件类                                                                                                                                                               | array    | []                                          |
+| locale        | 界面语言，`zh-CN` 或 `en` 等；未传时使用 `@kne/global-context` 的 `locale`                                                                                                           | string   | 上下文 locale                               |
+| uploadAdapter | 图片上传与粘贴转存；富文本下亦作为 `modelUpload` / `videoUpload` 的默认合并源                                                                                                        | object   | `preset.apis.file` 的 `upload`、`uploadUrl` |
+| liveComponent | **兼容简写**。与 `config.liveComponent` 合并；推荐直接写在 `config.liveComponent`（见下表）                                                                                          | object   | `{}`                                        |
+| formCreator   | **兼容简写**。与 `config.formCreator` 合并；推荐直接写在 `config.formCreator`（见下表）                                                                                              | object   | `{}`                                        |
+| model3d       | 3D 模型预览扩展参数，与 `config.model3d` 合并，见下表                                                                                                                                | object   | 见 `defaultConfig.model3d`                  |
+| value         | 编辑器 HTML / Markdown 内容                                                                                                                                                          | string   | -                                           |
+| onChange      | 内容变化回调 `(html: string) => void`                                                                                                                                                | function | -                                           |
 
 #### 工具栏宽度
 
@@ -944,21 +1008,22 @@ render(<BaseExample />);
 
 与 CKEditor 5 一致项以外，本组件扩展如下（`merge` 进编辑器 `config`）：
 
-| 配置项             | 说明                                                                                                                                                                        |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| style              | Style 插件配置。传入 `style.definitions` 时会**整体替换**默认样式列表（非按索引合并）                                                                 | object   | 见 `defaultConfig.style`                    |
-| table              | 表格内容工具栏                                                                                                                                                              |
-| htmlSupport        | GeneralHtmlSupport 白名单；已允许 `model-viewer`、`figure.ck-video`、`figure.ck-echart`、`section.ck-live-component`、`section.ck-form-creator` 等                                                     |
-| uploadAdapter      | 图片上传：`upload(file)` 返回 URL 或 `{ code, data, msg }`；`uploadUrl` 粘贴外链转存；`base64MaxWidth` / `base64MaxHeight` 控制无 `upload` 时的 base64 缩放                 |
-| modelUpload        | **仅富文本**。3D 上传，默认合并 `uploadAdapter`；仅 `.glb`；无 `upload` 时 base64 嵌入                                                                                      |
-| videoUpload        | **仅富文本**。视频上传，默认合并 `uploadAdapter`；支持 mp4、webm、ogg、mov 等；无 `upload` 时 base64 嵌入                                                                   |
-| model3d.toolbar    | **仅富文本**。3D 浮动工具栏，默认 `model3dStyle:*`、`resizeModel3d:*`、`resizeModel3dHeight:*`，可拖拽缩放                                                                  |
-| mediaVideo.toolbar | **仅富文本**。视频浮动工具栏，默认 `mediaVideoStyle:*`、`resizeMediaVideo:*`、`resizeMediaVideoHeight:*`                                                                    |
-| liveComponent      | **仅富文本**。交互组件渲染/编辑参数，见下表                                                                                                                                 |
-| formCreator        | **仅富文本**。FormCreator 表单渲染/编辑参数，见下表                                                                                                                         |
-| echart.toolbar     | **仅富文本**。图表浮动工具栏，默认 `echartStyle:*`、`resizeEchart:*`、`resizeEchartHeight:*`，可拖拽缩放                                                                    |
-| model3d            | **仅富文本**。3D 模型 `model-viewer` 参数，见下表                                                                                                                           |
-| templateVariable   | **仅富文本**。邮件模版变量：变量列表与 lodash `templateSettings` 同名字段（`interpolate` / `escape`），见下表                                                               |
+| 配置项             | 说明                                                                                                                                                        |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| style              | Style 插件配置。传入 `style.definitions` 时会**整体替换**默认样式列表（非按索引合并）                                                                       | object | 见 `defaultConfig.style` |
+| table              | 表格内容工具栏                                                                                                                                              |
+| htmlSupport        | GeneralHtmlSupport 白名单；已允许 `model-viewer`、`figure.ck-video`、`figure.ck-echart`、`section.ck-live-component`、`section.ck-form-creator` 等          |
+| uploadAdapter      | 图片上传：`upload(file)` 返回 URL 或 `{ code, data, msg }`；`uploadUrl` 粘贴外链转存；`base64MaxWidth` / `base64MaxHeight` 控制无 `upload` 时的 base64 缩放 |
+| modelUpload        | **仅富文本**。3D 上传，默认合并 `uploadAdapter`；仅 `.glb`；无 `upload` 时 base64 嵌入                                                                      |
+| videoUpload        | **仅富文本**。视频上传，默认合并 `uploadAdapter`；支持 mp4、webm、ogg、mov 等；无 `upload` 时 base64 嵌入                                                   |
+| model3d.toolbar    | **仅富文本**。3D 浮动工具栏，默认 `model3dStyle:*`、`resizeModel3d:*`、`resizeModel3dHeight:*`，可拖拽缩放                                                  |
+| mediaVideo.toolbar | **仅富文本**。视频浮动工具栏，默认 `mediaVideoStyle:*`、`resizeMediaVideo:*`、`resizeMediaVideoHeight:*`                                                    |
+| liveComponent      | **仅富文本**。交互组件渲染/编辑参数，见下表                                                                                                                 |
+| formCreator        | **仅富文本**。FormCreator 表单渲染/编辑参数，见下表                                                                                                         |
+| echart.toolbar     | **仅富文本**。图表浮动工具栏，默认 `echartStyle:*`、`resizeEchart:*`、`resizeEchartHeight:*`，可拖拽缩放                                                    |
+| model3d            | **仅富文本**。3D 模型 `model-viewer` 参数，见下表                                                                                                           |
+| templateVariable   | **仅富文本**。邮件模版变量：变量列表与 lodash `templateSettings` 同名字段（`interpolate` / `escape`），见下表                                               |
+| templateCondition  | **仅富文本**。邮件模版行内条件：算子白名单与可选 else，见下表                                                                                               |
 
 上传函数约定与图片相同：返回字符串 URL，或 `{ code: 0, data: 'url', msg }`（`code !== 0` 时展示失败占位图/提示）。
 
@@ -1010,6 +1075,35 @@ render(<BaseExample />);
 | escape      | 转义语法 RegExp（需含捕获组），同 lodash `templateSettings.escape`                                 | RegExp | `/<%-([\s\S]+?)%>/g` |
 | evaluate    | 可传入以兼容完整 `templateSettings`；不参与变量 widget 化                                          | RegExp | -                    |
 
+#### 邮件模版条件（TemplateConditionPlugin）
+
+- 工具栏：`insertTemplateCondition`（需自行加入 `config.toolbar.items`；变量列表来自 `templateVariable.variables` 或 `templateCondition.variables`）
+- 编辑态：默认行内**单条件**壳；选中后浮动条可「编辑条件」（弹窗内可添加多条扁平且/或谓词）、「否则」、以及「块级」
+- `getData` / `onChange`：条件最外层保留 `data-template-condition-*`（含 `clauses` JSON 与 `joiner`；块级为 `data-template-condition-layout="block"`），内部是 lodash evaluate，多条件如 `<% if ((userName == 'VIP') && (couponCode != null && couponCode !== '')) { %>…<% } %>`
+- 算子白名单：`truthy` / `falsy` / `filled` / `empty` / `eq` / `neq`；扁平多条件仅支持全 `&&` 或全 `||`（无括号分组、无 else-if）；块级 then/else 可再套条件 widget（`allowNesting`）；行内不可嵌套 widget
+- 回填：仅识别本插件规范形态的 `<% if %>`；手写混合 `&&`/`||` 或不规范表达式不 widget 化
+
+#### templateCondition 参数（config.templateCondition）
+
+| 字段         | 说明                                                            | 类型    | 默认值                           |
+| ------------ | --------------------------------------------------------------- | ------- | -------------------------------- |
+| variables    | 可选；不传则复用 `templateVariable.variables` 作 subject 白名单 | array   | 同 templateVariable              |
+| operators    | 允许的算子列表                                                  | array   | `['truthy','falsy','filled','empty','eq','neq']` |
+| allowElse    | 是否允许否则分支                                                | boolean | `true`                           |
+| allowNesting | 块级条件 then/else 内是否允许再套条件；行内条件始终不可嵌套 | boolean | `true`                           |
+| maxClauses   | 「编辑条件」弹窗最多可添加的谓词条数                            | number  | `5`                              |
+| display      | 新建条件的默认展示；实例可用浮动条在行内 / 块级间切换 | string  | `'inline'`                       |
+
+#### 模版校验工具（包导出）
+
+| 名称                         | 说明                                                     |
+| ---------------------------- | -------------------------------------------------------- |
+| findUnbalancedTemplateTags   | 扫描 `<%` / `%>` 是否配对，返回错误或 null               |
+| validateTemplateHtml         | 配对校验；可传入 `template`（如 `_.template`）做 dry-run |
+| unwrapTemplateConditionSpans | 将编辑器中间态 condition span 转为 lodash evaluate       |
+| buildConditionExpression     | 由 subject/operator/value 生成条件表达式                 |
+| findConditionMatches         | 在文本中找出规范形态的 if/else 匹配                      |
+
 #### liveComponent 参数（`config.liveComponent` / Content.liveComponent）
 
 | 字段                       | 说明                                                                                                  | 类型             |
@@ -1035,14 +1129,14 @@ render(<BaseExample />);
 
 #### formCreator 参数（`config.formCreator` / Content.formCreator）
 
-| 字段         | 说明                                                                 | 类型             | 默认值  |
-| ------------ | -------------------------------------------------------------------- | ---------------- | ------- |
-| height       | 编辑区/预览区挂载容器最小高度                                        | number \| string | `240`   |
-| preview      | 传给 `SchemaRenderer` 的预览模式                                     | boolean          | `true`  |
-| showActions  | 是否显示 Schema 底部操作按钮                                         | boolean          | `false` |
-| formProps    | **对象**。透传给文档内**每一个** FormCreator `SchemaRenderer` 内部 `Form`（如 `onSubmit`、`data`）；Content 侧常用 | object           | `{}`    |
-| emptyText    | Schema 无可渲染内容时的占位文案                                      | string           | 见 i18n |
-| editor       | 透传给弹窗内 `FormCreatorField` 的属性（如 `apis`、`extraToolbar` 等） | object           | `{}`    |
+| 字段        | 说明                                                                                                               | 类型             | 默认值  |
+| ----------- | ------------------------------------------------------------------------------------------------------------------ | ---------------- | ------- |
+| height      | 编辑区/预览区挂载容器最小高度                                                                                      | number \| string | `240`   |
+| preview     | 传给 `SchemaRenderer` 的预览模式                                                                                   | boolean          | `true`  |
+| showActions | 是否显示 Schema 底部操作按钮                                                                                       | boolean          | `false` |
+| formProps   | **对象**。透传给文档内**每一个** FormCreator `SchemaRenderer` 内部 `Form`（如 `onSubmit`、`data`）；Content 侧常用 | object           | `{}`    |
+| emptyText   | Schema 无可渲染内容时的占位文案                                                                                    | string           | 见 i18n |
+| editor      | 透传给弹窗内 `FormCreatorField` 的属性（如 `apis`、`extraToolbar` 等）                                             | object           | `{}`    |
 
 - **Field**：推荐写在 `config.formCreator`（顶层 `formCreator` prop 仅兼容合并）；编辑区挂载同样会带上 `formProps`
 - **Content**：用 `formCreator` prop；其中 `formProps` 会对页面上所有 `section.ck-form-creator` 渲染出的表单生效
@@ -1070,16 +1164,18 @@ render(<BaseExample />);
 
 ### 包导出工具函数
 
-| 名称                            | 说明                                                   |
-| ------------------------------- | ------------------------------------------------------ |
-| formatToolbarDropdownMaxWidth   | 将数字或字符串格式化为 CSS 宽度值                      |
-| getToolbarDropdownMaxWidthStyle | 生成含 `--ck-toolbar-dropdown-max-width` 的 style 对象 |
-| useToolbarDropdownMaxWidth      | 对容器 ref 做 ResizeObserver，返回当前可用最大宽度     |
-| EMAIL_STYLE_PRESETS             | 邮件样式的**唯一声明来源**，下面几项均由它派生           |
-| EMAIL_STYLE_DEFINITIONS         | 邮件模版 Style 预设，可直接赋给 `config.style.definitions` |
-| EMAIL_TOOLBAR_ITEMS             | 邮件模版推荐工具栏（含模版变量与 `style`）             |
-| EMAIL_STYLE_CSS                 | 无前缀邮件样式 CSS，可注入邮件模版外壳                  |
+| 名称                            | 说明                                                           |
+| ------------------------------- | -------------------------------------------------------------- |
+| formatToolbarDropdownMaxWidth   | 将数字或字符串格式化为 CSS 宽度值                              |
+| getToolbarDropdownMaxWidthStyle | 生成含 `--ck-toolbar-dropdown-max-width` 的 style 对象         |
+| useToolbarDropdownMaxWidth      | 对容器 ref 做 ResizeObserver，返回当前可用最大宽度             |
+| EMAIL_STYLE_PRESETS             | 邮件样式的**唯一声明来源**，下面几项均由它派生                 |
+| EMAIL_STYLE_DEFINITIONS         | 邮件模版 Style 预设，可直接赋给 `config.style.definitions`     |
+| EMAIL_TOOLBAR_ITEMS             | 邮件模版推荐工具栏（含模版变量、模版条件与 `style`）           |
+| EMAIL_STYLE_CSS                 | 无前缀邮件样式 CSS，可注入邮件模版外壳                         |
 | toEmailHtml                     | 兜底工具：给 class 版 HTML 补 inline style（正常流程无需调用） |
+| findUnbalancedTemplateTags      | 模版 `<%`/`%>` 配对检查                                        |
+| validateTemplateHtml            | 模版 HTML 校验（配对 + 可选 lodash.template dry-run）          |
 
 #### 邮件模版样式（config.style + EMAIL_STYLE_DEFINITIONS）
 
@@ -1097,16 +1193,16 @@ import CKEditor, { EMAIL_STYLE_DEFINITIONS, EMAIL_TOOLBAR_ITEMS } from '@kne-com
 
 样式按「段落」下拉里可选的块元素分组。默认 heading 配置为 `paragraph→p`、`heading1→h2`、`heading2→h3`、`heading3→h4`（**没有 h1**），Style 插件只列出与当前块元素匹配的项，因此定义在 `h1` 上的样式永远选不到。
 
-| 元素 | 段落下拉 | 可选样式 |
-| ---- | -------- | -------- |
-| `p` | 正文 | 正文、导语、补充说明、引用段、提示条、警示条、成功条、主按钮、次按钮、页脚 |
-| `h2` | 标题 1 | 邮件主标题、章节标题（色条）、横幅标题（深底） |
-| `h3` | 标题 2 | 小节标题、小节标题（底线）、小节标题（品牌色） |
-| `h4` | 标题 3 | 小标题、标签标题 |
-| `blockquote` | 引用按钮 | 邮件引用块 |
-| `ul` / `ol` | 列表按钮 | 紧凑列表、宽松列表 |
-| `hr` | 分割线按钮 | 细分割线、粗分割线、虚线分割线、空白间距 |
-| `figure` | 表格按钮 | 邮件表格 |
+| 元素         | 段落下拉   | 可选样式                                                                   |
+| ------------ | ---------- | -------------------------------------------------------------------------- |
+| `p`          | 正文       | 正文、导语、补充说明、引用段、提示条、警示条、成功条、主按钮、次按钮、页脚 |
+| `h2`         | 标题 1     | 邮件主标题、章节标题（色条）、横幅标题（深底）                             |
+| `h3`         | 标题 2     | 小节标题、小节标题（底线）、小节标题（品牌色）                             |
+| `h4`         | 标题 3     | 小标题、标签标题                                                           |
+| `blockquote` | 引用按钮   | 邮件引用块                                                                 |
+| `ul` / `ol`  | 列表按钮   | 紧凑列表、宽松列表                                                         |
+| `hr`         | 分割线按钮 | 细分割线、粗分割线、虚线分割线、空白间距                                   |
+| `figure`     | 表格按钮   | 邮件表格                                                                   |
 
 对齐、字号、颜色、加粗交给工具栏，样式项不重复这些能力。按钮样式作用在段落上，内部链接会渲染成按钮块：写一行文字 → 加链接 → 套「主按钮」。
 
@@ -1127,13 +1223,13 @@ import CKEditor, { EMAIL_STYLE_DEFINITIONS, EMAIL_TOOLBAR_ITEMS } from '@kne-com
 
 运作方式：
 
-| 环节 | 内容形态 | 说明 |
-| ---- | -------- | ---- |
-| 编辑器 model | 只有 class | 保持干净，「样式」下拉可随时切换 |
-| 编辑态显示 | class + 注入的 scoped CSS | CSS 由 `EMAIL_STYLE_PRESETS` 派生后运行时注入 |
-| `onChange` / `getData()` | class + inline style | `editor.data.get()` 出口按同一份声明派生 `style` |
-| `CKEditor.Content` 预览 | 同上 | 内容自带 inline style，无需额外样式表 |
-| 发信 | 同上 | 直接投递，无转换步骤 |
+| 环节                     | 内容形态                  | 说明                                             |
+| ------------------------ | ------------------------- | ------------------------------------------------ |
+| 编辑器 model             | 只有 class                | 保持干净，「样式」下拉可随时切换                 |
+| 编辑态显示               | class + 注入的 scoped CSS | CSS 由 `EMAIL_STYLE_PRESETS` 派生后运行时注入    |
+| `onChange` / `getData()` | class + inline style      | `editor.data.get()` 出口按同一份声明派生 `style` |
+| `CKEditor.Content` 预览  | 同上                      | 内容自带 inline style，无需额外样式表            |
+| 发信                     | 同上                      | 直接投递，无转换步骤                             |
 
 回填是幂等的：`htmlSupport` 未放开 `p`/`h2` 等的 `style`，内容回到编辑器时 inline style 被丢弃、class 保留，显示仍由 scoped CSS 负责，下次输出再重新派生。因此同一份内容反复编辑保存不会叠加或漂移。
 
@@ -1143,11 +1239,11 @@ import CKEditor, { EMAIL_STYLE_DEFINITIONS, EMAIL_TOOLBAR_ITEMS } from '@kne-com
 
 正常流程用不到——只在手上是 class 版 HTML（例如从别处导入的内容）时用它补样式。
 
-| 参数            | 说明                                                         | 类型     | 默认值            |
-| --------------- | ------------------------------------------------------------ | -------- | ----------------- |
-| html            | 富文本内容                                                   | string   | -                 |
-| options.css     | 要 inline 的 CSS                                             | string   | `EMAIL_STYLE_CSS` |
-| options.inliner | 自定义 inline 实现 `(html, css) => string`，替换内置逻辑     | function | -                 |
+| 参数            | 说明                                                     | 类型     | 默认值            |
+| --------------- | -------------------------------------------------------- | -------- | ----------------- |
+| html            | 富文本内容                                               | string   | -                 |
+| options.css     | 要 inline 的 CSS                                         | string   | `EMAIL_STYLE_CSS` |
+| options.inliner | 自定义 inline 实现 `(html, css) => string`，替换内置逻辑 | function | -                 |
 
 行为说明：
 

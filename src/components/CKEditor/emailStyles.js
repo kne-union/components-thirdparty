@@ -320,12 +320,13 @@ export const EMAIL_STYLE_CSS = buildCss();
 /** 编辑态显示用：作用域限定在编辑器与内容预览容器内 */
 export const EMAIL_STYLE_CSS_SCOPED = buildCss(['.ck-editor__editable ', '.ck.ck-content ']);
 
-/** 邮件模版推荐工具栏：撤销置顶，含模版变量与样式 */
+/** 邮件模版推荐工具栏：撤销置顶，含模版变量、模版条件与样式 */
 export const EMAIL_TOOLBAR_ITEMS = [
   'undo',
   'redo',
   '|',
   'insertTemplateVariable',
+  'insertTemplateCondition',
   '|',
   'heading',
   'style',
