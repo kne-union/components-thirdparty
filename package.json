@@ -1,6 +1,6 @@
 {
   "name": "@kne-components/components-thirdparty",
-  "version": "0.1.45",
+  "version": "0.1.47",
   "description": "用于封装一些体积较大的需要使用时再加载的第三方库",
   "scripts": {
     "init": "husky",
@@ -100,7 +100,7 @@
     "@kne/axios-fetch": "^1.2.2",
     "@kne/ensure-slash": "^0.1.0",
     "@kne/file-system-view": "^1.0.4",
-    "@kne/form-creator": "^0.1.18",
+    "@kne/form-creator": "^0.1.19",
     "@kne/form-info": "^0.1.27",
     "@kne/global-context": "^1.3.2",
     "@kne/json-view": "^0.1.2",
