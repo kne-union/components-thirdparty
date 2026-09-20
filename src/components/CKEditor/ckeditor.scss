@@ -1045,6 +1045,208 @@ html.ck-model3d-overlay-open {
   border-color: #ffd591;
 }
 
+/* 变量 / 条件：标签按文字收窄，不再占 CKEditor 下拉默认的 7em */
+.ck.ck-toolbar .ck-dropdown > .ck-button.ck-template-insert-button .ck-button__label {
+  width: auto;
+}
+
+/* 邮件模版条件：编辑态描边壳；内容预览（.ck.ck-content）不展示条件区域颜色 */
+.ck-editor__editable span.ck-template-condition {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  max-width: 100%;
+  margin: 0 2px;
+  padding: 1px 4px;
+  vertical-align: baseline;
+  box-sizing: border-box;
+  border: 1px solid #d3adf7;
+  border-radius: 6px;
+  background: #f9f0ff;
+  line-height: 1.6;
+  gap: 2px;
+}
+
+.ck-editor__editable span.ck-template-condition > .ck-template-condition__badge {
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 0.85em;
+  white-space: nowrap;
+  user-select: none;
+  cursor: default;
+}
+
+.ck-editor__editable span.ck-template-condition > .ck-template-condition__badge .ck-template-condition__badge-clause {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: #efdbff;
+  color: #531dab;
+  white-space: nowrap;
+}
+
+.ck-editor__editable span.ck-template-condition > .ck-template-condition__badge .ck-template-condition__badge-joiner {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ck-editor__editable span.ck-template-condition > .ck-template-condition__badge .ck-template-condition__badge-joiner--and {
+  background: #fff7e6;
+  color: #d46b08;
+}
+
+.ck-editor__editable span.ck-template-condition > .ck-template-condition__badge .ck-template-condition__badge-joiner--or {
+  background: #e6f7ff;
+  color: #096dd9;
+}
+
+.ck-editor__editable span.ck-template-condition > .ck-template-condition__then,
+.ck-editor__editable span.ck-template-condition > .ck-template-condition__else {
+  display: inline-block;
+  min-width: 8em;
+  min-height: 1.6em;
+  padding: 0 10px;
+  border: 1px dashed #b37feb;
+  border-radius: 4px;
+  background: #fff;
+  vertical-align: baseline;
+  cursor: text;
+}
+
+.ck-editor__editable span.ck-template-condition > .ck-template-condition__then.ck-placeholder::before,
+.ck-editor__editable span.ck-template-condition > .ck-template-condition__else.ck-placeholder::before {
+  color: #bfbfbf;
+}
+
+.ck-editor__editable span.ck-template-condition > .ck-template-condition__else-sep {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 4px;
+  color: #8c8c8c;
+  font-size: 0.85em;
+  user-select: none;
+  cursor: default;
+}
+
+.ck-editor__editable span.ck-template-condition > .ck-template-condition__else-sep::before {
+  content: '';
+  display: inline-block;
+  width: 1px;
+  height: 0.9em;
+  margin-right: 4px;
+  background: #d9d9d9;
+  vertical-align: middle;
+}
+
+.ck-editor__editable span.ck-template-condition.ck-template-condition--block {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  margin: 4px 0;
+  vertical-align: top;
+}
+
+.ck-editor__editable span.ck-template-condition.ck-template-condition--block > .ck-template-condition__then,
+.ck-editor__editable span.ck-template-condition.ck-template-condition--block > .ck-template-condition__else {
+  display: block;
+  width: 100%;
+  min-height: 2.4em;
+  white-space: normal;
+}
+
+.ck-editor__editable span.ck-template-condition.ck-template-condition--block > .ck-template-condition__else-sep,
+.ck-editor__editable div.ck-template-condition.ck-template-condition--block > .ck-template-condition__else-sep {
+  align-self: flex-start;
+}
+
+.ck-editor__editable div.ck-template-condition {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  width: 100%;
+  margin: 4px 0;
+  padding: 4px;
+  box-sizing: border-box;
+  border: 1px solid #d3adf7;
+  border-radius: 6px;
+  background: #f9f0ff;
+  line-height: 1.6;
+  gap: 4px;
+}
+
+.ck-editor__editable div.ck-template-condition > .ck-template-condition__badge {
+  display: inline-flex;
+  align-self: flex-start;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding: 0;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  font-size: 0.85em;
+  white-space: nowrap;
+}
+
+.ck-editor__editable div.ck-template-condition > .ck-template-condition__badge .ck-template-condition__badge-clause {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 6px;
+  border-radius: 4px;
+  background: #efdbff;
+  color: #531dab;
+  white-space: nowrap;
+}
+
+.ck-editor__editable div.ck-template-condition > .ck-template-condition__badge .ck-template-condition__badge-joiner {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 4px;
+  border-radius: 4px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ck-editor__editable div.ck-template-condition > .ck-template-condition__badge .ck-template-condition__badge-joiner--and {
+  background: #fff7e6;
+  color: #d46b08;
+}
+
+.ck-editor__editable div.ck-template-condition > .ck-template-condition__badge .ck-template-condition__badge-joiner--or {
+  background: #e6f7ff;
+  color: #096dd9;
+}
+
+.ck-editor__editable div.ck-template-condition > .ck-template-condition__then,
+.ck-editor__editable div.ck-template-condition > .ck-template-condition__else {
+  display: block;
+  width: 100%;
+  min-height: 2.4em;
+  padding: 4px 10px;
+  border: 1px dashed #b37feb;
+  border-radius: 4px;
+  background: #fff;
+  cursor: text;
+}
+
+.ck-editor__editable div.ck-template-condition > .ck-template-condition__else-sep {
+  align-self: flex-start;
+  color: #8c8c8c;
+  font-size: 0.85em;
+}
+
 /* 邮件模版样式不在此处维护：声明集中在 emailStyles.js 的 EMAIL_STYLE_PRESETS，
    编辑态 CSS 由 EmailStylePlugin 从同一数据源派生后运行时注入，发信用的 inline style
    也来自同一份声明，避免编辑 / 保存 / 发信三处各写一遍。 */

@@ -279,9 +279,11 @@ class TemplateVariableUI extends Plugin {
       const command = editor.commands.get('insertTemplateVariable');
 
       dropdown.buttonView.set({
-        label: i18n.templateVariableLabel || '模版变量',
+        label: i18n.templateVariableLabel || '变量',
         icon: templateVariableIcon,
-        tooltip: true
+        withText: true,
+        tooltip: true,
+        class: 'ck-template-insert-button'
       });
 
       dropdown.bind('isEnabled').to(command, 'isEnabled');

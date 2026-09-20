@@ -160,7 +160,7 @@ const TOOLBAR_PRESETS = {
   },
   emailTemplate: {
     label: '邮件模版',
-    hint: '撤销置顶；模版变量 + 样式（按段落可选元素分组：正文/标题1-3/引用/列表/分割线/表格，均为邮件客户端兼容写法）',
+    hint: '撤销置顶；模版变量 + 模版条件 + 样式（按段落可选元素分组：正文/标题1-3/引用/列表/分割线/表格，均为邮件客户端兼容写法）',
     config: {
       toolbar: {
         items: EMAIL_TOOLBAR_ITEMS
@@ -174,6 +174,10 @@ const TOOLBAR_PRESETS = {
           { name: 'companyName', label: '公司名' },
           { name: 'rawHtml', label: '原始HTML', kind: 'escape' }
         ]
+      },
+      templateCondition: {
+        operators: ['truthy', 'falsy', 'filled', 'empty', 'eq', 'neq'],
+        allowElse: true
       }
     }
   },
@@ -190,9 +194,7 @@ const TOOLBAR_PRESETS = {
 
 const CustomConfigExample = () => {
   const [toolbarType, setToolbarType] = useState('simple');
-  const [content, setContent] = useState(
-    `<h2>自定义配置示例</h2>\n<p>切换下方档位，工具栏按钮数量会明显变化。</p>`
-  );
+  const [content, setContent] = useState(`<h2>自定义配置示例</h2>\n<p>切换下方档位，工具栏按钮数量会明显变化。</p>`);
 
   const preset = TOOLBAR_PRESETS[toolbarType];
   const toolbarItemCount = preset.config.toolbar.items.filter(item => item !== '|').length;
@@ -209,12 +211,7 @@ const CustomConfigExample = () => {
               </Radio.Button>
             ))}
           </Radio.Group>
-          <Alert
-            type="info"
-            showIcon
-            message={`当前：${preset.label}（${toolbarItemCount} 个工具按钮）`}
-            description={preset.hint}
-          />
+          <Alert type="info" showIcon message={`当前：${preset.label}（${toolbarItemCount} 个工具按钮）`} description={preset.hint} />
           <CKEditor.Field key={toolbarType} config={preset.config} value={content} onChange={setContent} />
           <Divider orientation="left">内容预览</Divider>
           <CKEditor.Content key={`preview-${toolbarType}`}>{content}</CKEditor.Content>

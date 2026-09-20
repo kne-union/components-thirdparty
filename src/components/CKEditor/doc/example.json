@@ -157,6 +157,21 @@
       ]
     },
     {
+      "title": "邮件模版条件",
+      "description": "行内条件（真值/假值/有值/空值/等于/不等于 + 可选否则）。块级写在条件最外层 span 的 data-template-condition-layout 上，内部仍是 lodash if/else",
+      "code": "./templateCondition.js",
+      "scope": [
+        {
+          "name": "_CKEditor",
+          "packageName": "@components/CKEditor"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        }
+      ]
+    },
+    {
       "title": "FormCreator 表单",
       "description": "config.formCreator 配置编辑区；Content 用 formCreator.formProps 给所有表单 Form 传参",
       "code": "./formCreator.js",
