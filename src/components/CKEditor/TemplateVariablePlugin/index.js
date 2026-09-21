@@ -9,6 +9,7 @@ import {
   TEMPLATE_VARIABLE_NAME_ATTR
 } from './constants';
 import templateVariableIcon from './icon';
+import bindDialogFloatingDropdown from '../dialogFloatingDropdown';
 import {
   findTemplateMatches,
   resolveTemplateVariableSettings,
@@ -278,6 +279,7 @@ class TemplateVariableUI extends Plugin {
       const dropdown = createDropdown(locale);
       const command = editor.commands.get('insertTemplateVariable');
 
+      dropdown.class = 'ck-template-variable-dropdown';
       dropdown.buttonView.set({
         label: i18n.templateVariableLabel || '变量',
         icon: templateVariableIcon,
@@ -324,6 +326,7 @@ class TemplateVariableUI extends Plugin {
       }
 
       addListToDropdown(dropdown, items);
+      bindDialogFloatingDropdown(dropdown, editor, 'ck-template-variable-panel');
 
       this.listenTo(dropdown, 'execute', evt => {
         const { name, kind, variableLabel, isEnabled } = evt.source;

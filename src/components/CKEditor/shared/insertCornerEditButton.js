@@ -1,7 +1,8 @@
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
-import { Button } from 'antd';
+import { Button, ConfigProvider } from 'antd';
 import { EditOutlined } from '@ant-design/icons';
+import { resolveIsolatedThemeToken } from '../FormCreatorPlugin/FormCreatorGlobalShell';
 
 export const SECTION_WIDGET_EDIT_CLASS = 'ck-section-widget-edit';
 
@@ -27,22 +28,33 @@ export const insertCornerEditButton = (writer, section, { label, onEdit }) => {
       roots.set(domElement, root);
     }
 
+    const themeToken = resolveIsolatedThemeToken();
+
     root.render(
-      <Button
-        type="primary"
-        shape="circle"
-        size="small"
-        icon={<EditOutlined />}
-        title={label}
-        aria-label={label}
-        onClick={event => {
-          stop(event.nativeEvent || event);
-          onEdit?.();
+      <ConfigProvider
+        theme={{
+          token: {
+            colorPrimary: themeToken?.colorPrimary,
+            ...(themeToken?.colorPrimaryHover ? { colorPrimaryHover: themeToken.colorPrimaryHover } : null)
+          }
         }}
-        onMouseDown={event => {
-          stop(event.nativeEvent || event);
-        }}
-      />
+      >
+        <Button
+          type="primary"
+          shape="circle"
+          size="small"
+          icon={<EditOutlined />}
+          title={label}
+          aria-label={label}
+          onClick={event => {
+            stop(event.nativeEvent || event);
+            onEdit?.();
+          }}
+          onMouseDown={event => {
+            stop(event.nativeEvent || event);
+          }}
+        />
+      </ConfigProvider>
     );
 
     return () => {

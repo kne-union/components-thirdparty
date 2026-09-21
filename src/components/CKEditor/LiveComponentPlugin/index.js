@@ -22,7 +22,9 @@ const getLiveComponentMountOptions = (editor, content) => {
     content,
     height: cfg.height ?? LIVE_COMPONENT_DEFAULT_HEIGHT,
     libs: cfg.libs,
-    props: cfg.props
+    props: cfg.props,
+    themeToken: editor.config.get('hostThemeToken'),
+    locale: editor.config.get('hostLocale')
   };
 };
 
@@ -259,6 +261,8 @@ const openLiveComponentDialogForEditor = (editor, initialValue) => {
     onSitesChange: editorCfg.onSitesChange ?? cfg.onSitesChange,
     transformContentUrl: editorCfg.transformContentUrl ?? cfg.transformContentUrl,
     enableSourceLocate: editorCfg.enableSourceLocate ?? cfg.enableSourceLocate,
+    themeToken: editor.config.get('hostThemeToken'),
+    locale: editor.config.get('hostLocale'),
     onSubmit: content => {
       if (!content) {
         return;

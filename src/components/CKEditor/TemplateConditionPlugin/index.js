@@ -11,6 +11,7 @@ import {
   ViewModel,
   ButtonView
 } from 'ckeditor5';
+import bindDialogFloatingDropdown, { bindDialogBalloonToolbar } from '../dialogFloatingDropdown';
 import {
   ELSE_SEP_TEXT,
   JOINER_AND,
@@ -1400,6 +1401,9 @@ class TemplateConditionUI extends Plugin {
     this._registerInsertDropdown();
     this._registerToolbarButtons();
     this._registerWidgetToolbar();
+
+    // 弹窗内：抬高气球层级，并避免点工具栏时被焦点锁拆掉导致命令不执行
+    bindDialogBalloonToolbar(editor);
   }
 
   _registerInsertDropdown() {
@@ -1464,6 +1468,7 @@ class TemplateConditionUI extends Plugin {
       }
 
       addListToDropdown(dropdown, items);
+      bindDialogFloatingDropdown(dropdown, editor, 'ck-template-condition-panel');
 
       this.listenTo(dropdown, 'execute', evt => {
         const { subject, operator, needsValue, isEnabled } = evt.source;

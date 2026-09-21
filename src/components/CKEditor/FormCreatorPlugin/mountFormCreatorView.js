@@ -23,7 +23,9 @@ export const mountFormCreatorInHost = (
     preview = true,
     showActions = false,
     formProps = {},
-    emptyText = '暂无表单内容'
+    emptyText = '暂无表单内容',
+    themeToken,
+    locale
   } = {}
 ) => {
   if (!host) {
@@ -56,7 +58,7 @@ export const mountFormCreatorInHost = (
   }
 
   root.render(
-    <FormCreatorGlobalShell>
+    <FormCreatorGlobalShell themeToken={themeToken} locale={locale}>
       <SchemaRenderer schema={normalized} preview={preview} showActions={showActions} formProps={resolvedFormProps} />
     </FormCreatorGlobalShell>
   );

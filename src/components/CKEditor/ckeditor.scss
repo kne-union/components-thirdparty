@@ -3,6 +3,13 @@
   visibility: hidden;
 }
 
+/* ContextualBalloon / widget 工具栏挂在 document.body 的共享容器上；默认约 1000，需高于 Modal（常 1000–2000）。
+ * 必须同时设 position，否则 z-index 在 static 元素上不生效，气球仍会被后挂载的 ant-modal-root 盖住。 */
+.ck-body-wrapper {
+  position: relative;
+  z-index: 2100;
+}
+
 .ck-editor__editable {
   --ck-image-style-spacing: 1.5em;
   --ck-media-frame-bg: #fafafa;
@@ -1048,6 +1055,16 @@ html.ck-model3d-overlay-open {
 /* 变量 / 条件：标签按文字收窄，不再占 CKEditor 下拉默认的 7em */
 .ck.ck-toolbar .ck-dropdown > .ck-button.ck-template-insert-button .ck-button__label {
   width: auto;
+}
+
+/* 变量下拉：限制高度，列表在面板内滚动。挂到 body 后不再是 dropdown 的子节点，选择器写在 panel 上 */
+.ck.ck-dropdown__panel.ck-template-dropdown-panel,
+.ck.ck-dropdown__panel.ck-template-variable-panel,
+.ck.ck-dropdown__panel.ck-template-condition-panel {
+  max-height: min(280px, 40vh);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 /* 邮件模版条件：编辑态描边壳；内容预览（.ck.ck-content）不展示条件区域颜色 */
