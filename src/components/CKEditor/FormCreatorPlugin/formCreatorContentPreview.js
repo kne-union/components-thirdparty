@@ -14,7 +14,9 @@ export const enhanceFormCreatorContentPreview = (container, options = {}) => {
     preview = true,
     showActions = false,
     formProps,
-    emptyText
+    emptyText,
+    themeToken,
+    locale
   } = options;
 
   if (!container) {
@@ -47,7 +49,9 @@ export const enhanceFormCreatorContentPreview = (container, options = {}) => {
         preview,
         showActions,
         formProps,
-        emptyText
+        emptyText,
+        themeToken,
+        locale
       });
     });
 };

@@ -3,7 +3,7 @@ const { Flex, Card, Space, Typography, Radio, Divider, Alert } = antd;
 const { useState } = React;
 const { Title } = Typography;
 
-/** 与 CKEditor.Field 默认 config.toolbar.items 一致，代表「全部」档位 */
+/** 默认工具栏全量能力，并补上模版变量与模版条件 */
 const FULL_TOOLBAR_ITEMS = [
   'undo',
   'redo',
@@ -45,6 +45,9 @@ const FULL_TOOLBAR_ITEMS = [
   'highlight',
   'horizontalLine',
   '|',
+  'insertTemplateVariable',
+  'insertTemplateCondition',
+  '|',
   'selectAll',
   'removeFormat',
   'sourceEditing'
@@ -55,7 +58,7 @@ const FULL_TOOLBAR_ITEMS = [
  * 标准：日常最常用（结构、列表、链接、对齐、图片、表格、代码块等）
  * 富媒体模版：撤销/重做置顶，其后图片 / 视频 / 3D / 图表 / 交互组件 / 表单，其余与标准类似
  * 邮件模版：模版变量优先，含样式（邮件兼容常用样式），配合邮件常用排版与表格
- * 全部：组件默认工具栏全量能力
+ * 全部：默认工具栏全量能力，并包含模版变量与模版条件
  */
 const TOOLBAR_PRESETS = {
   simple: {
@@ -183,10 +186,21 @@ const TOOLBAR_PRESETS = {
   },
   full: {
     label: '全部',
-    hint: '开放默认工具栏全部功能（含预设样式、富媒体、源码编辑等）',
+    hint: '开放默认工具栏全部功能（含模版变量、模版条件、预设样式、富媒体、源码编辑等）',
     config: {
       toolbar: {
         items: FULL_TOOLBAR_ITEMS
+      },
+      templateVariable: {
+        variables: [
+          { name: 'userName', label: '用户名' },
+          { name: 'companyName', label: '公司名' },
+          { name: 'rawHtml', label: '原始HTML', kind: 'escape' }
+        ]
+      },
+      templateCondition: {
+        operators: ['truthy', 'falsy', 'filled', 'empty', 'eq', 'neq'],
+        allowElse: true
       }
     }
   }

@@ -30,7 +30,9 @@ const getFormCreatorMountOptions = (editor, schemaText) => {
     preview: cfg.preview !== false,
     showActions: cfg.showActions === true,
     formProps: cfg.formProps && typeof cfg.formProps === 'object' ? cfg.formProps : {},
-    emptyText: i18n.formCreatorEmpty || '暂无表单内容'
+    emptyText: i18n.formCreatorEmpty || '暂无表单内容',
+    themeToken: editor.config.get('hostThemeToken'),
+    locale: editor.config.get('hostLocale')
   };
 };
 
@@ -276,6 +278,8 @@ const openFormCreatorDialogForEditor = (editor, initialValue) => {
       : i18n.formCreatorInsertTitle || '插入表单',
     defaultValue: defaultSchemaValue,
     editorProps: editorCfg,
+    themeToken: editor.config.get('hostThemeToken'),
+    locale: editor.config.get('hostLocale'),
     onSubmit: schema => {
       if (!schema) {
         return;

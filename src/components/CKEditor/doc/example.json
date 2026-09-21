@@ -192,7 +192,7 @@
     },
     {
       "title": "在Form中使用",
-      "description": "展示如何在Form中使用编辑器",
+      "description": "页内 Form 与 useFormModal 中使用编辑器；弹窗示例带模版变量和条件，用于验收下拉",
       "code": "./form.js",
       "scope": [
         {

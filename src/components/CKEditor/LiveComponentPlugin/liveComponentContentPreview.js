@@ -8,7 +8,7 @@ import {
 const ENHANCED_ATTR = 'data-live-component-preview-enhanced';
 
 export const enhanceLiveComponentContentPreview = (container, options = {}) => {
-  const { height = LIVE_COMPONENT_DEFAULT_HEIGHT, libs, props } = options;
+  const { height = LIVE_COMPONENT_DEFAULT_HEIGHT, libs, props, themeToken, locale } = options;
   if (!container) {
     return;
   }
@@ -32,7 +32,7 @@ export const enhanceLiveComponentContentPreview = (container, options = {}) => {
       const host = document.createElement('div');
 
       section.appendChild(host);
-      mountLiveComponentInHost(host, { content, height, libs, props });
+      mountLiveComponentInHost(host, { content, height, libs, props, themeToken, locale });
     });
 };
 

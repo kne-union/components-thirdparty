@@ -1,6 +1,7 @@
 import { createElement } from 'react';
 import { createRoot } from 'react-dom/client';
 import LiveComponentDialog from './LiveComponentDialog';
+import FormCreatorGlobalShell from '../FormCreatorPlugin/FormCreatorGlobalShell';
 
 export const openLiveComponentDialog = ({
   title,
@@ -14,6 +15,8 @@ export const openLiveComponentDialog = ({
   onSitesChange,
   transformContentUrl,
   enableSourceLocate,
+  themeToken,
+  locale,
   onSubmit,
   onCancel
 } = {}) => {
@@ -40,22 +43,26 @@ export const openLiveComponentDialog = ({
   };
 
   root.render(
-    createElement(LiveComponentDialog, {
-      open: true,
-      title,
-      defaultValue,
-      editorHeight,
-      editorLibs,
-      sites,
-      siteActionsOpen,
-      userSitesStorageKey,
-      sitePanelWidth,
-      onSitesChange,
-      transformContentUrl,
-      enableSourceLocate,
-      onOk: handleOk,
-      onCancel: handleCancel
-    })
+    createElement(
+      FormCreatorGlobalShell,
+      { themeToken, locale },
+      createElement(LiveComponentDialog, {
+        open: true,
+        title,
+        defaultValue,
+        editorHeight,
+        editorLibs,
+        sites,
+        siteActionsOpen,
+        userSitesStorageKey,
+        sitePanelWidth,
+        onSitesChange,
+        transformContentUrl,
+        enableSourceLocate,
+        onOk: handleOk,
+        onCancel: handleCancel
+      })
+    )
   );
 
   return { destroy };

@@ -7,6 +7,8 @@ export const openFormCreatorDialog = ({
   title,
   defaultValue,
   editorProps,
+  themeToken,
+  locale,
   onSubmit,
   onCancel
 } = {}) => {
@@ -35,7 +37,7 @@ export const openFormCreatorDialog = ({
   root.render(
     createElement(
       FormCreatorGlobalShell,
-      null,
+      { themeToken, locale },
       createElement(FormCreatorDialog, {
         open: true,
         title,

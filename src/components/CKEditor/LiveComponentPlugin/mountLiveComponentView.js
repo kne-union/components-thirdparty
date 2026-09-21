@@ -1,13 +1,14 @@
 import { createRoot } from 'react-dom/client';
 import { flushSync } from 'react-dom';
 import LiveComponentView from '@components/LiveComponentView';
+import FormCreatorGlobalShell from '../FormCreatorPlugin/FormCreatorGlobalShell';
 import { LIVE_COMPONENT_DEFAULT_HEIGHT } from './constants';
 
 const roots = new WeakMap();
 
 export const mountLiveComponentInHost = (
   host,
-  { content, height = LIVE_COMPONENT_DEFAULT_HEIGHT, libs, props: componentProps } = {}
+  { content, height = LIVE_COMPONENT_DEFAULT_HEIGHT, libs, props: componentProps, themeToken, locale } = {}
 ) => {
   if (!host) {
     return;
@@ -28,7 +29,11 @@ export const mountLiveComponentInHost = (
     roots.set(host, root);
   }
 
-  root.render(<LiveComponentView content={content || ''} libs={libs} props={componentProps} />);
+  root.render(
+    <FormCreatorGlobalShell themeToken={themeToken} locale={locale}>
+      <LiveComponentView content={content || ''} libs={libs} props={componentProps} />
+    </FormCreatorGlobalShell>
+  );
 };
 
 export const unmountLiveComponentFromHost = host => {

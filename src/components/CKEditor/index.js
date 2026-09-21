@@ -4,6 +4,7 @@ import { CKEditor as CKEditor5 } from '@ckeditor/ckeditor5-react';
 import { ClassicEditor } from 'ckeditor5';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import useRefCallback from '@kne/use-ref-callback';
+import { resolveNestedOverlayZIndex } from './dialogFloatingDropdown';
 import {
   Alignment,
   Autoformat,
@@ -515,6 +516,7 @@ const CKEditorFieldView = withLocale(
     const wrapperRef = useRef(null);
     const measuredToolbarDropdownMaxWidth = useToolbarDropdownMaxWidth(wrapperRef);
     const contextLocale = useGlobalValue('locale');
+    const themeToken = useGlobalValue('themeToken');
     const { apis } = usePreset();
     const locale = customLocale || contextLocale;
     const plugins = useMemo(() => {
@@ -566,7 +568,9 @@ const CKEditorFieldView = withLocale(
         liveComponent: liveComponentConfig,
         formCreator: formCreatorConfig,
         model3d: { ...model3dConfig, i18n: ckeditorI18n },
-        ckeditorI18n
+        ckeditorI18n,
+        hostThemeToken: themeToken,
+        hostLocale: locale
       });
 
       // lodash.merge 会按索引合并数组，导致自定义 toolbar.items 无法整体替换默认项
@@ -619,7 +623,7 @@ const CKEditorFieldView = withLocale(
           items: toolbarItems
         }
       };
-    }, [isMarkdown, config, liveComponentConfig, formCreatorConfig, model3dConfig, ckeditorI18n, openCompareValueModal, openConditionEditorModal]);
+    }, [isMarkdown, config, liveComponentConfig, formCreatorConfig, model3dConfig, ckeditorI18n, openCompareValueModal, openConditionEditorModal, themeToken, locale]);
 
     const wrapperStyle = useMemo(() => {
       if (!measuredToolbarDropdownMaxWidth) {
@@ -692,6 +696,7 @@ const CKEditorField = createWithRemoteLoader({
     const modalApi = formModal({
       title: title || '比较值',
       size: 'small',
+      zIndex: resolveNestedOverlayZIndex(),
       formProps: {
         data: { value: defaultValue ?? '' },
         onSubmit: data => {
@@ -742,6 +747,7 @@ const CKEditorField = createWithRemoteLoader({
       const modalApi = formModal({
         title: title || i18n?.templateConditionEdit || '编辑条件',
         size: 'default',
+        zIndex: resolveNestedOverlayZIndex(),
         formProps: {
           data: {
             joiner: data?.joiner === 'or' ? 'or' : 'and',
@@ -888,8 +894,16 @@ CKEditor.Field = CKEditorField;
 
 const CKContent = ({ className, children, liveComponent: liveComponentProp, formCreator: formCreatorProp, model3d: model3dProp }) => {
   const ref = useRef(null);
-  const liveComponentOptions = useMemo(() => resolveLiveComponentOptions(liveComponentProp), [liveComponentProp]);
-  const formCreatorOptions = useMemo(() => resolveFormCreatorOptions(formCreatorProp), [formCreatorProp]);
+  const themeToken = useGlobalValue('themeToken');
+  const locale = useGlobalValue('locale');
+  const liveComponentOptions = useMemo(
+    () => Object.assign({}, resolveLiveComponentOptions(liveComponentProp), { themeToken, locale }),
+    [liveComponentProp, themeToken, locale]
+  );
+  const formCreatorOptions = useMemo(
+    () => Object.assign({}, resolveFormCreatorOptions(formCreatorProp), { themeToken, locale }),
+    [formCreatorProp, themeToken, locale]
+  );
   const model3dOptions = useMemo(() => resolveModel3dOptions(model3dProp), [model3dProp]);
 
   useLayoutEffect(() => {
