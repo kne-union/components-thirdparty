@@ -3,6 +3,7 @@ import { Button, Input, Empty, Tree } from 'antd';
 import { DownOutlined, FolderOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons';
 import { useIntl } from '@kne/react-intl';
 import classnames from 'classnames';
+import Fuse from 'fuse.js';
 import withLocale from '../withLocale';
 import ScrollArea from '../ScrollArea';
 import style from '../style.module.scss';
@@ -19,13 +20,18 @@ const ApiMenu = withLocale(({ data, cases = [], currentKey, onChange, onAdd }) =
   const [keyword, setKeyword] = useState('');
   const [expandedKeys, setExpandedKeys] = useState(null);
 
+  const fuse = useMemo(
+    () => new Fuse(data.operations, { keys: ['summary', 'path', 'method'], threshold: 0.3, ignoreLocation: true }),
+    [data.operations]
+  );
+
   const { treeData, allKeys, nodeMap } = useMemo(() => {
-    const search = keyword.trim().toLowerCase();
+    const search = keyword.trim();
+    const matchedKeys = search ? new Set(fuse.search(search).map(({ item }) => item.key)) : null;
     const casesMap = cases.reduce((output, item) => {
       (output[item.operationKey] = output[item.operationKey] || []).push(item);
       return output;
     }, {});
-    const match = (...values) => !search || values.join(' ').toLowerCase().includes(search);
     const defaultTag = formatMessage({ id: 'PostCatDefaultTag' });
     const allKeys = [];
     const nodeMap = {};
@@ -35,7 +41,7 @@ const ApiMenu = withLocale(({ data, cases = [], currentKey, onChange, onAdd }) =
           .filter(item => (item.tags.length ? item.tags.includes(group) : group === defaultTag))
           .map(item => {
             const caseCount = (casesMap[item.key] || []).length;
-            if (!match(item.path, item.summary, item.operationId, item.method)) {
+            if (matchedKeys && !matchedKeys.has(item.key)) {
               return null;
             }
             const key = operationNodeKey(group, item.key);
@@ -74,7 +80,7 @@ const ApiMenu = withLocale(({ data, cases = [], currentKey, onChange, onAdd }) =
       })
       .filter(group => group.children.length > 0);
     return { treeData, allKeys, nodeMap };
-  }, [data, cases, keyword, formatMessage]);
+  }, [data, fuse, cases, keyword, formatMessage]);
 
   const selectedKeys = useMemo(() => Object.keys(nodeMap).filter(key => nodeMap[key] === currentKey), [nodeMap, currentKey]);
 

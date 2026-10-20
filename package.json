@@ -115,6 +115,7 @@
     "@monaco-editor/react": "^4.7.0",
     "ckeditor5": "47.4.0",
     "dayjs": "^1.11.19",
+    "fuse.js": "^7.5.0",
     "lottie-web": "^5.13.0",
     "plantuml-encoder": "^1.4.0",
     "simplebar-react": "^3.3.2",

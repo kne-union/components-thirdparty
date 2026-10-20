@@ -268,7 +268,6 @@ const parseOpenApiData = (input = {}) => {
         tags,
         summary: operation.summary || '',
         description: operation.description || '',
-        operationId: operation.operationId || '',
         deprecated: !!operation.deprecated,
         parameters: {
           path: parameters.path,

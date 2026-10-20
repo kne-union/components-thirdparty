@@ -4,6 +4,7 @@ import { ClearOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons
 import { useIntl } from '@kne/react-intl';
 import dayjs from 'dayjs';
 import classnames from 'classnames';
+import Fuse from 'fuse.js';
 import withLocale from '../withLocale';
 import { MethodTag } from './ApiMenu';
 import ScrollArea from '../ScrollArea';
@@ -17,13 +18,16 @@ const HistoryList = withLocale(({ history = [], operationKeys, currentId, onSele
   const { formatMessage } = useIntl();
   const [keyword, setKeyword] = useState('');
 
+  const fuse = useMemo(() => new Fuse(history, { keys: ['summary', 'url', 'method'], threshold: 0.3, ignoreLocation: true }), [history]);
+
   const groups = useMemo(() => {
-    const search = keyword.trim().toLowerCase();
+    const search = keyword.trim();
+    const matched = search ? new Set(fuse.search(search).map(({ item }) => item)) : null;
     const today = dayjs().format('YYYY-MM-DD');
     const yesterday = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
     const output = [];
     history
-      .filter(item => !search || [item.method, item.url, item.summary].join(' ').toLowerCase().includes(search))
+      .filter(item => !matched || matched.has(item))
       .forEach(item => {
         const date = dayjs(item.time).format('YYYY-MM-DD');
         const label = date === today ? formatMessage({ id: 'PostCatToday' }) : date === yesterday ? formatMessage({ id: 'PostCatYesterday' }) : date;
@@ -31,7 +35,7 @@ const HistoryList = withLocale(({ history = [], operationKeys, currentId, onSele
         group && group.label === label ? group.list.push(item) : output.push({ label, list: [item] });
       });
     return output;
-  }, [history, keyword, formatMessage]);
+  }, [history, fuse, keyword, formatMessage]);
 
   return (
     <div className={style['menu']}>

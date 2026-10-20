@@ -258,7 +258,6 @@ const ApiItem = withLocale(
               {operation.path}
             </Text>
             {operation.deprecated && <Tag color="error">{formatMessage({ id: 'PostCatDeprecated' })}</Tag>}
-            {operation.operationId && <Text type="secondary">{operation.operationId}</Text>}
           </div>
           {operation.description && (
             <Paragraph type="secondary" className={style['pre-wrap']} style={{ margin: 0 }}>
