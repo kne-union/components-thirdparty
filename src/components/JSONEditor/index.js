@@ -9,7 +9,7 @@ import '@kne/json-view/dist/index.css';
 import { useIntl } from '@kne/react-intl';
 import withLocale from './withLocale';
 
-const JSONEditorField = withLocale(({ value, onChange, className }) => {
+const JSONEditorField = withLocale(({ value, onChange, className, height }) => {
   const { formatMessage } = useIntl();
   const [type, setType] = useState('code');
   const [editor, setEditor] = useState();
@@ -53,6 +53,7 @@ const JSONEditorField = withLocale(({ value, onChange, className }) => {
       {type === 'code' && (
         <CodeEditor
           className={style['code-editor']}
+          height={height}
           defaultValue={value ?? ''}
           onChange={onChange}
           language="json"

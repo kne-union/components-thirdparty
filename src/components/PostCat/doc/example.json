@@ -1,0 +1,47 @@
+{
+  "isFull": true,
+  "list": [
+    {
+      "title": "站点模式",
+      "description": "与 LiveComponentEditor 相同的站点管理：左侧站点文件树（localStorage:KEY 为本地站点，http 地址为远程站点，可添加自定义站点），每个文件是一份 OpenAPI JSON；右侧展示文档、在线调试，支持导入 / 导出与环境管理。演示首次进入会在本地站点写入 Petstore 示例",
+      "code": "./base.js",
+      "scope": [
+        {
+          "name": "_PostCat",
+          "packageName": "@components/PostCat"
+        },
+        {
+          "name": "_mockPreset",
+          "packageName": "@root/mockPreset"
+        },
+        {
+          "name": "remoteLoader",
+          "packageName": "@kne/remote-loader"
+        }
+      ]
+    },
+    {
+      "title": "文档展示",
+      "description": "单独使用 OpenApiView 展示一份 OpenAPI 文档：按 tag 分组的接口菜单、参数与 schema 树表、响应、示例和在线调试",
+      "code": "./view.js",
+      "scope": [
+        {
+          "name": "_PostCat",
+          "packageName": "@components/PostCat"
+        },
+        {
+          "name": "_mockPreset",
+          "packageName": "@root/mockPreset"
+        },
+        {
+          "name": "remoteLoader",
+          "packageName": "@kne/remote-loader"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        }
+      ]
+    }
+  ]
+}

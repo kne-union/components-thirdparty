@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { App, Button, Flex, Input, Modal, Select, Space, Spin, Typography, Dropdown } from 'antd';
+import { App, Button, Flex, Input, Modal, Segmented, Select, Space, Spin, Typography, Dropdown } from 'antd';
 import {
   FolderAddOutlined,
   FileAddOutlined,
@@ -109,6 +109,9 @@ const SiteFilePanel = ({
   onCurrentFileChange,
   onActiveHostChange,
   refreshToken = 0,
+  defaultFileName = 'untitled.live',
+  // 新建文件时可选的类型：[{ key, label, icon, defaultName, extension, renderFields({ value, onChange }), getContent(value) }]
+  fileTypes = null,
   onCollapse
 }) => {
   const { formatMessage } = useIntl();
@@ -419,30 +422,47 @@ const SiteFilePanel = ({
         return;
       }
       const underDirectory = parentNode && isDirectoryData(parentNode);
+      const fileType = type === 'file' && fileTypes?.length ? fileTypes[0] : null;
       setCreateModal({
         type,
         parentId: underDirectory ? parentNode.id : null,
         parentName: underDirectory ? parentNode.name : '',
-        name: type === 'directory' ? 'new-folder' : 'untitled.live'
+        name: type === 'directory' ? 'new-folder' : fileType ? fileType.defaultName || 'untitled' : defaultFileName,
+        fileTypeKey: fileType?.key,
+        extra: {}
       });
     },
-    [formatMessage, message]
+    [formatMessage, message, defaultFileName, fileTypes]
   );
+
+  const createFileType = createModal?.type === 'file' ? fileTypes?.find(item => item.key === createModal.fileTypeKey) : null;
 
   const handleCreateConfirm = useRefCallback(async () => {
     if (!api || !createModal?.name?.trim()) {
       return;
     }
-    const name = createModal.name.trim();
+    let name = createModal.name.trim();
+    if (createFileType?.extension && !name.toLowerCase().endsWith(createFileType.extension.toLowerCase())) {
+      name = `${name}${createFileType.extension}`;
+    }
     if (hasDuplicateName(tree, createModal.parentId, name)) {
       message.error(formatMessage({ id: 'MsgDuplicateName' }));
       return;
+    }
+    let content = '';
+    if (createFileType?.getContent) {
+      try {
+        content = createFileType.getContent(createModal.extra || {});
+      } catch (error) {
+        message.error(error.message);
+        return;
+      }
     }
     try {
       if (createModal.type === 'directory') {
         await api.createFolder({ parentId: createModal.parentId, name });
       } else {
-        await api.create({ parentId: createModal.parentId, name, content: '' });
+        await api.create({ parentId: createModal.parentId, name, content });
       }
       message.success(formatMessage({ id: 'MsgCreateSuccess' }));
       setCreateModal(null);
@@ -900,12 +920,31 @@ const SiteFilePanel = ({
         onCancel={() => setCreateModal(null)}
         onOk={handleCreateConfirm}
         destroyOnClose>
-        <Input
-          value={createModal?.name || ''}
-          onChange={e => setCreateModal(prev => (prev ? { ...prev, name: e.target.value } : prev))}
-          placeholder={formatMessage({ id: 'NamePlaceholder' })}
-          onPressEnter={handleCreateConfirm}
-        />
+        <Flex vertical gap={12}>
+          {createFileType && fileTypes.length > 1 ? (
+            <Segmented
+              block
+              value={createModal.fileTypeKey}
+              options={fileTypes.map(item => ({ value: item.key, label: item.label, icon: item.icon }))}
+              onChange={fileTypeKey => setCreateModal(prev => (prev ? { ...prev, fileTypeKey, extra: {} } : prev))}
+            />
+          ) : null}
+          <Space.Compact block>
+            <Input
+              value={createModal?.name || ''}
+              onChange={e => setCreateModal(prev => (prev ? { ...prev, name: e.target.value } : prev))}
+              placeholder={formatMessage({ id: 'NamePlaceholder' })}
+              onPressEnter={handleCreateConfirm}
+            />
+            {createFileType?.extension ? <Space.Addon>{createFileType.extension}</Space.Addon> : null}
+          </Space.Compact>
+          {createFileType?.renderFields
+            ? createFileType.renderFields({
+                value: createModal?.extra || {},
+                onChange: extra => setCreateModal(prev => (prev ? { ...prev, extra } : prev))
+              })
+            : null}
+        </Flex>
       </Modal>
 
       <Modal
@@ -973,12 +1012,12 @@ const SiteFilePanel = ({
   );
 };
 
-export const SaveAsModal = ({ open, sites, defaultHost, onCancel, onOk }) => {
+export const SaveAsModal = ({ open, sites, defaultHost, defaultName = 'untitled.live', onCancel, onOk }) => {
   const { formatMessage } = useIntl();
   const { message } = App.useApp();
   const [host, setHost] = useState(defaultHost || sites[0]?.host);
   const [parentId, setParentId] = useState('');
-  const [name, setName] = useState('untitled.live');
+  const [name, setName] = useState(defaultName);
   const [tree, setTree] = useState([]);
   const [loading, setLoading] = useState(false);
 
@@ -986,9 +1025,9 @@ export const SaveAsModal = ({ open, sites, defaultHost, onCancel, onOk }) => {
     if (open) {
       setHost(defaultHost || sites[0]?.host);
       setParentId('');
-      setName('untitled.live');
+      setName(defaultName);
     }
-  }, [open, defaultHost, sites]);
+  }, [open, defaultHost, defaultName, sites]);
 
   useEffect(() => {
     if (!open || !host) {
