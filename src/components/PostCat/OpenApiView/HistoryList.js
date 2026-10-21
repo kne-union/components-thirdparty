@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Button, Empty, Input, Popconfirm, Tag, Typography } from 'antd';
 import { ClearOutlined, DeleteOutlined, SearchOutlined } from '@ant-design/icons';
 import { useIntl } from '@kne/react-intl';
@@ -7,18 +7,37 @@ import classnames from 'classnames';
 import withLocale from '../withLocale';
 import { MethodTag } from './ApiMenu';
 import ScrollArea from '../ScrollArea';
+import useLoadMore from './useLoadMore';
 import style from '../style.module.scss';
 
 const { Text } = Typography;
 
 export const statusTagColor = status => (!status ? 'error' : status < 300 ? 'success' : status < 400 ? 'warning' : 'error');
 
-const HistoryList = withLocale(({ history = [], operationKeys, currentId, onSelect, onRemove, onClear }) => {
+const SEARCH_DELAY = 300;
+
+/** hasMore + onLoadMore 开启下拉加载：滚动接近底部时自动加载，内容不足一屏时可点「加载更多」；传 onSearch 时搜索交给调用方（服务端），不再本地过滤 */
+const HistoryList = withLocale(({ history = [], total, hasMore = false, onLoadMore, onSearch, operationKeys, currentId, onSelect, onRemove, onClear }) => {
   const { formatMessage } = useIntl();
   const [keyword, setKeyword] = useState('');
+  const onSearchRef = useRef(onSearch);
+  onSearchRef.current = onSearch;
+  const searchedRef = useRef('');
+  useEffect(() => {
+    const value = keyword.trim();
+    if (!onSearchRef.current || value === searchedRef.current) {
+      return;
+    }
+    const timer = setTimeout(() => {
+      searchedRef.current = value;
+      onSearchRef.current(value);
+    }, SEARCH_DELAY);
+    return () => clearTimeout(timer);
+  }, [keyword]);
+  const loader = useLoadMore({ hasMore, onLoadMore });
 
   const groups = useMemo(() => {
-    const search = keyword.trim().toLowerCase();
+    const search = onSearch ? '' : keyword.trim().toLowerCase();
     const today = dayjs().format('YYYY-MM-DD');
     const yesterday = dayjs().subtract(1, 'day').format('YYYY-MM-DD');
     const output = [];
@@ -31,7 +50,7 @@ const HistoryList = withLocale(({ history = [], operationKeys, currentId, onSele
         group && group.label === label ? group.list.push(item) : output.push({ label, list: [item] });
       });
     return output;
-  }, [history, keyword, formatMessage]);
+  }, [history, keyword, onSearch, formatMessage]);
 
   return (
     <div className={style['menu']}>
@@ -44,7 +63,7 @@ const HistoryList = withLocale(({ history = [], operationKeys, currentId, onSele
       />
       {history.length > 0 && (
         <div className={style['history-bar']}>
-          <Text type="secondary">{formatMessage({ id: 'PostCatHistoryCount' }, { count: history.length })}</Text>
+          <Text type="secondary">{formatMessage({ id: 'PostCatHistoryCount' }, { count: total ?? history.length })}</Text>
           <Popconfirm title={formatMessage({ id: 'PostCatClearHistoryConfirm' })} onConfirm={onClear}>
             <Button type="link" size="small" danger icon={<ClearOutlined />}>
               {formatMessage({ id: 'PostCatClearHistory' })}
@@ -52,7 +71,7 @@ const HistoryList = withLocale(({ history = [], operationKeys, currentId, onSele
           </Popconfirm>
         </div>
       )}
-      <ScrollArea className={style['menu-body']}>
+      <ScrollArea className={style['menu-body']} scrollableNodeProps={loader.scrollableNodeProps}>
         <div className={style['menu-body-inner']}>
           {groups.length > 0 ? (
             groups.map(group => (
@@ -91,8 +110,9 @@ const HistoryList = withLocale(({ history = [], operationKeys, currentId, onSele
               </div>
             ))
           ) : (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={formatMessage({ id: 'PostCatNoHistory' })} />
+            !loader.enabled && <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={formatMessage({ id: 'PostCatNoHistory' })} />
           )}
+          {loader.footer}
         </div>
       </ScrollArea>
     </div>

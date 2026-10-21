@@ -169,6 +169,26 @@ export const buildExample = (schema, depth = 0) => {
   }
 };
 
+/** 调试表单初值：只取 schema 显式声明的 example / default，不按类型生成占位值 */
+export const buildDefaultValue = (schema, depth = 0) => {
+  if (!isPlainObject(schema) || depth > 8) {
+    return undefined;
+  }
+  if (schema.example !== undefined) return schema.example;
+  if (schema.default !== undefined) return schema.default;
+  if ((schema.type === 'object' || schema.properties) && !schema.$circular) {
+    const output = Object.keys(schema.properties || {}).reduce((output, key) => {
+      const value = buildDefaultValue(schema.properties[key], depth + 1);
+      if (value !== undefined) {
+        output[key] = value;
+      }
+      return output;
+    }, {});
+    return Object.keys(output).length ? output : undefined;
+  }
+  return undefined;
+};
+
 const toContentList = (content, fallback) => {
   if (isPlainObject(content)) {
     return Object.keys(content).map(contentType => ({
