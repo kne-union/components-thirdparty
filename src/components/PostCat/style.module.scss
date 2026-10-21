@@ -81,6 +81,10 @@ $method-colors: (
   }
 }
 
+.open-api-menu-trigger {
+  display: none;
+}
+
 .open-api-main {
   flex: 1;
   min-width: 0;
@@ -711,9 +715,19 @@ $method-colors: (
   text-align: center;
 }
 
+// 侧栏形态只看容器宽度：useIsMobile 在视口模式下按窗口判断，窄内容区会与样式不一致
 @include resp.mobile-container {
   .open-api-view {
     flex-direction: column;
+  }
+
+  .open-api-aside {
+    display: none;
+  }
+
+  .open-api-menu-trigger {
+    display: inline-flex;
+    align-self: flex-start;
   }
 
   .try-target {
