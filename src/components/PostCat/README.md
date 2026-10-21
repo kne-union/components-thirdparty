@@ -167,14 +167,26 @@ render(<ViewExample />);
 | history | 调用记录（受控） | array | - |
 | defaultHistory | 调用记录初始值（非受控，仅存内存） | array | `[]` |
 | onHistoryChange | 调用记录变化回调 | function(list) | - |
-| maxHistory | 最多保留的调用记录条数 | number | 100 |
+| maxHistory | 最多保留的调用记录条数（服务端分页时传 `Infinity`，避免截断已加载记录） | number | 100 |
+| historyTotal | 调用记录总条数（服务端分页时显示），不传为已加载条数 | number | - |
+| historyHasMore | 是否还有更多调用记录；为 true 且传 `onHistoryLoadMore` 时开启下拉加载 | boolean | false |
+| onHistoryLoadMore | 加载下一页调用记录，返回 Promise；结果需由调用方追加到 `history` | function | - |
+| onHistorySearch | 传入后调用记录搜索交给调用方（如服务端），参数为关键字（输入停顿 300ms 后触发），不再本地过滤；结果需由调用方替换 `history` | function(keyword) | - |
+| onHistoryClear | 点「清空」时回调（在 `onHistoryChange([])` 之前），服务端分页时用来清空未加载的记录 | function | - |
+| caseCounts | 各接口的用例总数 `{ [operationKey]: count }`（服务端分页时传），接口树数量与「请求」页签是否显示用例列表以此为准 | object | - |
+| onCasesLoadMore | 加载某接口下一页用例，参数 `operationKey`，返回 Promise；打开接口且未加载用例时自动加载第一页，结果需由调用方追加到 `cases` | function(operationKey) | - |
 | cases | 接口用例（受控） | array | - |
 | defaultCases | 接口用例初始值（非受控） | array | `[]` |
 | onCasesChange | 接口用例变化回调 | function(list) | - |
 | caseActionsOpen | 是否允许新增 / 修改 / 删除用例 | boolean | true |
 | apiActionsOpen | 是否允许新增 / 编辑 / 删除接口（需同时传 `onDataChange`） | boolean | true |
 | onDataChange | 接口增删改后的文档回调，`(doc, { fromKey, toKey })`：`fromKey` 为原接口 key（新增为 null），`toKey` 为新 key（删除为 null） | function | - |
+| stickyTop | 左侧接口 / 调用记录列表吸顶时距视口顶部的距离（页面有固定 header 时传 header 高度），数字按 px | number \| string | 0 |
 | className | 根节点 className | string | - |
+
+分页与搜索相关属性（`historyTotal`、`historyHasMore`、`onHistoryLoadMore`、`onHistorySearch`、`onHistoryClear`、`caseCounts`、`onCasesLoadMore`）均为可选：不传时调用记录与用例按全量本地数据处理，PostCat 站点模式（本地站点 / 服务器站点）即为此方式。
+
+调试参数按 schema 填写：类型只作为输入框 placeholder，初值只取 schema 声明的 `example` / `default`；`object` 类型的 query / header 参数用 jsonschema-form 按属性填写，query 中按 `name[key]=value` 展开（参数声明 `style: form` 且 explode 时按属性平铺）；数组参数重复参数名（`name=a&name=b`，输入框可填 JSON 数组或逗号分隔），对象内的数组用 `name[key][]=value`。
 
 #### 接口用例结构
 

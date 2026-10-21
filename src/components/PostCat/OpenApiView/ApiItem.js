@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Button, Popconfirm, Segmented, Space, Tabs, Tag, Typography } from 'antd';
 import { DeleteOutlined, EditOutlined, FileTextOutlined, SendOutlined } from '@ant-design/icons';
 import classnames from 'classnames';
@@ -11,6 +11,7 @@ import TryIt from './TryIt';
 import CaseSelect from './CaseSelect';
 import { buildExample, schemaToRows } from './parseOpenApiData';
 import ScrollArea from '../ScrollArea';
+import useLoadMore from './useLoadMore';
 import style from '../style.module.scss';
 
 const { Title, Paragraph, Text } = Typography;
@@ -86,6 +87,8 @@ const ApiItem = withLocale(
     onTabChange,
     record,
     cases = [],
+    caseTotal,
+    onLoadMoreCases,
     currentCase,
     caseActionsOpen = true,
     onSelectCase,
@@ -99,6 +102,13 @@ const ApiItem = withLocale(
     const { formatMessage } = useIntl();
     const [narrow, setNarrow] = useState(false);
     const rootRef = useResize(el => setNarrow(el.clientWidth < NARROW_WIDTH));
+    const totalCases = caseTotal ?? cases.length;
+    const caseLoader = useLoadMore({ hasMore: totalCases > cases.length, onLoadMore: onLoadMoreCases });
+    const needFirstPage = cases.length === 0 && caseLoader.enabled;
+    useEffect(() => {
+      needFirstPage && caseLoader.loadMore();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [operation.key, needFirstPage]);
     const parameterGroups = useMemo(
       () =>
         [
@@ -177,7 +187,7 @@ const ApiItem = withLocale(
     );
 
     const runContent =
-      cases.length > 0 && narrow ? (
+      totalCases > 0 && narrow ? (
         <>
           <CaseSelect
             cases={cases}
@@ -187,12 +197,13 @@ const ApiItem = withLocale(
             onRenameCase={onRenameCase}
             onRemoveCase={onRemoveCase}
           />
+          {caseLoader.footer}
           {tryItNode}
         </>
-      ) : cases.length > 0 ? (
+      ) : totalCases > 0 ? (
         <div className={style['run-layout']}>
           <div className={style['case-list']}>
-            <ScrollArea className={style['case-list-scroll']}>
+            <ScrollArea className={style['case-list-scroll']} scrollableNodeProps={caseLoader.scrollableNodeProps}>
               <div className={style['case-list-inner']}>
                 {[{ id: null, name: formatMessage({ id: 'PostCatDraftRequest' }) }, ...cases].map(item => (
                   <div
@@ -219,6 +230,7 @@ const ApiItem = withLocale(
                     )}
                   </div>
                 ))}
+                {caseLoader.footer}
               </div>
             </ScrollArea>
           </div>

@@ -38,6 +38,7 @@ export default {
   PostCatHistoryTab: '历史',
   PostCatSearchHistory: '搜索调用记录',
   PostCatHistoryCount: '共 {count} 条',
+  PostCatLoadMore: '加载更多',
   PostCatClearHistory: '清空',
   PostCatClearHistoryConfirm: '确定清空当前文档的全部调用记录吗？',
   PostCatNoHistory: '暂无调用记录，在「请求」页签发送后会出现在这里',

@@ -102,6 +102,12 @@ $method-colors: (
   font-size: 12px;
 }
 
+.load-more {
+  display: flex;
+  justify-content: center;
+  padding: 8px 0;
+}
+
 .history-group {
   display: flex;
   flex-direction: column;
@@ -589,11 +595,20 @@ $method-colors: (
   gap: 8px;
 }
 
+.try-field-object {
+  align-items: flex-start;
+}
+
 .try-field-label {
   flex: 0 0 160px;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.try-field-control {
+  flex: 1;
+  min-width: 0;
 }
 
 .postcat {

@@ -38,6 +38,7 @@ export default {
   PostCatHistoryTab: 'History',
   PostCatSearchHistory: 'Search history',
   PostCatHistoryCount: '{count} records',
+  PostCatLoadMore: 'Load more',
   PostCatClearHistory: 'Clear',
   PostCatClearHistoryConfirm: 'Clear all request history of this document?',
   PostCatNoHistory: 'No history yet. Requests sent from the Request tab will appear here',

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { Flex, Segmented, Space, Typography, message } from 'antd';
 import { useIntl } from '@kne/react-intl';
 import { useIsMobile } from '@kne/responsive-utils';
@@ -24,7 +24,9 @@ export const canUseSchemaForm = schema => schema?.type === 'object' && Object.ke
 
 const formatExample = value => (value !== null && typeof value === 'object' ? JSON.stringify(value) : String(value));
 
-/** 叶子字段的说明、示例改由 labelRender 显示，并去掉 description 以免与 label 旁的 tooltip 重复 */
+const getTypeLabel = schema => [].concat(schema.type || []).join(' | ') || undefined;
+
+/** 叶子字段的类型作为 placeholder；说明、示例改由 labelRender 显示，并去掉 description 以免与 label 旁的 tooltip 重复 */
 const withFieldLabel = (schema, exampleLabel) => {
   if (!schema || typeof schema !== 'object' || Array.isArray(schema)) {
     return schema;
@@ -42,9 +44,16 @@ const withFieldLabel = (schema, exampleLabel) => {
     }
   });
   const isLeaf = !output.properties && !output.items?.properties && !output.oneOf && !output.anyOf;
+  if (!isLeaf) {
+    return output;
+  }
+  const typeLabel = getTypeLabel(output);
+  if (typeLabel && output['x-props']?.placeholder === undefined) {
+    output['x-props'] = { ...output['x-props'], placeholder: typeLabel };
+  }
   const { description } = output;
   const hasExample = output.example !== undefined;
-  if (!isLeaf || (!description && !hasExample)) {
+  if (!description && !hasExample) {
     return output;
   }
   delete output.description;
@@ -65,18 +74,20 @@ const withFieldLabel = (schema, exampleLabel) => {
   return output;
 };
 
-/** formProps 只在挂载时生成：data 变化会让 react-form 重置初值 */
-const SchemaBodyForm = ({ schema: originSchema, defaultData, onChange }) => {
+/** formProps 只在挂载时生成：data 变化会让 react-form 重置初值；onChange 回传表单对象 */
+export const SchemaForm = withLocale(({ schema: originSchema, defaultData, onChange }) => {
   const { formatMessage } = useIntl();
   const exampleLabel = formatMessage({ id: 'PostCatFieldExample' });
   const schema = useMemo(() => withFieldLabel(originSchema, exampleLabel), [originSchema, exampleLabel]);
   const isMobile = useIsMobile();
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
   const [formProps] = useState(() => ({
     data: defaultData,
-    onFormDataChange: data => onChange(JSON.stringify(data, null, 2))
+    onFormDataChange: data => onChangeRef.current(data)
   }));
   return <JSONSchemaForm schema={schema} column={isMobile ? 1 : 2} gap={16} footer={false} formProps={formProps} />;
-};
+});
 
 /** application/json 请求体：schema 为 object 时可在表单与 JSON 之间切换，value 始终为 JSON 文本 */
 const RequestBodyEditor = withLocale(({ title, schema, value, onChange }) => {
@@ -127,7 +138,7 @@ const RequestBodyEditor = withLocale(({ title, schema, value, onChange }) => {
       </Flex>
       <div className={style['try-body']}>
         {mode === 'form' ? (
-          <SchemaBodyForm schema={schema} defaultData={formData} onChange={onChange} />
+          <SchemaForm schema={schema} defaultData={formData} onChange={data => onChange(JSON.stringify(data, null, 2))} />
         ) : (
           <JSONEditor.Field value={value} onChange={onChange} height={280} />
         )}

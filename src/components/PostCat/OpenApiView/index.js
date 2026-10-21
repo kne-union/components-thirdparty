@@ -26,7 +26,25 @@ const OpenApiView = createWithRemoteLoader({
   withLocale(({ remoteModules, ...props }) => {
     const [useFormModal] = remoteModules;
     const formModal = useFormModal();
-    const { data, envs = [], tryIt = true, maxHistory = 100, caseActionsOpen = true, apiActionsOpen = true, onDataChange, className } = props;
+    const {
+      data,
+      envs = [],
+      tryIt = true,
+      maxHistory = 100,
+      historyTotal,
+      historyHasMore,
+      onHistoryLoadMore,
+      onHistorySearch,
+      onHistoryClear,
+      caseCounts,
+      onCasesLoadMore,
+      caseActionsOpen = true,
+      apiActionsOpen = true,
+      stickyTop,
+      onDataChange,
+      className
+    } = props;
+    const stickyTopValue = typeof stickyTop === 'number' ? `${stickyTop}px` : stickyTop;
     const apiEditable = apiActionsOpen && !!onDataChange;
     const { formatMessage } = useIntl();
     const isMobile = useIsMobile();
@@ -123,7 +141,7 @@ const OpenApiView = createWithRemoteLoader({
             options={[
               { label: formatMessage({ id: 'PostCatApiTab' }), value: 'api', icon: <ApiOutlined /> },
               {
-                label: `${formatMessage({ id: 'PostCatHistoryTab' })}${history.length ? ` (${history.length})` : ''}`,
+                label: `${formatMessage({ id: 'PostCatHistoryTab' })}${(historyTotal ?? history.length) ? ` (${historyTotal ?? history.length})` : ''}`,
                 value: 'history',
                 icon: <HistoryOutlined />
               }
@@ -133,6 +151,10 @@ const OpenApiView = createWithRemoteLoader({
         {tryIt && asideTab === 'history' ? (
           <HistoryList
             history={history}
+            total={historyTotal}
+            hasMore={historyHasMore}
+            onLoadMore={onHistoryLoadMore}
+            onSearch={onHistorySearch}
             operationKeys={operationKeys}
             currentId={currentHistory?.id}
             onSelect={item => select(item.operationKey, { type: 'history', id: item.id })}
@@ -141,6 +163,7 @@ const OpenApiView = createWithRemoteLoader({
               currentHistory?.id === item.id && setSelection(null);
             }}
             onClear={() => {
+              onHistoryClear && onHistoryClear();
               setHistory([]);
               currentHistory && setSelection(null);
             }}
@@ -149,6 +172,7 @@ const OpenApiView = createWithRemoteLoader({
           <ApiMenu
             data={parsed}
             cases={tryIt ? cases : []}
+            caseCounts={tryIt ? caseCounts : {}}
             currentKey={operation?.key}
             onChange={key => select(key, null)}
             onAdd={apiEditable ? () => editOperation(null) : null}
@@ -165,7 +189,12 @@ const OpenApiView = createWithRemoteLoader({
             {aside}
           </Drawer>
         ) : (
-          <div className={style['open-api-aside']}>{aside}</div>
+          <div
+            className={style['open-api-aside']}
+            style={stickyTopValue ? { top: stickyTopValue, maxHeight: `calc(100vh - ${stickyTopValue} - 16px)` } : undefined}
+          >
+            {aside}
+          </div>
         )}
         <div className={style['open-api-main']}>
           <ApiHeader data={parsed} />
@@ -185,6 +214,8 @@ const OpenApiView = createWithRemoteLoader({
               onTabChange={setActiveTab}
               record={record}
               cases={cases.filter(item => item.operationKey === operation.key)}
+              caseTotal={caseCounts ? caseCounts[operation.key] || 0 : undefined}
+              onLoadMoreCases={onCasesLoadMore ? () => onCasesLoadMore(operation.key) : undefined}
               currentCase={currentCase && currentCase.operationKey === operation.key ? currentCase : null}
               onSelectCase={id => select(operation.key, id ? { type: 'case', id } : null)}
               caseActionsOpen={caseActionsOpen}

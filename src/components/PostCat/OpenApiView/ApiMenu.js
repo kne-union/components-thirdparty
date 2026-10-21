@@ -13,8 +13,8 @@ export const MethodTag = ({ method, className }) => (
 
 const operationNodeKey = (group, key) => `api:${group}|${key}`;
 
-/** currentKey 为接口 key（`${method}:${path}`），cases 仅用于显示接口下已保存用例的数量 */
-const ApiMenu = withLocale(({ data, cases = [], currentKey, onChange, onAdd }) => {
+/** currentKey 为接口 key（`${method}:${path}`），cases 仅用于显示接口下已保存用例的数量；传 caseCounts（服务端分页）时以其为准 */
+const ApiMenu = withLocale(({ data, cases = [], caseCounts, currentKey, onChange, onAdd }) => {
   const { formatMessage } = useIntl();
   const [keyword, setKeyword] = useState('');
   const [expandedKeys, setExpandedKeys] = useState(null);
@@ -34,7 +34,7 @@ const ApiMenu = withLocale(({ data, cases = [], currentKey, onChange, onAdd }) =
         const children = data.operations
           .filter(item => (item.tags.length ? item.tags.includes(group) : group === defaultTag))
           .map(item => {
-            const caseCount = (casesMap[item.key] || []).length;
+            const caseCount = caseCounts ? caseCounts[item.key] || 0 : (casesMap[item.key] || []).length;
             if (!match(item.path, item.summary, item.operationId, item.method)) {
               return null;
             }
@@ -74,7 +74,7 @@ const ApiMenu = withLocale(({ data, cases = [], currentKey, onChange, onAdd }) =
       })
       .filter(group => group.children.length > 0);
     return { treeData, allKeys, nodeMap };
-  }, [data, cases, keyword, formatMessage]);
+  }, [data, cases, caseCounts, keyword, formatMessage]);
 
   const selectedKeys = useMemo(() => Object.keys(nodeMap).filter(key => nodeMap[key] === currentKey), [nodeMap, currentKey]);
 

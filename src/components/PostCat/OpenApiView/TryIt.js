@@ -5,9 +5,10 @@ import { useIntl } from '@kne/react-intl';
 import JSONView from '@kne/json-view';
 import '@kne/json-view/dist/index.css';
 import withLocale from '../withLocale';
-import { buildExample } from './parseOpenApiData';
+import classnames from 'classnames';
+import { buildDefaultValue } from './parseOpenApiData';
 import ScrollArea from '../ScrollArea';
-import RequestBodyEditor from './RequestBodyEditor';
+import RequestBodyEditor, { SchemaForm, canUseSchemaForm } from './RequestBodyEditor';
 import style from '../style.module.scss';
 
 const { Text } = Typography;
@@ -53,12 +54,54 @@ const parseHeaders = headers => {
   }
 };
 
+const isObjectParameter = item => item.schema?.type === 'object' || !!item.schema?.properties;
+
 const initValues = (parameters = []) =>
   parameters.reduce((output, item) => {
-    const example = item.example !== undefined ? item.example : buildExample(item.schema);
-    output[item.name] = example === null || example === undefined || typeof example === 'object' ? '' : String(example);
+    const value = item.example !== undefined ? item.example : buildDefaultValue(item.schema);
+    if (isObjectParameter(item) && canUseSchemaForm(item.schema)) {
+      output[item.name] = value && typeof value === 'object' ? value : {};
+    } else {
+      output[item.name] = value === null || value === undefined ? '' : typeof value === 'object' ? JSON.stringify(value) : String(value);
+    }
     return output;
   }, {});
+
+/** 对象按 name[key] 展开；数组在顶层重复 name，嵌套时用 name[]，确保单元素也解析为数组 */
+const appendQuery = (query, name, value, nested = false) => {
+  if (value === undefined || value === null || value === '') {
+    return;
+  }
+  if (Array.isArray(value)) {
+    value.forEach(item => appendQuery(query, nested ? `${name}[]` : name, item, true));
+    return;
+  }
+  if (typeof value === 'object') {
+    Object.keys(value).forEach(key => appendQuery(query, `${name}[${key}]`, value[key], true));
+    return;
+  }
+  query.append(name, String(value));
+};
+
+/** object 参数：style=form 且 explode 时按属性平铺，否则（含 deepObject）按 name[key] 展开 */
+const appendParameter = (query, item, value) => {
+  const isArray = item.schema?.type === 'array';
+  if ((isObjectParameter(item) || isArray) && typeof value === 'string' && value.trim()) {
+    try {
+      value = JSON.parse(value);
+    } catch {
+      // 非 JSON 文本原样发送
+    }
+  }
+  if (value && typeof value === 'object' && !Array.isArray(value) && item.style === 'form' && item.explode !== false) {
+    Object.keys(value).forEach(key => appendQuery(query, key, value[key]));
+    return;
+  }
+  if (isArray && typeof value === 'string' && !value.trim().startsWith('[')) {
+    value = value.split(',').map(item => item.trim());
+  }
+  appendQuery(query, item.name, value);
+};
 
 const ParameterInputs = ({ label, parameters, values, onChange }) => {
   if (!parameters.length) {
@@ -67,19 +110,28 @@ const ParameterInputs = ({ label, parameters, values, onChange }) => {
   return (
     <div className={style['try-group']}>
       <Text strong>{label}</Text>
-      {parameters.map(item => (
-        <div className={style['try-field']} key={item.name}>
-          <div className={style['try-field-label']}>
-            <Text code>{item.name}</Text>
-            {item.required && <span className={style['schema-required']}>*</span>}
+      {parameters.map(item => {
+        const schemaForm = isObjectParameter(item) && canUseSchemaForm(item.schema);
+        return (
+          <div className={classnames(style['try-field'], { [style['try-field-object']]: schemaForm })} key={item.name}>
+            <div className={style['try-field-label']}>
+              <Text code>{item.name}</Text>
+              {item.required && <span className={style['schema-required']}>*</span>}
+            </div>
+            {schemaForm ? (
+              <div className={classnames(style['try-body'], style['try-field-control'])}>
+                <SchemaForm schema={item.schema} defaultData={values[item.name]} onChange={data => onChange(Object.assign({}, values, { [item.name]: data }))} />
+              </div>
+            ) : (
+              <Input
+                value={values[item.name]}
+                placeholder={[].concat(item.schema?.type || []).join(' | ') || item.description}
+                onChange={e => onChange(Object.assign({}, values, { [item.name]: e.target.value }))}
+              />
+            )}
           </div>
-          <Input
-            value={values[item.name]}
-            placeholder={item.description || item.schema?.type}
-            onChange={e => onChange(Object.assign({}, values, { [item.name]: e.target.value }))}
-          />
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 };
@@ -119,8 +171,11 @@ const TryIt = withLocale(({ operation, servers = [], envs = [], record, currentC
     if (!bodyContent) {
       return '';
     }
-    const example = bodyContent.example !== undefined ? bodyContent.example : buildExample(bodyContent.schema);
-    return example === null ? '' : JSON.stringify(example, null, 2);
+    const value = bodyContent.example !== undefined ? bodyContent.example : buildDefaultValue(bodyContent.schema);
+    if (value === undefined || value === null) {
+      return canUseSchemaForm(bodyContent.schema) ? '{}' : '';
+    }
+    return JSON.stringify(value, null, 2);
   });
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(record ? record.response : null);
@@ -138,9 +193,7 @@ const TryIt = withLocale(({ operation, servers = [], envs = [], record, currentC
     const path = operation.path.replace(/\{([^}]+)\}/g, (match, name) => encodeURIComponent(pathValues[name] ?? ''));
     const query = new URLSearchParams();
     Object.keys(queryValues).forEach(name => {
-      if (queryValues[name] !== '') {
-        query.append(name, queryValues[name]);
-      }
+      appendParameter(query, operation.parameters.query.find(item => item.name === name) || { name }, queryValues[name]);
     });
     const queryString = query.toString();
     return `${String(baseUrl || '').replace(/\/$/, '')}${path}${queryString ? `?${queryString}` : ''}`;
@@ -159,8 +212,9 @@ const TryIt = withLocale(({ operation, servers = [], envs = [], record, currentC
   const send = async () => {
     const headers = Object.assign({}, currentTarget.headers);
     Object.keys(headerValues).forEach(name => {
-      if (headerValues[name] !== '') {
-        headers[name] = headerValues[name];
+      const value = headerValues[name];
+      if (value !== '' && value !== undefined && value !== null) {
+        headers[name] = typeof value === 'object' ? JSON.stringify(value) : value;
       }
     });
     const init = { method: operation.method.toUpperCase(), headers };
