@@ -1,7 +1,6 @@
 import { useMemo, useState } from 'react';
 import { Button, Empty, Segmented, message } from 'antd';
 import { ApiOutlined, HistoryOutlined, PlusOutlined, UnorderedListOutlined } from '@ant-design/icons';
-import { useIsMobile } from '@kne/responsive-utils';
 import { useIntl } from '@kne/react-intl';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import useControlValue from '@kne/use-control-value';
@@ -47,7 +46,6 @@ const OpenApiView = createWithRemoteLoader({
     const stickyTopValue = typeof stickyTop === 'number' ? `${stickyTop}px` : stickyTop;
     const apiEditable = apiActionsOpen && !!onDataChange;
     const { formatMessage } = useIntl();
-    const isMobile = useIsMobile();
     const [menuOpen, setMenuOpen] = useState(false);
     const [asideTab, setAsideTab] = useState('api');
     const parsed = useMemo(() => parseOpenApiData(data), [data]);
@@ -184,25 +182,20 @@ const OpenApiView = createWithRemoteLoader({
     return (
       <div className={classnames(style['open-api-view'], className)}>
         {messageContextHolder}
-        {isMobile ? (
-          <Drawer open={menuOpen} footer={null} placement="left" title={formatMessage({ id: 'PostCatApiList' })} onClose={() => setMenuOpen(false)}>
-            {aside}
-          </Drawer>
-        ) : (
-          <div
-            className={style['open-api-aside']}
-            style={stickyTopValue ? { top: stickyTopValue, maxHeight: `calc(100vh - ${stickyTopValue} - 16px)` } : undefined}
-          >
-            {aside}
-          </div>
-        )}
+        <div
+          className={style['open-api-aside']}
+          style={stickyTopValue ? { top: stickyTopValue, maxHeight: `calc(100vh - ${stickyTopValue} - 16px)` } : undefined}
+        >
+          {aside}
+        </div>
+        <Drawer open={menuOpen} footer={null} placement="left" title={formatMessage({ id: 'PostCatApiList' })} onClose={() => setMenuOpen(false)}>
+          {aside}
+        </Drawer>
         <div className={style['open-api-main']}>
           <ApiHeader data={parsed} />
-          {isMobile && (
-            <Button icon={<UnorderedListOutlined />} onClick={() => setMenuOpen(true)}>
-              {formatMessage({ id: 'PostCatApiList' })}
-            </Button>
-          )}
+          <Button className={style['open-api-menu-trigger']} icon={<UnorderedListOutlined />} onClick={() => setMenuOpen(true)}>
+            {formatMessage({ id: 'PostCatApiList' })}
+          </Button>
           {operation ? (
             <ApiItem
               operation={operation}
