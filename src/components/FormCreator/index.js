@@ -50,6 +50,10 @@ export {
   parseRuleString,
   buildRuleString,
   schemaToDataSchema,
+  isLocaleText,
+  resolveLocaleText,
+  localizeSchema,
+  hasLocaleText,
   FormCreator as BaseFormCreator
 } from '@kne/form-creator';
 

@@ -259,6 +259,9 @@ import { SchemaContent, SchemaContentInner } from '@kne/form-creator';
 - `SchemaContent` / `SchemaContentInner` 按 Schema + 字段 `valueSchema` 只读展示提交数据
 - `preset({ rules, fields })` 一次注册扩展规则与填写项（推荐）
 - `parseRuleString(rule)` / `buildRuleString(config)` 校验规则字符串解析/组装
+- `localizeSchema(schema, locale, languages)` / `resolveLocaleText(value, locale, languages)` 解析多语言文案：title、label、tips、placeholder、选项 label、按钮文字等可写成 `{ 'zh-CN': '姓名', 'en-US': 'Name' }`，渲染组件按当前 `locale` 自动解析：字符串（旧格式）原样显示，多语言对象先取当前语言，取不到按 `languages` 顺序回退（未传为 `zh-CN` → `en-US`）
+- 支持哪些语言由调用方决定：`FormCreator` / `SchemaRenderer` / `SchemaContent` 传 `languages={[{ value: 'zh-CN', label: '中文' }, { value: 'en-US', label: 'English' }]}`，首项为基础语言；`FormCreator` 不传时为单语言输入
+- `isLocaleText(value)` / `hasLocaleText(value)` 多语言文案判断
 
 ### schemaToDataSchema
 
