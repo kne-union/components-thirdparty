@@ -22,6 +22,8 @@
 | model3d       | 3D 模型预览扩展参数，与 `config.model3d` 合并，见下表                                                                                                                                | object   | 见 `defaultConfig.model3d`                  |
 | value         | 编辑器 HTML / Markdown 内容                                                                                                                                                          | string   | -                                           |
 | onChange      | 内容变化回调 `(html: string) => void`                                                                                                                                                | function | -                                           |
+| onFocus       | 编辑器获得焦点回调                                                                                                                                                                   | function | -                                           |
+| onBlur        | 编辑器失焦回调；作为表单项时由 `useDecorator` 注入，用于触发失焦校验                                                                                                                 | function | -                                           |
 
 #### 工具栏宽度
 
