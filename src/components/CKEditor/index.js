@@ -508,6 +508,8 @@ const CKEditorFieldView = withLocale(
     model3d: model3dProp,
     openCompareValueModal,
     openConditionEditorModal,
+    onBlur,
+    onFocus,
     ...props
   }) => {
     const { formatMessage } = useIntl();
@@ -679,6 +681,9 @@ const CKEditorFieldView = withLocale(
             const data = editor.getData();
             onChange(data);
           }}
+          // 表单项默认在失焦时校验，不透传则校验提示出现后不会再消失
+          onFocus={() => onFocus?.()}
+          onBlur={() => onBlur?.()}
         />
       </div>
     );
