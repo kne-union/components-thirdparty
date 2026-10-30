@@ -1,5 +1,5 @@
-import { Segmented, Alert } from 'antd';
-import { DesktopOutlined, EditOutlined, EyeOutlined, MobileOutlined } from '@ant-design/icons';
+import { App, Button, Segmented, Alert } from 'antd';
+import { CopyOutlined, DesktopOutlined, EditOutlined, EyeOutlined, FileTextOutlined, MobileOutlined } from '@ant-design/icons';
 import { useMemo, useRef, useState } from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
@@ -23,8 +23,22 @@ img{max-width:100%;height:auto}
 table{border-collapse:collapse;max-width:100%}
 `;
 
-const toPreviewDocument = html =>
-  `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${PREVIEW_BASE_CSS}</style></head><body>${html}</body></html>`;
+// 链接一律新标签页打开（页内锚点除外）；基础样式放在 head 最前，模版自带样式可以覆盖
+export const toPreviewDocument = html => {
+  const doc = new DOMParser().parseFromString(html || '', 'text/html');
+  doc.querySelectorAll('a[href], area[href]').forEach(node => {
+    if ((node.getAttribute('href') || '').trim().startsWith('#')) {
+      return;
+    }
+    node.setAttribute('target', '_blank');
+    node.setAttribute('rel', 'noopener noreferrer');
+  });
+  doc.head.insertAdjacentHTML(
+    'afterbegin',
+    `<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><style>${PREVIEW_BASE_CSS}</style>`
+  );
+  return `<!doctype html>${doc.documentElement.outerHTML}`;
+};
 
 /** 未提供示例值的变量用 [标签] 占位，避免预览出现大片空白 */
 const buildPreviewData = (variables, previewData) => {
@@ -64,8 +78,25 @@ const useTextBridge = (isText, value, onChange) => {
 const EMPTY_VARIABLES = [];
 
 const TemplateEditorField = withLocale(
-  ({ type = 'html', value, onChange, onFocus, onBlur, className, height, variables = EMPTY_VARIABLES, previewData, subject, condition = true, config }) => {
+  ({
+    type = 'html',
+    value,
+    onChange,
+    onFocus,
+    onBlur,
+    className,
+    height,
+    variables = EMPTY_VARIABLES,
+    previewData,
+    subject,
+    condition = true,
+    config,
+    readOnly = false,
+    copyable = false,
+    uploadAdapter
+  }) => {
     const { formatMessage } = useIntl();
+    const { message } = App.useApp();
     const isMobile = useIsMobile();
     const isText = type === 'text';
     const [mode, setMode] = useState('edit');
@@ -77,7 +108,7 @@ const TemplateEditorField = withLocale(
         item => (item !== 'insertTemplateVariable' || variables.length > 0) && (item !== 'insertTemplateCondition' || condition !== false)
       );
       return Object.assign(
-        { toolbar: { items: toolbarItems }, templateVariable: { variables } },
+        { toolbar: { items: toolbarItems }, templateVariable: { variables, previewData } },
         !isText && { style: { definitions: EMAIL_STYLE_DEFINITIONS } },
         condition !== false && {
           templateCondition: Object.assign(
@@ -89,7 +120,7 @@ const TemplateEditorField = withLocale(
         },
         config
       );
-    }, [isText, variables, condition, config]);
+    }, [isText, variables, previewData, condition, config]);
 
     const preview = useMemo(() => {
       if (mode !== 'preview') {
@@ -134,7 +165,8 @@ const TemplateEditorField = withLocale(
               <div className={style['envelope-meta']}>{formatMessage({ id: 'TemplateEditorPreviewTip' })}</div>
             </div>
           )}
-          <iframe title="template-preview" className={style['preview']} sandbox="" srcDoc={preview.html} />
+          {/* 不给 allow-scripts：模版里的脚本不执行；allow-popups(-to-escape-sandbox) 让 target=_blank 的链接能在正常的新标签页打开 */}
+          <iframe title="template-preview" className={style['preview']} sandbox="allow-popups allow-popups-to-escape-sandbox" srcDoc={preview.html} />
         </div>
       );
     };
@@ -148,24 +180,50 @@ const TemplateEditorField = withLocale(
             value={mode}
             onChange={setMode}
             options={[
-              { value: 'edit', icon: <EditOutlined />, label: formatMessage({ id: 'TemplateEditorEdit' }) },
+              {
+                value: 'edit',
+                icon: readOnly ? <FileTextOutlined /> : <EditOutlined />,
+                label: formatMessage({ id: readOnly ? 'TemplateEditorContent' : 'TemplateEditorEdit' })
+              },
               { value: 'preview', icon: <EyeOutlined />, label: formatMessage({ id: 'TemplateEditorPreview' }) }
             ]}
           />
-          {mode === 'preview' && !isText && !isMobile && (
-            <Segmented
-              value={device}
-              onChange={setDevice}
-              options={[
-                { value: 'desktop', icon: <DesktopOutlined />, label: formatMessage({ id: 'TemplateEditorDesktop' }) },
-                { value: 'mobile', icon: <MobileOutlined />, label: formatMessage({ id: 'TemplateEditorMobile' }) }
-              ]}
-            />
-          )}
+          <div className={style['toolbar-extra']}>
+            {mode === 'preview' && !isText && !isMobile && (
+              <Segmented
+                value={device}
+                onChange={setDevice}
+                options={[
+                  { value: 'desktop', icon: <DesktopOutlined />, label: formatMessage({ id: 'TemplateEditorDesktop' }) },
+                  { value: 'mobile', icon: <MobileOutlined />, label: formatMessage({ id: 'TemplateEditorMobile' }) }
+                ]}
+              />
+            )}
+            {copyable && (
+              <Button
+                size="small"
+                icon={<CopyOutlined />}
+                disabled={!value}
+                onClick={async () => {
+                  await navigator.clipboard.writeText(value || '');
+                  message.success(formatMessage({ id: 'TemplateEditorCopySuccess' }));
+                }}>
+                {formatMessage({ id: 'TemplateEditorCopy' })}
+              </Button>
+            )}
+          </div>
         </div>
         <div className={style['canvas']}>
           <div hidden={mode !== 'edit'} className={style['paper']}>
-            <CKEditor.Field value={editorValue} onChange={handleChange} onFocus={onFocus} onBlur={onBlur} config={editorConfig} />
+            <CKEditor.Field
+              value={editorValue}
+              onChange={handleChange}
+              onFocus={onFocus}
+              onBlur={onBlur}
+              config={editorConfig}
+              readOnly={readOnly}
+              uploadAdapter={uploadAdapter}
+            />
           </div>
           {preview && renderPreview()}
         </div>

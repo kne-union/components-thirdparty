@@ -1,6 +1,9 @@
 const localeMessages = {
   TemplateEditorEdit: 'Edit',
+  TemplateEditorContent: 'Content',
   TemplateEditorPreview: 'Preview',
+  TemplateEditorCopy: 'Copy',
+  TemplateEditorCopySuccess: 'Template content copied',
   TemplateEditorDesktop: 'Desktop',
   TemplateEditorMobile: 'Mobile',
   TemplateEditorSubjectEmpty: '(No subject)',

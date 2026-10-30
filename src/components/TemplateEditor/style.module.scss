@@ -17,6 +17,12 @@
   border-bottom: 1px solid var(--font-color-grey-3, #f0f0f0);
 }
 
+.toolbar-extra {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .canvas {
   padding: 24px;
   background: #f5f6f8;

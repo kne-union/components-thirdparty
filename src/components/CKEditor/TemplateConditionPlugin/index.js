@@ -56,6 +56,7 @@ import {
 } from './conditionSyntax';
 import { findTemplateMatches, normalizeVariableKind, resolveTemplateVariableSettings, resolveVariableLabel } from '../TemplateVariablePlugin/templateSyntax';
 import { TEMPLATE_VARIABLE_MODEL } from '../TemplateVariablePlugin/constants';
+import ensureTextPosition from '../shared/ensureTextPosition';
 
 const getConditionSettings = editor =>
   resolveTemplateConditionSettings(editor.config.get('templateCondition') || {}, editor.config.get('templateVariable') || {});
@@ -1236,6 +1237,9 @@ class TemplateConditionEditing extends Plugin {
           const variableSettings = getVariableSettings(editor);
           let modelCursor = data.modelCursor;
           const hostCondition = modelCursor.parent?.is?.('element', TEMPLATE_CONDITION_MODEL) ? modelCursor.parent : null;
+          if (!hostCondition && !schema.checkChild(modelCursor.parent, '$text')) {
+            modelCursor = ensureTextPosition(modelCursor, conversionApi) || modelCursor;
+          }
           let modelRangeStart = null;
           let lastRange = null;
           let offset = 0;

@@ -10,9 +10,11 @@ import {
 } from './constants';
 import templateVariableIcon from './icon';
 import bindDialogFloatingDropdown from '../dialogFloatingDropdown';
+import ensureTextPosition from '../shared/ensureTextPosition';
 import {
   findTemplateMatches,
   normalizeVariableKind,
+  resolveStyleValue,
   resolveTemplateVariableSettings,
   resolveVariableLabel,
   unwrapTemplateVariableSpans,
@@ -121,6 +123,36 @@ class TemplateVariableEditing extends Plugin {
     this._defineConverters();
     this._patchGetData();
     this._registerInlineObjectMatchers();
+    this._resolveEditingStyleVariables();
+  }
+
+  /**
+   * 样式里的变量（如 background-color:{{themeColor}}）在编辑区是非法 CSS，浏览器会丢弃，导致白字白底等显示问题。
+   * 只在编辑视图里换成示例值，数据管线（getData）不受影响
+   */
+  _resolveEditingStyleVariables() {
+    const editor = this.editor;
+    const view = editor.editing.view;
+    view.document.registerPostFixer(writer => {
+      const settings = getSettings(editor);
+      let changed = false;
+      for (const root of view.document.roots) {
+        for (const { item } of view.createRangeIn(root)) {
+          if (!item.is('element')) {
+            continue;
+          }
+          for (const name of item.getStyleNames()) {
+            const value = item.getStyle(name);
+            const resolved = resolveStyleValue(value, settings);
+            if (resolved !== value) {
+              writer.setStyle(name, resolved, item);
+              changed = true;
+            }
+          }
+        }
+      }
+      return changed;
+    });
   }
 
   _registerInlineObjectMatchers() {
@@ -199,11 +231,12 @@ class TemplateVariableEditing extends Plugin {
             return;
           }
 
-          if (!consumable.consume(viewItem)) {
+          const textPosition = schema.checkChild(data.modelCursor, '$text') || schema.checkChild(data.modelCursor, 'paragraph');
+          if (!textPosition || !consumable.consume(viewItem)) {
             return;
           }
 
-          let modelCursor = data.modelCursor;
+          let modelCursor = ensureTextPosition(data.modelCursor, conversionApi);
           let modelRangeStart = null;
           let lastRange = null;
           let offset = 0;
