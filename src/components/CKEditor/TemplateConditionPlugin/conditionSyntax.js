@@ -12,7 +12,6 @@ import {
   OPERATOR_NEQ,
   OPERATOR_TRUTHY,
   TEMPLATE_CONDITION_CLASS,
-  CONDITION_LAYOUT_BLOCK_MARKER,
   LAYOUT_BLOCK,
   TEMPLATE_CONDITION_CLAUSES_ATTR,
   TEMPLATE_CONDITION_HAS_ELSE_ATTR,
@@ -22,9 +21,16 @@ import {
   TEMPLATE_CONDITION_SUBJECT_ATTR,
   TEMPLATE_CONDITION_VALUE_ATTR
 } from './constants';
+import { Liquid, Tokenizer, TokenKind } from 'liquidjs';
 import { unwrapTemplateVariableSpans } from '../TemplateVariablePlugin/templateSyntax';
+import { VARIABLE_PATH_RE, VARIABLE_PATH_SOURCE } from '../TemplateVariablePlugin/constants';
 
-const IDENTIFIER_RE = /^[A-Za-z_$][\w$]*$/;
+const IDENTIFIER_RE = VARIABLE_PATH_RE;
+const PATH = VARIABLE_PATH_SOURCE;
+const LITERAL = `(?:-?\\d+(?:\\.\\d+)?|'(?:[^'\\\\]|\\\\.)*'|"(?:[^"\\\\]|\\\\.)*")`;
+
+/** {% if %} 开始标签（可带块级注释前缀）；只用于定位，表达式是否合规由 parseConditionExpression 判断 */
+export const LIQUID_IF_OPEN_RE = /(?:\{%\s*#\s*ck-layout:block\s*%\}\s*)?\{%\s*if\s+[\s\S]*?%\}/;
 
 /**
  * 规范化 config.templateCondition
@@ -34,6 +40,7 @@ export const resolveTemplateConditionSettings = (config = {}, variableConfig = {
   const operators = Array.isArray(config.operators) && config.operators.length ? config.operators : DEFAULT_OPERATORS;
   const allowElse = config.allowElse !== false;
   const allowNesting = config.allowNesting !== false;
+  const allowBlock = config.allowBlock !== false;
   const maxClauses = Number.isFinite(config.maxClauses) && config.maxClauses > 0 ? Math.floor(config.maxClauses) : DEFAULT_MAX_CLAUSES;
 
   return {
@@ -41,6 +48,7 @@ export const resolveTemplateConditionSettings = (config = {}, variableConfig = {
     operators,
     allowElse,
     allowNesting,
+    allowBlock,
     maxClauses,
     display: 'inline',
     openCompareValueModal: typeof config.openCompareValueModal === 'function' ? config.openCompareValueModal : undefined,
@@ -139,12 +147,12 @@ const quoteLiteral = value => {
 
 const unquoteLiteral = raw => {
   if ((raw.startsWith("'") && raw.endsWith("'")) || (raw.startsWith('"') && raw.endsWith('"'))) {
-    return raw.slice(1, -1).replace(/\\'/g, "'").replace(/\\"/g, '"').replace(/\\\\/g, '\\');
+    return raw.slice(1, -1).replace(/\\(.)/g, '$1');
   }
   return raw;
 };
 
-/** 单条谓词 → lodash 表达式片段（可不带外层括号） */
+/** 单条谓词 → Liquid 条件片段 */
 export const buildClauseExpression = ({ subject, operator, value }) => {
   const name = String(subject ?? '').trim();
   if (!name || !IDENTIFIER_RE.test(name)) {
@@ -156,13 +164,13 @@ export const buildClauseExpression = ({ subject, operator, value }) => {
     return name;
   }
   if (op === OPERATOR_FALSY) {
-    return `!${name}`;
+    return `${name} == false`;
   }
   if (op === OPERATOR_FILLED) {
-    return `${name} != null && ${name} !== ''`;
+    return `${name} != blank`;
   }
   if (op === OPERATOR_EMPTY) {
-    return `${name} == null || ${name} === ''`;
+    return `${name} == blank`;
   }
   if (op === OPERATOR_EQ) {
     return `${name} == ${quoteLiteral(value)}`;
@@ -173,117 +181,79 @@ export const buildClauseExpression = ({ subject, operator, value }) => {
   return name;
 };
 
-/** 导出到 lodash evaluate 的条件表达式（不含 if 外壳）；多条款每条加括号 */
+/** 导出到 {% if %} 的条件表达式；Liquid 不支持括号，多条款只用同一种 and / or 扁平连接 */
 export const buildConditionExpression = input => {
   const { clauses, joiner } = normalizeConditionClauses(input);
-  const token = joiner === JOINER_OR ? '||' : '&&';
-
-  if (clauses.length === 1) {
-    return buildClauseExpression(clauses[0]);
-  }
-
-  return clauses.map(clause => `(${buildClauseExpression(clause)})`).join(` ${token} `);
+  const token = joiner === JOINER_OR ? 'or' : 'and';
+  return clauses.map(clause => buildClauseExpression(clause)).join(` ${token} `);
 };
 
-/** 解析单条规范谓词（可带一层括号）→ { subject, operator, value } | null */
+const CLAUSE_PATTERNS = [
+  [new RegExp(`^(${PATH})\\s*==\\s*false$`), OPERATOR_FALSY],
+  [new RegExp(`^(${PATH})\\s*!=\\s*blank$`), OPERATOR_FILLED],
+  [new RegExp(`^(${PATH})\\s*==\\s*blank$`), OPERATOR_EMPTY],
+  [new RegExp(`^(${PATH})\\s*==\\s*(${LITERAL})$`), OPERATOR_EQ],
+  [new RegExp(`^(${PATH})\\s*!=\\s*(${LITERAL})$`), OPERATOR_NEQ],
+  [new RegExp(`^(${PATH})$`), OPERATOR_TRUTHY]
+];
+
+/** 解析单条规范谓词 → { subject, operator, value } | null */
 export const parseSingleClauseExpression = expr => {
-  let text = String(expr ?? '').trim();
+  const text = String(expr ?? '').trim();
   if (!text) {
     return null;
   }
 
-  if (text.startsWith('(') && text.endsWith(')')) {
-    let depth = 0;
-    let wrapsWhole = true;
-    for (let i = 0; i < text.length; i += 1) {
-      const ch = text[i];
-      if (ch === '(') depth += 1;
-      else if (ch === ')') {
-        depth -= 1;
-        if (depth === 0 && i < text.length - 1) {
-          wrapsWhole = false;
-          break;
-        }
-      }
+  for (const [re, operator] of CLAUSE_PATTERNS) {
+    const match = text.match(re);
+    if (match) {
+      const value = operator === OPERATOR_EQ || operator === OPERATOR_NEQ ? unquoteLiteral(match[2]) : '';
+      return { subject: match[1], operator, value };
     }
-    if (wrapsWhole) {
-      text = text.slice(1, -1).trim();
-    }
-  }
-
-  let match = text.match(/^([A-Za-z_$][\w$]*)\s*!=\s*null\s*&&\s*\1\s*!==\s*''$/);
-  if (match) {
-    return { subject: match[1], operator: OPERATOR_FILLED, value: '' };
-  }
-
-  match = text.match(/^([A-Za-z_$][\w$]*)\s*==\s*null\s*\|\|\s*\1\s*===\s*''$/);
-  if (match) {
-    return { subject: match[1], operator: OPERATOR_EMPTY, value: '' };
-  }
-
-  match = text.match(/^!(?:\(([A-Za-z_$][\w$]*)\)|([A-Za-z_$][\w$]*))$/);
-  if (match) {
-    return { subject: match[1] || match[2], operator: OPERATOR_FALSY, value: '' };
-  }
-
-  match = text.match(/^([A-Za-z_$][\w$]*)$/);
-  if (match) {
-    return { subject: match[1], operator: OPERATOR_TRUTHY, value: '' };
-  }
-
-  match = text.match(/^([A-Za-z_$][\w$]*)\s*==\s*(.+)$/);
-  if (match) {
-    return { subject: match[1], operator: OPERATOR_EQ, value: unquoteLiteral(match[2].trim()) };
-  }
-
-  match = text.match(/^([A-Za-z_$][\w$]*)\s*!=\s*(.+)$/);
-  if (match) {
-    return { subject: match[1], operator: OPERATOR_NEQ, value: unquoteLiteral(match[2].trim()) };
   }
 
   return null;
 };
 
-/** 按顶层 && / || 切开（忽略括号内） */
+/** 按引号外的 and / or 切开；同一表达式混用 and / or 返回 null */
 const splitTopLevelJoin = text => {
   const parts = [];
-  let depth = 0;
   let buf = '';
   let joiner = null;
+  let quote = null;
   let i = 0;
 
   while (i < text.length) {
     const ch = text[i];
-    if (ch === '(') {
-      depth += 1;
+    if (quote) {
+      buf += ch;
+      if (ch === '\\' && i + 1 < text.length) {
+        buf += text[i + 1];
+        i += 2;
+        continue;
+      }
+      if (ch === quote) {
+        quote = null;
+      }
+      i += 1;
+      continue;
+    }
+    if (ch === "'" || ch === '"') {
+      quote = ch;
       buf += ch;
       i += 1;
       continue;
     }
-    if (ch === ')') {
-      depth -= 1;
-      buf += ch;
-      i += 1;
-      continue;
-    }
-    if (depth === 0 && text.startsWith('&&', i)) {
-      if (joiner === JOINER_OR) {
+    const word = text.slice(i).match(/^\s+(and|or)\s+/);
+    if (word) {
+      const next = word[1] === 'or' ? JOINER_OR : JOINER_AND;
+      if (joiner && joiner !== next) {
         return null;
       }
-      joiner = JOINER_AND;
+      joiner = next;
       parts.push(buf.trim());
       buf = '';
-      i += 2;
-      continue;
-    }
-    if (depth === 0 && text.startsWith('||', i)) {
-      if (joiner === JOINER_AND) {
-        return null;
-      }
-      joiner = JOINER_OR;
-      parts.push(buf.trim());
-      buf = '';
-      i += 2;
+      i += word[0].length;
       continue;
     }
     buf += ch;
@@ -398,15 +368,15 @@ export const buildConditionModelAttributes = (input = {}, { hasElse, operators }
 };
 
 /**
- * 用 then/else 内 HTML（变量已 unwrap）拼 lodash evaluate 片段
+ * 用 then/else 内 HTML（变量已 unwrap）拼 Liquid if 片段
  */
 export const wrapConditionEvaluate = ({ subject, operator, value, clauses, joiner, hasElse, thenHtml, elseHtml }) => {
   const expr = buildConditionExpression({ subject, operator, value, clauses, joiner });
   const thenPart = thenHtml ?? '';
   if (hasElse) {
-    return `<% if (${expr}) { %>${thenPart}<% } else { %>${elseHtml ?? ''}<% } %>`;
+    return `{% if ${expr} %}${thenPart}{% else %}${elseHtml ?? ''}{% endif %}`;
   }
-  return `<% if (${expr}) { %>${thenPart}<% } %>`;
+  return `{% if ${expr} %}${thenPart}{% endif %}`;
 };
 
 const getAttr = (el, name) => el.getAttribute?.(name) || '';
@@ -415,7 +385,7 @@ const VOID_TAGS = new Set(['br', 'hr', 'img', 'wbr']);
 
 const escapeAttr = value => String(value ?? '').replace(/&/g, '&amp;').replace(/"/g, '&quot;');
 
-/** 块级分支保留标题、段落和样式 class；文本用 textContent，避免把 <%= %> 编成实体 */
+/** 块级分支保留标题、段落和样式 class；文本用 textContent，避免把模版标签里的字符编成实体 */
 const serializeElementChildren = el => {
   if (!el) {
     return '';
@@ -460,7 +430,7 @@ const serializeElementChildren = el => {
   return html;
 };
 
-/** 槽内只允许文本和变量芯片；用 textContent 取出，避免 innerHTML 把 <%= %> 编成 &lt;%=。换行存成 &lt;br&gt;，避免真实 br 把 if 拆成多段文本。 */
+/** 槽内只允许文本和变量芯片；用 textContent 取出，避免 innerHTML 把模版标签里的字符编成实体。换行存成 &lt;br&gt;，避免真实 br 把 if 拆成多段文本。 */
 const readBranchText = el => {
   if (!el) {
     return '';
@@ -483,7 +453,7 @@ const readBranchText = el => {
 };
 
 /**
- * 将数据态 condition span 的内部还原为 lodash evaluate（供 getData）
+ * 将数据态 condition span 的内部还原为 Liquid if（供 getData）
  * 外层 span 及其 data-template-condition-* 属性保留；badge / 否则分隔不进入导出文本
  */
 export const unwrapTemplateConditionSpans = html => {
@@ -565,15 +535,15 @@ export const unwrapTemplateConditionSpans = html => {
 };
 
 /**
- * 在纯文本中找出本插件规范形态的 if/else（不识别任意 JS）
+ * 在纯文本中找出本插件规范形态的 if/else（白名单外的写法不识别）
  */
 export const findConditionMatches = text => {
-  if (!text || !/<%\s*(?:\/\*ck-layout:block\*\/\s*)?if\b/.test(text)) {
+  if (!text || !/\{%\s*if\s/.test(text)) {
     return [];
   }
 
   const results = [];
-  const openRe = /<%\s*(?:\/\*ck-layout:block\*\/\s*)?if\s*\(\s*([\s\S]*?)\s*\)\s*\{\s*%>/g;
+  const openRe = /(?:\{%\s*#\s*ck-layout:block\s*%\}\s*)?\{%\s*if\s+([\s\S]*?)\s*%\}/g;
   let openMatch;
 
   while ((openMatch = openRe.exec(text)) !== null) {
@@ -584,8 +554,8 @@ export const findConditionMatches = text => {
 
     const start = openMatch.index;
     const afterOpen = openMatch.index + openMatch[0].length;
-    const elseToken = '<% } else { %>';
-    const closeToken = '<% } %>';
+    const elseToken = '{% else %}';
+    const closeToken = '{% endif %}';
     const elseIndex = text.indexOf(elseToken, afterOpen);
     const closeIndex = text.indexOf(closeToken, afterOpen);
 
@@ -618,7 +588,7 @@ export const findConditionMatches = text => {
       raw: text.slice(start, end),
       ...parsed,
       hasElse,
-      layout: openMatch[0].includes(CONDITION_LAYOUT_BLOCK_MARKER) ? LAYOUT_BLOCK : 'inline',
+      layout: /^\{%\s*#/.test(openMatch[0]) ? LAYOUT_BLOCK : 'inline',
       thenHtml,
       elseHtml
     });
@@ -629,54 +599,125 @@ export const findConditionMatches = text => {
   return results;
 };
 
+const TAG_PAIRS = [
+  ['{{', '}}'],
+  ['{%', '%}']
+];
+
 /**
- * 扫描 <% %> 是否配对（保存前校验）
+ * 扫描 {{ }} / {% %} 是否配对（保存前校验）
  * @returns {string|null} 错误信息；合法则 null
  */
 export const findUnbalancedTemplateTags = text => {
   const source = String(text ?? '');
-  let openCount = 0;
+  let open = null;
   let index = 0;
 
   while (index < source.length) {
-    if (source.startsWith('<%', index)) {
-      openCount += 1;
+    const opening = TAG_PAIRS.find(([start]) => source.startsWith(start, index));
+    if (opening) {
+      if (open) {
+        return `unclosed ${open[0]}`;
+      }
+      open = opening;
       index += 2;
       continue;
     }
-    if (source.startsWith('%>', index)) {
-      if (openCount === 0) {
-        return 'unmatched %>';
+    const closing = TAG_PAIRS.find(([, end]) => source.startsWith(end, index));
+    if (closing) {
+      if (!open) {
+        return `unmatched ${closing[1]}`;
       }
-      openCount -= 1;
+      if (open !== closing) {
+        return `unclosed ${open[0]}`;
+      }
+      open = null;
       index += 2;
       continue;
     }
     index += 1;
   }
 
-  if (openCount > 0) {
-    return 'unclosed <%';
+  if (open) {
+    return `unclosed ${open[0]}`;
   }
   return null;
 };
 
+const OUTPUT_CONTENT_RE = new RegExp(`^\\s*${PATH}\\s*(?:\\|\\s*raw\\s*)?$`);
+
+const isBlockMarkerToken = token => token.kind === TokenKind.Tag && token.name === '#' && String(token.args).trim() === 'ck-layout:block';
+
+/** 按白名单逐个检查顶层 token；返回错误信息或 null */
+const findDisallowedToken = source => {
+  const tokens = new Tokenizer(source).readTopLevelTokens();
+
+  for (let i = 0; i < tokens.length; i += 1) {
+    const token = tokens[i];
+    if (token.kind === TokenKind.HTML) {
+      continue;
+    }
+    const text = token.getText();
+    if (token.trimLeft || token.trimRight) {
+      return `whitespace control is not allowed: ${text}`;
+    }
+    if (token.kind === TokenKind.Output) {
+      if (!OUTPUT_CONTENT_RE.test(token.content)) {
+        return `output not allowed: ${text}`;
+      }
+      continue;
+    }
+    if (token.kind !== TokenKind.Tag) {
+      return `syntax not allowed: ${text}`;
+    }
+    if (isBlockMarkerToken(token)) {
+      const next = tokens[i + 1];
+      if (!next || next.kind !== TokenKind.Tag || next.name !== 'if') {
+        return `${text} must be followed by {% if %}`;
+      }
+      continue;
+    }
+    if (token.name === 'if') {
+      if (!parseConditionExpression(token.args)) {
+        return `condition not allowed: ${text}`;
+      }
+      continue;
+    }
+    if ((token.name === 'else' || token.name === 'endif') && !String(token.args).trim()) {
+      continue;
+    }
+    return `tag not allowed: ${text}`;
+  }
+  return null;
+};
+
+let liquidEngine = null;
+const getLiquidEngine = () => {
+  if (!liquidEngine) {
+    liquidEngine = new Liquid({ outputEscape: 'escape', strictFilters: true });
+  }
+  return liquidEngine;
+};
+
 /**
- * 校验模版 HTML：标签配对；可选 dry-run lodash.template
+ * 校验模版 HTML：标签配对 + 语法白名单（{{ path }} / {{ path | raw }} / {% if %} / {% else %} / {% endif %}）+ liquidjs 解析
  * @returns {{ ok: boolean, error?: string }}
  */
-export const validateTemplateHtml = (html, { template } = {}) => {
-  const unbalanced = findUnbalancedTemplateTags(html);
+export const validateTemplateHtml = html => {
+  const source = String(html ?? '');
+  const unbalanced = findUnbalancedTemplateTags(source);
   if (unbalanced) {
     return { ok: false, error: unbalanced };
   }
 
-  if (typeof template === 'function') {
-    try {
-      template(String(html ?? ''));
-    } catch (error) {
-      return { ok: false, error: error?.message || String(error) };
+  try {
+    const disallowed = findDisallowedToken(source);
+    if (disallowed) {
+      return { ok: false, error: disallowed };
     }
+    getLiquidEngine().parse(source);
+  } catch (error) {
+    return { ok: false, error: error?.message || String(error) };
   }
 
   return { ok: true };

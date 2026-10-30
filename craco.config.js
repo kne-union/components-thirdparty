@@ -8,8 +8,11 @@ process.env.CI = false;
 const localFormCreatorRoot = path.resolve(__dirname, '../form-creator');
 const localFormCreatorSrc = path.join(localFormCreatorRoot, 'src');
 const localFormCreatorCss = path.join(localFormCreatorRoot, 'dist/index.css');
+// 默认使用 node_modules 中已发布的 @kne/form-creator；联调本地源码时需显式设置 LOCAL_FORM_CREATOR=true
 const useLocalFormCreator =
-  process.env.NODE_ENV !== 'production' && fs.existsSync(path.join(localFormCreatorSrc, 'index.js'));
+  process.env.NODE_ENV !== 'production' &&
+  process.env.LOCAL_FORM_CREATOR === 'true' &&
+  fs.existsSync(path.join(localFormCreatorSrc, 'index.js'));
 
 const allowOutsideSrc = (webpackConfig, dir) => {
   const plugin = webpackConfig.resolve.plugins?.find(item => item.constructor?.name === 'ModuleScopePlugin');

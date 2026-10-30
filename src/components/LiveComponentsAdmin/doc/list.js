@@ -1,6 +1,7 @@
-const { List } = _LiveComponentsAdmin;
+const { List, Detail } = _LiveComponentsAdmin;
 const { default: mockPreset } = _mockPreset;
 const { createWithRemoteLoader } = remoteLoader;
+const { Routes, Route } = reactRouterDom;
 
 const ListExample = createWithRemoteLoader({
   modules: ['components-core:Global@PureGlobal', 'components-core:Layout']
@@ -9,7 +10,10 @@ const ListExample = createWithRemoteLoader({
   return (
     <PureGlobal preset={mockPreset}>
       <Layout navigation={{ isFixed: false }}>
-        <List />
+        <Routes>
+          <Route index element={<List />} />
+          <Route path="detail" element={<Detail />} />
+        </Routes>
       </Layout>
     </PureGlobal>
   );

@@ -39,7 +39,7 @@ const localeMessages = {
   TemplateVariableWidgetLabel: 'Template variable',
   TemplateVariableEmpty: 'No variables configured',
   TemplateVariableKindInterpolate: 'interpolate',
-  TemplateVariableKindEscape: 'escape',
+  TemplateVariableKindRaw: 'raw HTML',
   TemplateConditionLabel: 'Condition',
   TemplateConditionWidgetLabel: 'Template condition',
   TemplateConditionEmpty: 'No variables configured',

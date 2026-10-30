@@ -39,7 +39,7 @@ const localeMessages = {
   TemplateVariableWidgetLabel: '模版变量',
   TemplateVariableEmpty: '未配置变量列表',
   TemplateVariableKindInterpolate: '插值',
-  TemplateVariableKindEscape: '转义',
+  TemplateVariableKindRaw: '原样HTML',
   TemplateConditionLabel: '条件',
   TemplateConditionWidgetLabel: '模版条件',
   TemplateConditionEmpty: '未配置变量列表',

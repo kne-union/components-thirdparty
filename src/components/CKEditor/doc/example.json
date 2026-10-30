@@ -143,7 +143,7 @@
     },
     {
       "title": "邮件模版变量",
-      "description": "插入 lodash 模版变量：编辑态显示 label 芯片，getData 输出可配置的插值/转义语法",
+      "description": "插入 Liquid 模版变量：编辑态显示 label 芯片，getData 输出 {{ name }} / {{ name | raw }}",
       "code": "./templateVariable.js",
       "scope": [
         {
@@ -158,7 +158,7 @@
     },
     {
       "title": "邮件模版条件",
-      "description": "行内条件（真值/假值/有值/空值/等于/不等于 + 可选否则）。块级写在条件最外层 span 的 data-template-condition-layout 上，内部仍是 lodash if/else",
+      "description": "行内条件（真值/假值/有值/空值/等于/不等于 + 可选否则）。块级写在条件最外层 span 的 data-template-condition-layout 上，内部是 Liquid {% if %} / {% else %} / {% endif %}",
       "code": "./templateCondition.js",
       "scope": [
         {

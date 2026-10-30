@@ -45,6 +45,7 @@ import {
   buildConditionModelAttributes,
   findConditionMatches,
   formatClauseBadge,
+  LIQUID_IF_OPEN_RE,
   formatJoinerLabel,
   normalizeJoiner,
   normalizeOperator,
@@ -53,8 +54,8 @@ import {
   resolveTemplateConditionSettings,
   unwrapTemplateConditionSpans
 } from './conditionSyntax';
-import { findTemplateMatches, resolveTemplateVariableSettings, resolveVariableLabel } from '../TemplateVariablePlugin/templateSyntax';
-import { KIND_ESCAPE, KIND_INTERPOLATE, TEMPLATE_VARIABLE_MODEL } from '../TemplateVariablePlugin/constants';
+import { findTemplateMatches, normalizeVariableKind, resolveTemplateVariableSettings, resolveVariableLabel } from '../TemplateVariablePlugin/templateSyntax';
+import { TEMPLATE_VARIABLE_MODEL } from '../TemplateVariablePlugin/constants';
 
 const getConditionSettings = editor =>
   resolveTemplateConditionSettings(editor.config.get('templateCondition') || {}, editor.config.get('templateVariable') || {});
@@ -240,8 +241,8 @@ const createConditionElement = (writer, { subject, operator, value, clauses, joi
   return condition;
 };
 
-const ELSE_TOKEN = '<% } else { %>';
-const CLOSE_TOKEN = '<% } %>';
+const ELSE_TOKEN = '{% else %}';
+const CLOSE_TOKEN = '{% endif %}';
 
 const collectConditionBranchNodes = viewElement => {
   const thenNodes = [];
@@ -272,7 +273,7 @@ const collectConditionBranchNodes = viewElement => {
     if (child.is?.('$text')) {
       let data = child.data || '';
       if (phase === 'pre') {
-        const matched = data.match(/<%\s*(?:\/\*ck-layout:block\*\/\s*)?if\s*\([\s\S]*?\)\s*\{\s*%>/);
+        const matched = data.match(LIQUID_IF_OPEN_RE);
         if (!matched) {
           continue;
         }
@@ -319,7 +320,7 @@ const fillBlockBranch = (editor, conversionApi, branch, nodes) => {
   let cursor = writer.createPositionAt(branch, 0);
 
   const insertText = (paragraph, value) => {
-    const matches = findTemplateMatches(value, variableSettings);
+    const matches = findTemplateMatches(value);
     if (!matches.length) {
       writer.insert(writer.createText(value), paragraph, 0);
       return;
@@ -332,7 +333,7 @@ const fillBlockBranch = (editor, conversionApi, branch, nodes) => {
         writer.insert(writer.createText(before), position);
         position = writer.createPositionAt(paragraph, 'end');
       }
-      const kind = match.kind === KIND_ESCAPE ? KIND_ESCAPE : KIND_INTERPOLATE;
+      const kind = normalizeVariableKind(match.kind);
       const variable = writer.createElement(TEMPLATE_VARIABLE_MODEL, {
         name: match.name,
         label: resolveVariableLabel(match.name, kind, variableSettings.variables),
@@ -721,8 +722,10 @@ class ToggleTemplateConditionLayoutCommand extends Command {
 
   refresh() {
     const condition = findSelectedCondition(this.editor.model.document.selection);
-    this.isEnabled = !!condition && !this.editor.isReadOnly;
-    this.value = !!condition?.is('element', TEMPLATE_CONDITION_BLOCK_MODEL);
+    const isBlock = !!condition?.is('element', TEMPLATE_CONDITION_BLOCK_MODEL);
+    // allowBlock=false 时只允许把已有块级转回行内
+    this.isEnabled = !!condition && !this.editor.isReadOnly && (isBlock || getConditionSettings(this.editor).allowBlock);
+    this.value = isBlock;
   }
 }
 
@@ -1131,7 +1134,7 @@ class TemplateConditionEditing extends Plugin {
         })
     });
 
-    // 数据态 span 回填（中间态）；规范 lodash 文本见下方 text upcast
+    // 数据态 span 回填（中间态）；规范 Liquid 文本见下方 text upcast
     editor.conversion.for('upcast').elementToElement({
       view: viewElement => {
         if (!(viewElement.is('element', 'span') && viewElement.hasClass(TEMPLATE_CONDITION_CLASS))) {
@@ -1207,7 +1210,7 @@ class TemplateConditionEditing extends Plugin {
       );
     });
 
-    // 规范 lodash if/else 文本 → widget（任意 JS 不解析）
+    // 规范 Liquid if/else 文本 → widget（白名单外的写法不解析）
     editor.conversion.for('upcast').add(dispatcher => {
       dispatcher.on(
         'text',
@@ -1255,7 +1258,7 @@ class TemplateConditionEditing extends Plugin {
               return cursor;
             }
             let cursor = asCursor ? targetParentOrCursor : writer.createPositionAt(targetParentOrCursor, 'end');
-            const varMatches = findTemplateMatches(value, variableSettings);
+            const varMatches = findTemplateMatches(value);
 
             const writeText = chunk => {
               if (!chunk) {
@@ -1283,7 +1286,7 @@ class TemplateConditionEditing extends Plugin {
             for (const match of varMatches) {
               writeText(value.slice(localOffset, match.start));
               if (schema.checkChild(cursor.parent, TEMPLATE_VARIABLE_MODEL)) {
-                const kind = match.kind === KIND_ESCAPE ? KIND_ESCAPE : KIND_INTERPOLATE;
+                const kind = normalizeVariableKind(match.kind);
                 const element = writer.createElement(TEMPLATE_VARIABLE_MODEL, {
                   name: match.name,
                   label: resolveVariableLabel(match.name, kind, variableSettings.variables),
@@ -1566,7 +1569,7 @@ class TemplateConditionUI extends Plugin {
 
     widgetToolbarRepository.register('templateCondition', {
       ariaLabel: i18n.templateConditionToolbarAria || '模版条件工具栏',
-      items: ['editTemplateConditionOperator', 'toggleTemplateConditionElse', 'toggleTemplateConditionLayout'],
+      items: ['editTemplateConditionOperator', 'toggleTemplateConditionElse'].concat(getConditionSettings(editor).allowBlock ? ['toggleTemplateConditionLayout'] : []),
       getRelatedElement: viewSelection => {
         const selection = editor.model.document.selection;
         const modelElement = findSelectedCondition(selection);

@@ -168,6 +168,70 @@ const BaseExample = () => {
                     })
                 ]
             }),
+            createBlock('editableList', {
+                title: '证书资质（行内编辑列表）',
+                name: 'certificates',
+                addText: '添加证书',
+                list: [
+                    createField({
+                        type: 'Input',
+                        name: 'certName',
+                        label: '证书名称',
+                        rule: 'REQ',
+                        props: {placeholder: '请输入证书名称'}
+                    }),
+                    createField({
+                        type: 'DatePicker',
+                        name: 'issueDate',
+                        label: '获得时间',
+                        props: {placeholder: '请选择日期'}
+                    })
+                ]
+            }),
+            createBlock('editableList', {
+                title: '岗位核心任务（行内编辑列表 + 嵌套）',
+                name: 'tasks',
+                addText: '添加任务',
+                addPosition: 'top',
+                minLength: 1,
+                list: [
+                    createField({
+                        type: 'Input',
+                        name: 'taskName',
+                        label: '任务名称',
+                        rule: 'REQ',
+                        props: {placeholder: '请输入任务名称'}
+                    }),
+                    createField({
+                        type: 'Select',
+                        name: 'frequency',
+                        label: '执行频率',
+                        props: {
+                            placeholder: '请选择',
+                            options: [
+                                {label: '每天', value: 'daily'},
+                                {label: '每周', value: 'weekly'},
+                                {label: '每月', value: 'monthly'}
+                            ]
+                        }
+                    })
+                ],
+                itemBlocks: [
+                    createBlock('list', {
+                        title: '分析依据',
+                        name: 'evidence',
+                        addText: '添加依据',
+                        list: [
+                            createField({
+                                type: 'Input',
+                                name: 'source',
+                                label: '来源',
+                                props: {placeholder: '如：JD 原文'}
+                            })
+                        ]
+                    })
+                ]
+            }),
             createBlock('list', {
                 title: '项目经历（含嵌套）',
                 name: 'projects',
@@ -415,7 +479,7 @@ const BaseExample = () => {
         <FormCreator value={schema} onChange={setSchema} />
         <div style={{marginTop: 16}}>
             <JsonView data={schema} theme="light" collapsedFrom={2} searchable={false} />
-            <Text type="secondary">初始示例已包含表单分组、列表、表格列表、列表嵌套、选项切换、多字段、分步等模块。</Text>
+            <Text type="secondary">初始示例已包含表单分组、列表、表格列表、行内编辑列表、列表嵌套、选项切换、多字段、分步等模块。</Text>
         </div>
     </div>;
 };
@@ -665,87 +729,95 @@ render(<NestedChoiceExample />);
 const { default: FormCreator, preset, defaultSchema, createBlock, createField } = _FormCreator;
 const { Rate, Slider } = _ReactFormAntd;
 const { default: JsonView } = _JsonView;
-const { useState } = React;
+const { useRef, useState } = React;
 const { Alert, Typography, Space } = antd;
 const { Text, Paragraph } = Typography;
 
-// 一次 preset：运行时校验 + 编辑器规则面板 + 扩展填写项
-preset({
-  rules: {
-    ID_CARD: {
-      label: '身份证格式',
-      reg: /^\d{17}[\dXx]$/,
-      message: '%s格式不正确'
+const applyPresetOnce = () => {
+  // 勿放在模块顶层：modules-dev 会加载全部示例，顶层 preset 会污染其它示例的 Field Type 下拉
+  preset({
+    rules: {
+      ID_CARD: {
+        label: '身份证格式',
+        reg: /^\d{17}[\dXx]$/,
+        message: '%s格式不正确'
+      },
+      RATE_MIN: {
+        label: '评分至少3星',
+        validator: value => {
+          const score = Number(value) || 0;
+          return {
+            result: score >= 3,
+            errMsg: score >= 3 ? '' : '评分至少 3 星'
+          };
+        }
+      }
     },
-    RATE_MIN: {
-      label: '评分至少3星',
-      validator: value => {
-        const score = Number(value) || 0;
-        return {
-          result: score >= 3,
-          errMsg: score >= 3 ? '' : '评分至少 3 星'
-        };
+    fields: {
+      Rate: {
+        label: '评分',
+        groupName: '评价组件',
+        component: Rate,
+        defaultProps: { count: 5, allowHalf: false, allowClear: true },
+        valueSchema: { type: 'number' },
+        propsSchema: [
+          {
+            name: 'count',
+            label: '星星总数',
+            type: 'number',
+            min: 1,
+            max: 10,
+            defaultValue: 5
+          },
+          {
+            name: 'allowHalf',
+            label: '允许半星',
+            type: 'boolean',
+            defaultValue: false
+          },
+          {
+            name: 'allowClear',
+            label: '允许清除',
+            type: 'boolean',
+            defaultValue: true
+          }
+        ]
+      },
+      Slider: {
+        label: '滑块',
+        component: Slider,
+        defaultProps: { min: 0, max: 100, step: 1 },
+        valueSchema: { type: 'number' },
+        propsSchema: [
+          { name: 'min', label: '最小值', type: 'number', defaultValue: 0 },
+          { name: 'max', label: '最大值', type: 'number', defaultValue: 100 },
+          { name: 'step', label: '步长', type: 'number', min: 0, defaultValue: 1 },
+          {
+            name: 'tooltipPlacement',
+            label: '提示位置',
+            type: 'select',
+            defaultValue: 'top',
+            options: [
+              { label: '上', value: 'top' },
+              { label: '下', value: 'bottom' },
+              { label: '左', value: 'left' },
+              { label: '右', value: 'right' }
+            ]
+          },
+          { name: 'dots', label: '显示刻度点', type: 'boolean', defaultValue: false }
+        ]
       }
     }
-  },
-  fields: {
-    Rate: {
-      label: '评分',
-      groupName: '评价组件',
-      component: Rate,
-      defaultProps: { count: 5, allowHalf: false, allowClear: true },
-      valueSchema: { type: 'number' },
-      propsSchema: [
-        {
-          name: 'count',
-          label: '星星总数',
-          type: 'number',
-          min: 1,
-          max: 10,
-          defaultValue: 5
-        },
-        {
-          name: 'allowHalf',
-          label: '允许半星',
-          type: 'boolean',
-          defaultValue: false
-        },
-        {
-          name: 'allowClear',
-          label: '允许清除',
-          type: 'boolean',
-          defaultValue: true
-        }
-      ]
-    },
-    Slider: {
-      label: '滑块',
-      component: Slider,
-      defaultProps: { min: 0, max: 100, step: 1 },
-      valueSchema: { type: 'number' },
-      propsSchema: [
-        { name: 'min', label: '最小值', type: 'number', defaultValue: 0 },
-        { name: 'max', label: '最大值', type: 'number', defaultValue: 100 },
-        { name: 'step', label: '步长', type: 'number', min: 0, defaultValue: 1 },
-        {
-          name: 'tooltipPlacement',
-          label: '提示位置',
-          type: 'select',
-          defaultValue: 'top',
-          options: [
-            { label: '上', value: 'top' },
-            { label: '下', value: 'bottom' },
-            { label: '左', value: 'left' },
-            { label: '右', value: 'right' }
-          ]
-        },
-        { name: 'dots', label: '显示刻度点', type: 'boolean', defaultValue: false }
-      ]
-    }
-  }
-});
+  });
+};
 
 const PresetExtendExample = () => {
+  const presetReady = useRef(false);
+  if (!presetReady.current) {
+    applyPresetOnce();
+    presetReady.current = true;
+  }
+
   const [schema, setSchema] = useState(() => ({
     ...defaultSchema(),
     blocks: [
@@ -1109,7 +1181,7 @@ render(<ExtraToolbarExample />);
 ```
 
 - 按 Schema 展示提交数据
-- SchemaContent：根据搭建 Schema 与字段 valueSchema，用 InfoPage（同 FormInfo 布局）展示提交结果
+- SchemaContent：按 Schema + valueSchema 展示提交结果；含长题干问卷与约 480px 窄栏预览，核对上下排布不被 minWidth 撑乱
 - _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],antd(antd)[import antd from "antd"]
 
 ```jsx
@@ -1151,6 +1223,69 @@ const demoSchema = {
         createField({ type: 'TextArea', name: 'remark', label: '备注', block: true, props: { rows: 2, placeholder: '选填' } })
       ]
     }),
+    createBlock('formInfo', {
+      title: '111',
+      subtitle: '长题干问卷（用于核对窄栏上下排布）',
+      column: 1,
+      list: [
+        createField({
+          type: 'RadioGroup',
+          name: 'yearsInRole',
+          label: '您在本岗位（人才招聘方向）的工作年限是？（单选题）',
+          rule: 'REQ',
+          props: {
+            inline: true,
+            options: [
+              { label: 'A. 不到6个月', value: 'lt6m' },
+              { label: 'B. 6个月-1年', value: '6m1y' },
+              { label: 'C. 1-3年', value: '1to3y' },
+              { label: 'D. 3年以上', value: 'gt3y' }
+            ]
+          }
+        }),
+        createField({
+          type: 'RadioGroup',
+          name: 'aiFrequency',
+          label: '过去一个月，您使用AI工具（如ChatGPT、Kimi、Copilot、文心一言等）辅助工作的频率是？（单选题）',
+          rule: 'REQ',
+          props: {
+            inline: false,
+            options: [
+              { label: 'A. 每天都在用', value: 'daily' },
+              { label: 'B. 每周几次', value: 'weekly' },
+              { label: 'C. 偶尔使用', value: 'rarely' },
+              { label: 'D. 几乎不用', value: 'never' }
+            ]
+          }
+        }),
+        createField({
+          type: 'CheckboxGroup',
+          name: 'aiTasks',
+          label: '目前您用AI辅助过以下哪些具体工作？（多选题）',
+          props: {
+            inline: false,
+            options: [
+              { label: 'A. 撰写或优化职位说明书/JD', value: 'jd' },
+              { label: 'H. 其他（请在下方文本框中说明）', value: 'other' }
+            ]
+          }
+        }),
+        createField({
+          type: 'TextArea',
+          name: 'aiTasksOther',
+          label: 'H. 其他（请在下方文本框中说明）',
+          block: true,
+          props: { rows: 2, placeholder: '选填说明' }
+        }),
+        createField({
+          type: 'TextArea',
+          name: 'workOpinion',
+          label: '您对工作中使用AI工具的整体看法是？（开放题）',
+          block: true,
+          props: { rows: 3, placeholder: '请输入' }
+        })
+      ]
+    }),
     createBlock('list', {
       title: '项目经历',
       name: 'projects',
@@ -1158,6 +1293,20 @@ const demoSchema = {
       list: [
         createField({ type: 'Input', name: 'projectName', label: '项目名', rule: 'REQ' }),
         createField({ type: 'Input', name: 'role', label: '角色' })
+      ]
+    }),
+    createBlock('editableList', {
+      title: '岗位核心任务（行内编辑列表）',
+      name: 'tasks',
+      addText: '添加任务',
+      addPosition: 'top',
+      list: [createField({ type: 'Input', name: 'taskName', label: '任务名称', rule: 'REQ' }), createField({ type: 'Input', name: 'frequency', label: '执行频率' })],
+      itemBlocks: [
+        createBlock('list', {
+          title: '分析依据',
+          name: 'evidence',
+          list: [createField({ type: 'Input', name: 'source', label: '来源' })]
+        })
       ]
     }),
     createBlock('choice', {
@@ -1187,9 +1336,18 @@ const demoData = {
   gender: 'male',
   agree: true,
   remark: '可远程办公',
+  yearsInRole: 'lt6m',
+  aiFrequency: 'daily',
+  aiTasks: ['jd', 'other'],
+  aiTasksOther: '示例内容',
+  workOpinion: '希望团队统一工具与规范，再逐步推广。',
   projects: [
     { projectName: '招聘门户改版', role: '前端' },
     { projectName: '表单搭建器', role: '全栈' }
+  ],
+  tasks: [
+    { taskName: '梳理招聘需求', frequency: '每周', evidence: [{ source: 'JD 原文' }] },
+    { taskName: '输出岗位画像', frequency: '每月' }
   ],
   customerType: 'enterprise',
   companyName: '示例科技有限公司'
@@ -1207,7 +1365,8 @@ const SchemaContentExample = () => {
         description={
           <span>
             按搭建 Schema 的分组结构展示提交数据；字段展示形态由各填写项的 <Text code>valueSchema</Text>
-            （如 string / number / boolean / enum）决定。布局与 FormInfo 相同，使用 InfoPage.Part + Content。
+            决定。长题干采用 label 在上、值在下。RadioGroup / CheckboxGroup 支持 <Text code>inline</Text>
+            （选项是否横向排列）；示例中「工作年限」为横向，「AI 频率 / 多选」为纵向。右侧窄栏约 480px 用于核对布局。
           </span>
         }
       />
@@ -1229,6 +1388,9 @@ const SchemaContentExample = () => {
           </Card>
         </Col>
       </Row>
+      <Card size="small" title="窄栏预览（模拟弹窗右栏 ~480px）" bordered style={{ maxWidth: 480 }}>
+        <SchemaContent schema={demoSchema} data={data} />
+      </Card>
     </Space>
   );
 };
@@ -1356,6 +1518,402 @@ const FormInfoFieldExample = () => {
 };
 
 render(<FormInfoFieldExample />);
+
+
+```
+
+- 语言切换(全屏)
+- FormCreator locale prop 切换中/英；检查内置 Field Type 分组与选项、列表类型 Tag、Select/DatePicker 占位，以及 Schema 多语言文案随语言切换
+- _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],antd(antd)[import antd from "antd"],remoteLoader(@kne/remote-loader)
+
+```jsx
+const { default: FormCreator, defaultSchema, createBlock, createField } = _FormCreator;
+const { createWithRemoteLoader } = remoteLoader;
+const { useState } = React;
+const { Radio, Space, Typography, Alert } = antd;
+
+const { Text, Paragraph } = Typography;
+
+const languages = [
+  { value: 'zh-CN', label: '中文' },
+  { value: 'en-US', label: 'English' }
+];
+
+const demoSchema = () => ({
+  ...defaultSchema(),
+  blocks: [
+    createBlock('formInfo', {
+      title: { 'zh-CN': '基本信息', 'en-US': 'Basic Info' },
+      column: 2,
+      list: [
+        createField({
+          type: 'Input',
+          name: 'name',
+          label: { 'zh-CN': '姓名', 'en-US': 'Name' },
+          rule: 'REQ'
+        }),
+        createField({
+          type: 'Input',
+          name: 'email',
+          label: { 'zh-CN': '邮箱', 'en-US': 'Email' },
+          rule: 'EMAIL LEN-6-30'
+        }),
+        createField({
+          type: 'Select',
+          name: 'city',
+          label: { 'zh-CN': '城市', 'en-US': 'City' },
+          props: {
+            options: [
+              { label: { 'zh-CN': '上海', 'en-US': 'Shanghai' }, value: 'sh' },
+              { label: { 'zh-CN': '北京', 'en-US': 'Beijing' }, value: 'bj' }
+            ]
+          }
+        }),
+        createField({
+          type: 'DatePicker',
+          name: 'birthday',
+          label: { 'zh-CN': '生日', 'en-US': 'Birthday' }
+        })
+      ]
+    })
+  ]
+});
+
+/**
+ * 通过 FormCreator 的 locale prop 切换语言，检查：
+ * - 编辑器壳层文案（Add Section / Field Type 等）
+ * - 内置 Field Type 分组与选项（Single-line Text / Dropdown）
+ * - 左侧列表字段类型 Tag、Select/DatePicker 默认占位
+ * - Schema 内多语言文案（{ 'zh-CN', 'en-US' }）随 locale 切换；languages 决定编辑时有哪几栏输入
+ * - 内置校验（EMAIL / TEL / LEN）错误提示随 locale 切换
+ * - DatePicker 面板等 antd 内置文案由外层 PureGlobal 的 preset.locale 决定
+ *
+ * 注意：扩展字段（Rate/Slider）若曾打开过「preset 扩展」示例，会残留中文 label；
+ * 那是全局 registry 污染，不在本示例内重注册（避免热更新循环）。
+ */
+const LocaleSwitchExample = createWithRemoteLoader({
+  modules: ['components-core:Global@PureGlobal']
+})(({ remoteModules }) => {
+  const [PureGlobal] = remoteModules;
+  const [locale, setLocale] = useState('en-US');
+  const [schema, setSchema] = useState(demoSchema);
+
+  return (
+    <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      <Alert
+        type="info"
+        showIcon
+        message="Language switch"
+        description={
+          <Paragraph style={{ marginBottom: 0 }}>
+            Toggle locale, then open <Text code>Edit Field</Text> and check built-in <Text strong>Field Type</Text> groups/options, type tags, and Select/DatePicker placeholders.
+          </Paragraph>
+        }
+      />
+      <Radio.Group
+        optionType="button"
+        buttonStyle="solid"
+        value={locale}
+        onChange={e => setLocale(e.target.value)}
+        options={languages}
+      />
+      <PureGlobal key={locale} preset={{ locale }}>
+        <FormCreator locale={locale} languages={languages} value={schema} onChange={setSchema} />
+      </PureGlobal>
+    </Space>
+  );
+});
+
+render(<LocaleSwitchExample />);
+
+
+```
+
+- 固定填写项
+- 字段设置 locked: true 后不可编辑、删除或移动，所在模块位置固定；适合业务依赖的固定字段
+- _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],antd(antd)[import antd from "antd"]
+
+```jsx
+const { default: FormCreator, defaultSchema, createBlock, createField } = _FormCreator;
+const { useState } = React;
+const { Alert, Space, Typography } = antd;
+const { Text } = Typography;
+
+const LockedFieldExample = () => {
+  const [schema, setSchema] = useState(() => ({
+    ...defaultSchema(),
+    blocks: [
+      createBlock('formInfo', {
+        title: '面试评价',
+        column: 1,
+        list: [
+          createField({
+            type: 'RadioGroup',
+            name: 'recommendation',
+            label: '是否通过',
+            rule: 'REQ',
+            locked: true,
+            props: {
+              options: [
+                { label: '通过', value: 'pass' },
+                { label: '待定', value: 'hold' },
+                { label: '不通过', value: 'reject' }
+              ]
+            }
+          }),
+          createField({ type: 'InputNumber', name: 'score', label: '综合评分（1-5）', rule: 'REQ', locked: true, props: { min: 1, max: 5 } }),
+          createField({ type: 'TextArea', name: 'strengths', label: '优势', block: true, props: { rows: 3 } }),
+          createField({ type: 'TextArea', name: 'notes', label: '备注', block: true, props: { rows: 3 } })
+        ]
+      }),
+      createBlock('formInfo', {
+        title: '补充信息',
+        column: 2,
+        list: [createField({ type: 'Input', name: 'expectedSalary', label: '期望薪资', props: { placeholder: '请输入期望薪资' } })]
+      })
+    ]
+  }));
+
+  return (
+    <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      <Alert
+        type="info"
+        showIcon
+        message="固定填写项"
+        description={
+          <span>
+            字段设置 <Text code>locked: true</Text> 后不可编辑、删除或移动，其他字段也不能换到它前面；所在模块（含步骤、选项）不可删除、不可移动。适合「是否通过」「综合评分」这类业务依赖的固定字段。
+          </span>
+        }
+      />
+      <FormCreator value={schema} onChange={setSchema} />
+    </Space>
+  );
+};
+
+render(<LockedFieldExample />);
+
+
+```
+
+- 超长文案(全屏)
+- 模块标题、字段 label、选项、步骤标题均为超长文本并叠加固定/隐藏/整行标签，检查编辑器列表与预览的换行和省略
+- _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],antd(antd)[import antd from "antd"]
+
+```jsx
+const { default: FormCreator, defaultSchema, createBlock, createField, createStep } = _FormCreator;
+const { useState } = React;
+const { Alert, Space, Typography } = antd;
+const { Text } = Typography;
+
+const LongLabelExample = () => {
+  const [schema, setSchema] = useState(() => ({
+    ...defaultSchema(),
+    blocks: [
+      createBlock('formInfo', {
+        title: '候选人面试综合评价表（适用于技术岗位、产品岗位以及跨部门协作岗位的多轮面试场景）',
+        subtitle: '请面试官在面试结束后 24 小时内完成填写，评价结果将同步给招聘负责人、用人部门负责人以及 HRBP 作为录用决策依据',
+        column: 2,
+        list: [
+          createField({
+            type: 'RadioGroup',
+            name: 'recommendation',
+            label: '综合以上所有面试环节的表现，您是否推荐该候选人进入下一轮面试或直接发放录用通知',
+            rule: 'REQ',
+            locked: true,
+            props: {
+              options: [
+                { label: '强烈推荐，候选人能力明显超出岗位要求，建议尽快推进后续流程', value: 'pass' },
+                { label: '待定，需要结合其他面试官意见或补充一轮面试后再做决定', value: 'hold' },
+                { label: '不推荐，候选人在核心能力项上与岗位要求存在明显差距', value: 'reject' }
+              ]
+            }
+          }),
+          createField({
+            type: 'InputNumber',
+            name: 'score',
+            label: '综合评分（1-5 分，请结合专业能力、沟通表达、文化契合度与成长潜力综合打分）',
+            rule: 'REQ',
+            locked: true,
+            props: { min: 1, max: 5 }
+          }),
+          createField({
+            type: 'Input',
+            name: 'expectedSalaryAndAvailableDateAndOtherRemarks',
+            label: '候选人期望薪资、最快到岗时间以及其他需要招聘负责人特别关注的事项说明',
+            hidden: true,
+            props: { placeholder: '例如：期望 35K × 15 薪，最快一个月后到岗，需要确认是否接受出差' }
+          }),
+          createField({
+            type: 'Select',
+            name: 'interviewRound',
+            label: '本次面试所属轮次（如为加面或交叉面，请选择最接近的轮次并在备注中说明）',
+            props: {
+              options: [
+                { label: '第一轮：业务部门技术或专业能力面试', value: 'first' },
+                { label: '第二轮：部门负责人综合面试', value: 'second' },
+                { label: '终面：HRBP 与高管联合面试', value: 'final' }
+              ]
+            }
+          }),
+          createField({
+            type: 'TextArea',
+            name: 'strengthsAndWeaknesses',
+            label: '请详细描述候选人在本轮面试中展现出的主要优势、明显短板以及对岗位胜任力的整体判断依据',
+            block: true,
+            props: { rows: 3 }
+          })
+        ]
+      }),
+      createBlock('steps', {
+        title: '分步骤填写的超长模块标题：第一步填写基础评价，第二步填写补充说明与附件',
+        items: [
+          createStep({
+            title: '第一步：基础评价信息（包括专业能力、沟通表达与团队协作等维度）',
+            column: 1,
+            list: [createField({ type: 'Input', name: 'stepRemark', label: '对候选人专业能力与过往项目经验真实性的核实情况说明', props: {} })]
+          }),
+          createStep({
+            title: '第二步：补充说明',
+            column: 1,
+            list: [createField({ type: 'TextArea', name: 'stepNotes', label: '其他补充说明', props: { rows: 2 } })]
+          })
+        ]
+      })
+    ]
+  }));
+
+  return (
+    <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      <Alert
+        type="info"
+        showIcon
+        message="超长文案"
+        description={
+          <span>
+            模块标题、副标题、字段 label、选项文案、步骤标题均为超长文本，并叠加 <Text code>locked</Text> / <Text code>hidden</Text> / <Text code>block</Text>{' '}
+            标签，用于检查编辑器列表与右侧预览的换行、省略与对齐。
+          </span>
+        }
+      />
+      <FormCreator value={schema} onChange={setSchema} />
+    </Space>
+  );
+};
+
+render(<LongLabelExample />);
+
+
+```
+
+- 条件显示(全屏)
+- 字段配置 visibleWhen：按其他字段的值（等于、属于其一、多选包含、数值比较、正则匹配，支持且/或组合）决定是否显示，隐藏时不校验并清空值
+- _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],antd(antd)[import antd from "antd"]
+
+```jsx
+const { default: FormCreator, defaultSchema, createBlock, createField, schemaToDataSchema } = _FormCreator;
+const { useState } = React;
+const { Alert, Collapse, Space, Typography } = antd;
+const { Text } = Typography;
+
+const ConditionalFieldExample = () => {
+  const [schema, setSchema] = useState(() => ({
+    ...defaultSchema(),
+    blocks: [
+      createBlock('formInfo', {
+        title: '面试评价',
+        column: 1,
+        list: [
+          createField({
+            type: 'RadioGroup',
+            name: 'recommendation',
+            label: '是否通过',
+            rule: 'REQ',
+            props: {
+              options: [
+                { label: '通过', value: 'pass' },
+                { label: '待定', value: 'hold' },
+                { label: '不通过', value: 'reject' }
+              ]
+            }
+          }),
+          createField({
+            type: 'TextArea',
+            name: 'rejectReason',
+            label: '不通过原因',
+            rule: 'REQ',
+            block: true,
+            props: { rows: 3 },
+            visibleWhen: { logic: 'and', conditions: [{ field: 'recommendation', operator: 'eq', value: 'reject' }] }
+          }),
+          createField({ type: 'InputNumber', name: 'score', label: '综合评分（1-5）', rule: 'REQ', props: { min: 1, max: 5 } }),
+          createField({
+            type: 'TextArea',
+            name: 'improvement',
+            label: '改进建议',
+            block: true,
+            props: { rows: 3 },
+            visibleWhen: { logic: 'and', conditions: [{ field: 'score', operator: 'lte', value: 2 }] }
+          }),
+          createField({
+            type: 'CheckboxGroup',
+            name: 'dimensions',
+            label: '考察维度',
+            props: {
+              options: [
+                { label: '专业能力', value: 'skill' },
+                { label: '沟通表达', value: 'communication' },
+                { label: '管理能力', value: 'management' }
+              ]
+            }
+          }),
+          createField({
+            type: 'InputNumber',
+            name: 'teamSize',
+            label: '带过的团队规模（人）',
+            rule: 'REQ',
+            props: { min: 1 },
+            visibleWhen: { logic: 'and', conditions: [{ field: 'dimensions', operator: 'includesAny', value: ['management'] }] }
+          }),
+          createField({ type: 'Input', name: 'interviewerEmail', label: '面试官邮箱' }),
+          createField({
+            type: 'Input',
+            name: 'referrer',
+            label: '内部推荐人',
+            visibleWhen: { logic: 'and', conditions: [{ field: 'interviewerEmail', operator: 'regex', value: '@leapin\\.ai$', flags: 'i' }] }
+          })
+        ]
+      })
+    ]
+  }));
+
+  return (
+    <Space direction="vertical" size={16} style={{ width: '100%' }}>
+      <Alert
+        type="info"
+        showIcon
+        message="条件显示"
+        description={
+          <span>
+            字段配置 <Text code>visibleWhen</Text> 后，满足条件才显示：选「不通过」出现「不通过原因」；评分 ≤ 2 出现「改进建议」；考察维度勾选「管理能力」出现「团队规模」；面试官邮箱匹配 <Text code>/@leapin\.ai$/i</Text> 出现「内部推荐人」。隐藏的字段不参与校验，已填的值会被清空。在编辑弹窗的「条件显示」中可修改条件。
+          </span>
+        }
+      />
+      <FormCreator value={schema} onChange={setSchema} />
+      <Collapse
+        items={[
+          {
+            key: 'data-schema',
+            label: 'schemaToDataSchema 输出（条件字段不进 required，description 附条件说明）',
+            children: <pre style={{ margin: 0, maxHeight: 360, overflow: 'auto' }}>{JSON.stringify(schemaToDataSchema(schema), null, 2)}</pre>
+          }
+        ]}
+      />
+    </Space>
+  );
+};
+
+render(<ConditionalFieldExample />);
 
 
 ```
@@ -1563,6 +2121,113 @@ render(<TemplateApisExample />);
 
 ```
 
+- 弹窗适配 components-core Modal
+- 内部编辑弹窗默认使用 components-core Modal（固定标题/底部、内容滚动、移动端全屏）；通过 renderModal 可替换为 Drawer 等其它弹层
+- _FormCreator(@components/FormCreator),remoteLoader(@kne/remote-loader),antd(antd)
+
+```jsx
+const { default: FormCreator, defaultSchema, createBlock, createField, createChoiceOption } = _FormCreator;
+const { createWithRemoteLoader } = remoteLoader;
+const { useMemo, useState } = React;
+const { Alert, Flex, Segmented, Typography } = antd;
+const { Text } = Typography;
+
+const createInterviewSchema = () => ({
+  ...defaultSchema(),
+  blocks: [
+    createBlock('formInfo', {
+      title: '候选人信息',
+      subtitle: '面试官填写前请核对候选人基本资料',
+      column: 2,
+      list: [
+        createField({ type: 'Input', name: 'candidateName', label: '候选人姓名', rule: 'REQ', props: { placeholder: '如：李雨桐' } }),
+        createField({ type: 'Input', name: 'position', label: '应聘岗位', rule: 'REQ', props: { placeholder: '如：高级前端工程师' } }),
+        createField({ type: 'DatePicker', name: 'interviewDate', label: '面试日期', rule: 'REQ' }),
+        createField({
+          type: 'Select',
+          name: 'round',
+          label: '面试轮次',
+          rule: 'REQ',
+          props: {
+            options: [
+              { label: '一面（技术）', value: 'tech' },
+              { label: '二面（业务）', value: 'business' },
+              { label: 'HR 面', value: 'hr' }
+            ]
+          }
+        })
+      ]
+    }),
+    createBlock('choice', {
+      title: '面试结论',
+      selectorName: 'conclusion',
+      options: [
+        createChoiceOption({
+          title: '通过',
+          list: [createField({ type: 'TextArea', name: 'highlight', label: '主要亮点', block: true, rule: 'REQ' })]
+        }),
+        createChoiceOption({
+          title: '不通过',
+          list: [createField({ type: 'TextArea', name: 'reason', label: '不通过原因', block: true, rule: 'REQ' })]
+        })
+      ]
+    })
+  ]
+});
+
+const ModalAdapterExample = createWithRemoteLoader({
+  modules: ['components-core:Drawer@createDrawerRender']
+})(({ remoteModules }) => {
+  const [createDrawerRender] = remoteModules;
+  const [schema, setSchema] = useState(createInterviewSchema);
+  const [mode, setMode] = useState('modal');
+
+  const renderDrawer = useMemo(() => {
+    const renderDrawerBase = createDrawerRender({ placement: 'right', footerButtons: [], bodyScroll: true });
+    // 宿主协议：onCancel → onClose，footer 函数需先执行；width 由 Drawer 自身决定（移动端全宽）
+    return ({ formProps, saveText, autoClose, cancelText, onCancel, footer, width, ...props }) =>
+      renderDrawerBase({
+        ...props,
+        onClose: onCancel,
+        footer: typeof footer === 'function' ? footer() : footer
+      });
+  }, [createDrawerRender]);
+
+  return (
+    <Flex vertical gap={16}>
+      <Alert
+        type="info"
+        showIcon
+        message="弹窗适配 components-core"
+        description={
+          <span>
+            本包装层默认把「编辑模块」「编辑填写项」「表单按钮」等内部弹窗统一渲染为 components-core 的 Modal：标题与底部按钮固定、内容区滚动，切到「手机」预览时全屏展示。
+            需要换成侧滑抽屉等其它弹层时，传入 <Text code>renderModal</Text> 即可，例如配合 <Text code>components-core:Drawer@createDrawerRender</Text>。
+          </span>
+        }
+      />
+      <Segmented
+        value={mode}
+        onChange={setMode}
+        options={[
+          { label: '默认（components-core Modal）', value: 'modal' },
+          { label: '自定义 renderModal（Drawer）', value: 'drawer' }
+        ]}
+      />
+      <FormCreator.Field
+        key={mode}
+        value={schema}
+        onChange={setSchema}
+        renderModal={mode === 'drawer' ? renderDrawer : undefined}
+      />
+    </Flex>
+  );
+});
+
+render(<ModalAdapterExample />);
+
+```
+
 - 扩展添加模块旁的按钮
 - extraToolbar 操作列表并入圆形「更多」下拉，与导入导出等扩展操作一致
 - _FormCreator(@components/FormCreator),antd(antd)
@@ -1633,6 +2298,7 @@ render(<ExtraToolbarExample />);
 | formProps | object | {} | 透传给预览区 Form / FormSteps 的属性 |
 | renderModal | function(props) | - | 自定义编辑弹窗渲染，透传给内部 FormModal（同 super-select / form-info） |
 | extraToolbar | ReactNode \| function({ schema }) | - | 追加在「添加模块」与设置按钮后面的自定义按钮区 |
+| languages | { value, label }[] | - | Schema 文案支持的语言，首项为基础语言；不传为单语言输入（见「多语言文案」） |
 
 ```js
 <FormCreator
@@ -1663,6 +2329,7 @@ render(<ExtraToolbarExample />);
 | buttonFooterProps | object | - | 透传给 `ButtonFooter`（如 `placement`、`target`、`className`） |
 | children | ReactNode | - | 追加到表单内容与操作区之间 |
 | showActions | boolean | true | 是否展示提交/重置操作区（默认开启，可不传） |
+| languages | { value, label }[] | - | 多语言文案回退顺序，同 FormCreator；不传按 `zh-CN` → `en-US` |
 | actions | ReactNode \| false | - | 自定义操作区；不传则按 Schema `actions` / 默认居中「提交/重置」；`false` 隐藏 |
 | showSubmit | boolean | - | 覆盖 Schema；不传则读 `schema.actions.showSubmit`（默认 true） |
 | showReset | boolean | - | 覆盖 Schema；不传则读 `schema.actions.showReset`（默认 true） |
@@ -1716,6 +2383,7 @@ import { SchemaRenderer } from '@kne/form-creator';
 | className | string | - | 包在表单区块外层的 className（可选） |
 | children | ReactNode | - | 追加内容 |
 | showActions | boolean | true | 是否展示提交/重置操作区（默认开启，可不传） |
+| languages | { value, label }[] | - | 多语言文案回退顺序，同 FormCreator；不传按 `zh-CN` → `en-US` |
 | actions / showSubmit / showReset / submitText / resetText / \*ButtonProps | - | - | 同 SchemaRenderer |
 | bodyClassName / footerClassName / buttonFooter / buttonFooterProps | - | - | 同 SchemaRenderer |
 
@@ -1744,6 +2412,7 @@ import { Form, SubmitButton } from '@kne/form-info';
 | data | object | - | 提交数据；为 `null` / `undefined` 时展示空状态 |
 | className | string | - | 根节点类名 |
 | empty | ReactNode | - | 自定义空状态；不传则用默认 Empty |
+| languages | { value, label }[] | - | 多语言文案回退顺序，同 FormCreator；不传按 `zh-CN` → `en-US` |
 
 `SchemaContentInner` 只渲染分组内容，**不包**外层 `InfoPage`，便于放入业务已有详情页。
 
@@ -1760,14 +2429,15 @@ import { SchemaContent, SchemaContentInner } from '@kne/form-creator';
 #### Schema 结构
 
 ```js
+// LocaleText = string | { [language: string]: string }，如 { 'zh-CN': '姓名', 'en-US': 'Name' }，title / label 等展示文案均可用（见「多语言文案」）
 {
   actions?: {
     showSubmit?: boolean,   // 默认 true
     showReset?: boolean,    // 默认 true
     showCancel?: boolean,   // 默认 false（可选取消按钮）
-    submitText?: string,    // 空则用「提交」
-    resetText?: string,     // 空则用「重置」
-    cancelText?: string,    // 空则用「取消」
+    submitText?: LocaleText,    // 空则用「提交」
+    resetText?: LocaleText,     // 空则用「重置」
+    cancelText?: LocaleText,    // 空则用「取消」
     align?: 'center' | 'start' | 'end', // 默认 center
     gap?: number,           // 按钮间距，默认 16
     submitButtonProps?: object,
@@ -1776,12 +2446,12 @@ import { SchemaContent, SchemaContentInner } from '@kne/form-creator';
   },
   blocks: [{
     id: string,
-    kind: 'formInfo' | 'list' | 'tableList' | 'multiField' | 'object' | 'choice' | 'steps',
+    kind: 'formInfo' | 'list' | 'tableList' | 'editableList' | 'multiField' | 'object' | 'choice' | 'steps',
     title?, subtitle?, column?, gap?, bordered?, important?,
-    name?, label?, addText?, maxLength?, minLength?, fieldType?, autoStep?,
+    name?, label?, addText?, addPosition?, maxLength?, minLength?, fieldType?, autoStep?,
     mode?, selectorName?, selectorInData?, discriminator?,
-    list?: [{ id, type, name, label, tips?, description?, rule?, block?, hidden?, props? }],
-    itemBlocks?: Block[], // list：列表项内子模块
+    list?: [{ id, type, name, label, tips?, description?, rule?, block?, hidden?, locked?, visibleWhen?, props? }],
+    itemBlocks?: Block[], // list / editableList：列表项内子模块
     blocks?: Block[], // formInfo / object：子模块
     options?: [{ id, title, list?, blocks?: Block[] }], // choice
     items?: [{ id, title, column, list: [...], blocks?: Block[] }] // steps 专用
@@ -1791,7 +2461,82 @@ import { SchemaContent, SchemaContentInner } from '@kne/form-creator';
 
 `actions` 由 FormCreator 顶部「添加模块」旁的设置按钮弹窗配置，写入 Schema；`SchemaRenderer` 会读取并渲染居中操作按钮（组件 props 可覆盖 Schema）。设置按钮后面可用 `extraToolbar` 追加自定义按钮。
 
+字段 `locked: true` 为固定填写项：编辑器中不可编辑、删除或移动，其他字段也不能与其交换位置；包含锁定字段的模块、步骤、选项不可删除、不可移动。渲染与提交不受影响。工具方法 `isFieldLocked(field)`、`blockHasLockedField(block)` 可用于业务侧判断。
+
+#### 条件显示（visibleWhen）
+
+字段可配置 `visibleWhen`，表单中其他字段的值满足条件时才显示该字段（编辑弹窗「条件显示」中配置）：
+
+```js
+{
+  name: 'rejectReason',
+  label: '不通过原因',
+  rule: 'REQ',
+  visibleWhen: {
+    logic: 'and', // 'and' 全部满足 | 'or' 满足任一，缺省 and
+    conditions: [{ field: 'recommendation', operator: 'eq', value: 'reject' }]
+  }
+}
+```
+
+| operator | 含义 | value |
+|----------|------|-------|
+| `eq` / `neq` | 等于 / 不等于 | 单值 |
+| `in` | 属于其一 | 数组 |
+| `includesAny` | 多选值包含任一 | 数组 |
+| `empty` / `notEmpty` | 为空 / 不为空（`undefined`、`null`、`''`、`[]` 视为空） | 无 |
+| `gt` / `gte` / `lt` / `lte` | 数值比较，非数字视为不满足 | 数字 |
+| `regex` | 正则匹配；值为数组时任一项匹配即满足 | 正则源码（不含 `/`），可加 `flags`（仅 `i` `m` `s` `u`） |
+
+规则：
+
+- `field` 为提交数据中的路径，object 模块内字段带前缀，如 `contact.phone`
+- 不满足条件的字段不渲染、不参与校验，已填的值会被清空；`SchemaContent` 按数据同样隐藏
+- 列表类模块（list / tableList / editableList / multiField）内的字段既不能配置条件，也不能作为触发字段
+- 条件引用的字段不存在、位于列表类模块内或正则无效时，该条件被忽略（编辑器显示「条件失效」）；全部条件失效时字段照常显示
+- 编辑器会拦截循环依赖；触发字段改名时自动同步引用
+- `schemaToDataSchema` 中条件字段不进入 `required`，并在 `description` 中附加条件说明
+- 工具方法：`evaluateVisibleWhen(visibleWhen, formData, knownNames?)`、`evaluateCondition(condition, formData)`、`collectConditionFields(schema)`、`findConditionCycle(schema)`、`renameConditionReferences(schema, oldPath, newPath)`
+
 顶层模块渲染时会自动挂上 `InfoPage.partRootClassName`，嵌入外层 FormInfo Part 时标题从一级重新起算；模块内再嵌套仍为二级胶囊。
+#### 多语言文案
+
+Schema 内的展示文案既可以是字符串，也可以是按语言区分的对象：`{ 'zh-CN': '姓名', 'en-US': 'Name' }`。`SchemaRenderer` / `SchemaRendererInner` / `SchemaContent` 渲染前按当前 `locale` 解析：字符串（旧格式）不论语言原样显示；多语言对象先取当前语言，取不到按 `languages` 顺序回退（未传 `languages` 时为 `zh-CN` → `en-US`），都没有内容为空。
+
+| 支持多语言的位置 | 说明 |
+|------|------|
+| 字段 | label、tips、description、props.placeholder、props.options[].label / description、Switch 的 checkedChildren / unCheckedChildren |
+| 模块 | title、subtitle、label、addText；tableList 列 title；choice 选项 title；steps 步骤 title |
+| actions | submitText、resetText、cancelText |
+
+支持哪些语言由调用方通过 `languages` 决定，组件不内置语言列表：
+
+```jsx
+const languages = [
+  { value: 'zh-CN', label: '中文' },
+  { value: 'en-US', label: 'English' }
+];
+
+<FormCreator languages={languages} value={schema} onChange={setSchema} />
+<SchemaRenderer languages={languages} schema={schema} />
+```
+
+FormCreator 不传 `languages` 时为单语言输入（与改造前一致，存字符串）；传入后每种语言一栏输入，首项为基础语言：只填基础语言时存为字符串（与旧 Schema 兼容），填了其它语言才存为对象；选项值联动时取基础语言文案。数据标识（`name`、选项 `value`）与语言无关。
+
+| 方法 / 组件 | 参数 | 返回值 | 说明 |
+|------|------|------|------|
+| localizeSchema | (schema, locale, languages?) | object | 深度解析多语言文案，返回新对象，不修改原 Schema |
+| resolveLocaleText | (value, locale, languages?) | string | 解析单个文案；非多语言对象原样返回 |
+| isLocaleText | (value) | boolean | 是否为多语言文案对象 |
+| hasLocaleText | (value) | boolean | 文案（字符串或多语言）是否有内容 |
+| LocaleInput / LocaleTextArea | 同 react-form-antd 字段，另可传 languages | - | 多语言文案表单字段 |
+| LocaleTextControl | value, onChange, placeholder, multiline, compact, languages | - | 非表单场景的多语言输入控件 |
+| LocaleTextProvider | languages, children | - | 给内部的 LocaleInput / LocaleTextControl 统一下发 languages（FormCreator 已内置） |
+
+`SchemaRenderer` 创建表单时按当前 `locale` 传入表单级 `rules`，让内置 `TEL` / `EMAIL` / `LEN` 的错误提示随语言切换（`@kne/react-form` 内置提示为中文）；业务通过 `preset` 覆盖了同名规则时不替换，`formProps.rules` 优先级最高。`SchemaRendererInner` 嵌在外部表单中，规则由外部表单决定。
+
+`schemaToDataSchema(schema, { locale, languages })` 与 `formatFieldDisplayValue(field, value, { formatMessage, locale, languages })` 也接受 `locale` / `languages`，回退规则同上。
+
 #### 区块类型
 
 | kind | 说明 | 主要参数 |
@@ -1799,6 +2544,7 @@ import { SchemaContent, SchemaContentInner } from '@kne/form-creator';
 | formInfo | 表单信息区块 | title, subtitle, column, gap, bordered, list, **blocks** |
 | list | 动态列表 | name, title, important, bordered, maxLength, list, **itemBlocks** |
 | tableList | 表格列表 | name, title, bordered, maxLength, list（不支持子模块） |
+| editableList | 行内编辑列表（`@kne/form-info` EditableList）：每条只读摘要展示，点击编辑后单独表单填写、保存写回；父表单只注册一个字段，数据量大不卡顿 | name, title, column（编辑态列数）, bordered, addText, **addPosition**（`bottom` 底部追加 \| `top` 标题右侧插入首项 \| `both`，默认 `bottom`）, minLength, maxLength, list, **itemBlocks** |
 | object | 对象分组 | name, title, column, gap, bordered, list（字段名渲染为 `name.field`）, **blocks** |
 | choice | 选项分支 | title, **mode**(`single`\|`multiple`), **minLength** / **maxLength**（仅多选：最少/最多选几项）, selectorName, selectorInData, options[{ title, list, **blocks** }] |
 | multiField | 同类型多值 | name, label, fieldType, addText（不支持子模块） |
@@ -1836,7 +2582,7 @@ const dataSchema = schemaToDataSchema(schema);
 |--------|----------------|
 | formInfo | 字段摊平进当前 object |
 | object | `properties[name]` = nested object（字段名为相对 name） |
-| list / tableList | `properties[name]` = array of object |
+| list / tableList / editableList | `properties[name]` = array of object |
 | multiField | `properties[name]` = array，元素为 `fieldType` 的 valueSchema |
 | steps | 各 step 字段/子块并入当前层 |
 | choice（single） | `oneOf`：每支含 selector `const` + 该 option 字段 |
@@ -1845,6 +2591,7 @@ const dataSchema = schemaToDataSchema(schema);
 说明：
 
 - **hidden 字段仍进入** data schema（可提交）
+- 配置了 `visibleWhen` 的字段不进入 `required`，`description` 追加条件说明（按 `options.locale` 输出中文或英文）
 - 字段值类型来自 registry 的 `valueSchema`；`rule` 含 `REQ` 时写入父 object 的 `required`（choice 支内同样生效）
 - 扩展字段在 `preset` / `registerField` 中声明 `valueSchema`（对象或 `(field) => schema`）；未声明则回退 `{ type: 'string' }`
 

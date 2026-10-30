@@ -93,7 +93,7 @@ export const globalInit = async () => {
       'components-admin': {
         ...registry,
         remote: 'components-admin',
-        defaultVersion: '1.1.70'
+        defaultVersion: '1.1.133'
       },
       'components-thirdparty':
         process.env.NODE_ENV === 'development'
@@ -110,10 +110,7 @@ export const globalInit = async () => {
     }
   });
 
-  const themeToken = {
-    colorPrimary: '#4F185A',
-    colorPrimaryHover: '#702280'
-  };
+  const themeToken = {};
 
   return {
     ajax,

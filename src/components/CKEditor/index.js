@@ -312,6 +312,37 @@ const defaultConfig = {
         element: 'p',
         classes: ['danger-card']
       },
+      // ── 按钮类（行内）──
+      {
+        name: 'Primary Button (Rounded)',
+        element: 'span',
+        classes: ['btn-rounded-primary']
+      },
+      {
+        name: 'Default Button (Rounded)',
+        element: 'span',
+        classes: ['btn-rounded-default']
+      },
+      {
+        name: 'Danger Button (Rounded)',
+        element: 'span',
+        classes: ['btn-rounded-danger']
+      },
+      {
+        name: 'Primary Button (Pill)',
+        element: 'span',
+        classes: ['btn-pill-primary']
+      },
+      {
+        name: 'Default Button (Pill)',
+        element: 'span',
+        classes: ['btn-pill-default']
+      },
+      {
+        name: 'Danger Button (Pill)',
+        element: 'span',
+        classes: ['btn-pill-danger']
+      },
       // ── 行内类 ──
       {
         name: 'Keywords',

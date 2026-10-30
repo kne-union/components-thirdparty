@@ -40,11 +40,26 @@ const loadScriptOnce = src => {
   });
 };
 
+// 页面已有 AMD 加载器（如 Monaco 的 vs/loader.js）时，UMD 脚本会走 define 而不挂全局变量，且匿名 define 会报错
+const withoutAmd = async load => {
+  const define = window.define;
+  if (typeof define !== 'function' || !define.amd) {
+    return load();
+  }
+  const amd = define.amd;
+  define.amd = undefined;
+  try {
+    return await load();
+  } finally {
+    define.amd = amd;
+  }
+};
+
 export const loadEcharts = async () => {
   const publicPath = getPublicPath('components-thirdparty');
-  await getOrLoadRemote('echarts', '', `${publicPath}/echarts/echarts.js`);
+  await withoutAmd(() => getOrLoadRemote('echarts', '', `${publicPath}/echarts/echarts.js`));
   const echarts = window.echarts;
-  await loadScriptOnce(`${publicPath}/echarts/extension/word-cloud.js`);
+  await withoutAmd(() => loadScriptOnce(`${publicPath}/echarts/extension/word-cloud.js`));
   if (echarts && window.wordCloudCustomSeriesInstaller) {
     echarts.use(window.wordCloudCustomSeriesInstaller);
   }

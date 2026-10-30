@@ -32,6 +32,25 @@
       ]
     },
     {
+      "title": "弹窗适配 components-core Modal",
+      "description": "内部编辑弹窗默认使用 components-core Modal（固定标题/底部、内容滚动、移动端全屏）；通过 renderModal 可替换为 Drawer 等其它弹层",
+      "code": "./modal-adapter.js",
+      "scope": [
+        {
+          "name": "_FormCreator",
+          "packageName": "@components/FormCreator"
+        },
+        {
+          "name": "remoteLoader",
+          "packageName": "@kne/remote-loader"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        }
+      ]
+    },
+    {
       "title": "扩展添加模块旁的按钮",
       "description": "extraToolbar 操作列表并入圆形「更多」下拉，与导入导出等扩展操作一致",
       "code": "./extra-toolbar.js",

@@ -4,7 +4,8 @@
 
 | 属性名 | 类型 | 默认值 | 说明 |
 |--------|------|--------|------|
-| height | number | 500 | 编辑器高度 |
+| height | number \| string | 500 | 编辑器高度，支持 `'100%'` 等字符串 |
+| formatActionOpen | boolean | true | 是否在左下角显示「格式化」浮层。格式化依赖 Monaco 内置格式化器（JSON、JavaScript、TypeScript、CSS、HTML 等），当前语言不支持格式化或 `options.readOnly` 为 true 时不展示 |
 | defaultLanguage | string | - | 默认编程语言 |
 | defaultValue | string | - | 默认代码内容 |
 | value | string | - | 受控的代码内容 |
@@ -22,6 +23,7 @@
 |--------|------|--------|------|
 | getValue | - | string | 获取编辑器内容 |
 | setValue | value: string | - | 设置编辑器内容 |
+| format | - | Promise\<boolean\> | 格式化当前内容，当前语言不支持格式化时返回 false |
 | getEditor | - | Editor | 获取 Monaco Editor 实例 |
 | getMonaco | - | Monaco | 获取 Monaco 命名空间 |
 

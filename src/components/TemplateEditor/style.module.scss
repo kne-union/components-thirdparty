@@ -1,0 +1,118 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
+.template-editor {
+  overflow: hidden;
+  border: 1px solid var(--font-color-grey-3, #f0f0f0);
+  border-radius: var(--radius-default, 8px);
+  background: #fff;
+}
+
+.toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--font-color-grey-3, #f0f0f0);
+}
+
+.canvas {
+  padding: 24px;
+  background: #f5f6f8;
+}
+
+.paper {
+  max-width: 680px;
+  margin: 0 auto;
+  overflow: hidden;
+  border-radius: var(--radius-default, 8px);
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(15, 35, 95, 0.08);
+  transition: max-width 0.2s ease;
+
+  &.is-mobile {
+    max-width: 375px;
+  }
+
+  // 只作用于根可编辑区；条件块内的 then/else 也带 ck-editor__editable 类
+  :global(.ck.ck-editor .ck-editor__main > .ck-editor__editable) {
+    min-height: var(--template-editor-height, 480px);
+  }
+}
+
+.is-text {
+  .paper :global(.ck-content p) {
+    margin: 0;
+    line-height: 1.8;
+  }
+}
+
+.sms {
+  max-width: 375px;
+  min-height: var(--template-editor-height, 160px);
+  margin: 0 auto;
+  padding: 20px 16px;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 4px 16px rgba(15, 35, 95, 0.08);
+}
+
+.sms-bubble {
+  display: inline-block;
+  max-width: 85%;
+  padding: 10px 14px;
+  border-radius: 4px 16px 16px 16px;
+  background: #f0f2f5;
+  color: rgba(0, 0, 0, 0.88);
+  font-size: 15px;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.sms-meta {
+  margin-top: 8px;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+}
+
+.envelope {
+  padding: 16px 20px;
+  border-bottom: 1px solid var(--font-color-grey-3, #f0f0f0);
+}
+
+.envelope-subject {
+  color: rgba(0, 0, 0, 0.88);
+  font-size: 16px;
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.envelope-meta {
+  margin-top: 4px;
+  color: rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+}
+
+.preview {
+  display: block;
+  width: 100%;
+  height: var(--template-editor-height, 480px);
+  border: 0;
+}
+
+@include resp.mobile-container {
+  .toolbar {
+    padding: 10px 12px;
+  }
+
+  .canvas {
+    padding: 12px;
+  }
+
+  .paper,
+  .sms {
+    max-width: none;
+  }
+}
