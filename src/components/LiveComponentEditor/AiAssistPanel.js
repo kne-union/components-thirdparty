@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { Button, Checkbox, Flex, Input, Space, Typography, Tag } from 'antd';
-import { RobotOutlined, SendOutlined, ThunderboltOutlined, MenuFoldOutlined } from '@ant-design/icons';
+import { SendOutlined, ThunderboltOutlined, MenuFoldOutlined } from '@ant-design/icons';
 import createAjax from '@kne/axios-fetch';
 import { getGlobal } from '@kne/remote-loader';
 import { getLibs } from '@components/LiveComponentView';
@@ -8,6 +8,7 @@ import { HtmlMarkdown } from '@components/MarkdownRender';
 import useRefCallback from '@kne/use-ref-callback';
 import { createSiteApi, isLocalStorageHost } from './siteApi';
 import { collectRemotesPayload, stripCodeFence, mergeSuggestedProps } from './aiSelection';
+import AiIcon from './AiIcon';
 import style from './style.module.scss';
 
 const { Text } = Typography;
@@ -192,7 +193,7 @@ const AiAssistPanel = ({
     <div className={style['ai-panel']}>
       <Flex justify="space-between" align="center" className={style['ai-panel-header']}>
         <Space size={6}>
-          <RobotOutlined />
+          <AiIcon />
           <Text strong>{formatMessage({ id: 'AiTitle' })}</Text>
         </Space>
         {onCollapse && (

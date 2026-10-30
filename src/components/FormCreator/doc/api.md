@@ -16,6 +16,7 @@
 | apis | object | - | 模版与文件夹接口；有 `groupList` 时显示左侧 FileSystemView；有 `saveTemplate` 时显示「保存为模版」 |
 | groupType | string | form-creator-template | 传给 Group 文件夹 API 的 `type` |
 | valueKey / labelKey | string | code / name | 与 GroupFolder 一致 |
+| renderModal | function(props) | components-core Modal | 自定义内部编辑弹窗渲染；props 为 `@kne/form-info` FormModal 宿主协议（`onCancel`、`footer` 可为函数、`formProps`、`modalRender` 等），不传时默认渲染 components-core Modal |
 
 ### apis
 

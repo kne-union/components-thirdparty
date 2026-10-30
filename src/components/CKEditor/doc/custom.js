@@ -175,7 +175,7 @@ const TOOLBAR_PRESETS = {
         variables: [
           { name: 'userName', label: '用户名' },
           { name: 'companyName', label: '公司名' },
-          { name: 'rawHtml', label: '原始HTML', kind: 'escape' }
+          { name: 'rawHtml', label: '原始HTML', kind: 'raw' }
         ]
       },
       templateCondition: {
@@ -195,7 +195,7 @@ const TOOLBAR_PRESETS = {
         variables: [
           { name: 'userName', label: '用户名' },
           { name: 'companyName', label: '公司名' },
-          { name: 'rawHtml', label: '原始HTML', kind: 'escape' }
+          { name: 'rawHtml', label: '原始HTML', kind: 'raw' }
         ]
       },
       templateCondition: {

@@ -2,13 +2,58 @@
   "isFull": false,
   "list": [
     {
-      "title": "这里填写示例标题",
-      "description": "这里填写示例说明",
+      "title": "基础用法",
+      "description": "编辑一段排版凌乱的订单金额计算函数，点击左下角的「格式化」浮层（或按 Shift + Alt + F）即可一键整理代码，浮层默认开启",
       "code": "./base.js",
       "scope": [
         {
           "name": "_CodeEditor",
           "packageName": "@components/CodeEditor"
+        }
+      ]
+    },
+    {
+      "title": "多语言与受控模式",
+      "description": "通过 language、path 切换 JSON / CSS / HTML / Markdown，用 value + onChange 受控保存每种语言的内容；没有内置格式化器的语言（如 Markdown）不展示格式化按钮",
+      "code": "./language.js",
+      "scope": [
+        {
+          "name": "_CodeEditor",
+          "packageName": "@components/CodeEditor"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        }
+      ]
+    },
+    {
+      "title": "主题、编辑器配置与格式化开关",
+      "description": "展示 theme、options、loading 的用法，并通过 formatActionOpen 控制格式化浮层；options.readOnly 为 true 时浮层自动隐藏。注意 Monaco 的 theme 是全局的，切换后同页面所有编辑器一起生效",
+      "code": "./options.js",
+      "scope": [
+        {
+          "name": "_CodeEditor",
+          "packageName": "@components/CodeEditor"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        }
+      ]
+    },
+    {
+      "title": "通过 Ref 操作编辑器",
+      "description": "关闭内置浮层，改由外部按钮调用 ref 上的 setValue、format、getValue、getEditor，适合把格式化集成到自定义工具栏的场景",
+      "code": "./ref.js",
+      "scope": [
+        {
+          "name": "_CodeEditor",
+          "packageName": "@components/CodeEditor"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
         }
       ]
     }

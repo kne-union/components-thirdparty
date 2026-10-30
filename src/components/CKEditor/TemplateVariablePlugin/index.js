@@ -1,17 +1,18 @@
 import { Plugin, Command, Widget, toWidget, createDropdown, addListToDropdown, Collection, ViewModel } from 'ckeditor5';
 import {
-  KIND_ESCAPE,
-  KIND_INTERPOLATE,
+  KIND_RAW,
   TEMPLATE_VARIABLE_CLASS,
   TEMPLATE_VARIABLE_KIND_ATTR,
   TEMPLATE_VARIABLE_LABEL_ATTR,
   TEMPLATE_VARIABLE_MODEL,
-  TEMPLATE_VARIABLE_NAME_ATTR
+  TEMPLATE_VARIABLE_NAME_ATTR,
+  VARIABLE_PATH_RE
 } from './constants';
 import templateVariableIcon from './icon';
 import bindDialogFloatingDropdown from '../dialogFloatingDropdown';
 import {
   findTemplateMatches,
+  normalizeVariableKind,
   resolveTemplateVariableSettings,
   resolveVariableLabel,
   unwrapTemplateVariableSpans,
@@ -20,7 +21,7 @@ import {
 
 const getSettings = editor => resolveTemplateVariableSettings(editor.config.get('templateVariable') || {});
 
-const normalizeKind = kind => (kind === KIND_ESCAPE ? KIND_ESCAPE : KIND_INTERPOLATE);
+const normalizeKind = normalizeVariableKind;
 
 const createEditingView = (modelElement, { writer }, i18n) => {
   const name = modelElement.getAttribute('name') || '';
@@ -50,11 +51,11 @@ const createEditingView = (modelElement, { writer }, i18n) => {
   });
 };
 
-const createDataView = (modelElement, { writer }, settings) => {
+const createDataView = (modelElement, { writer }) => {
   const name = modelElement.getAttribute('name') || '';
   const label = modelElement.getAttribute('label') || name;
   const kind = normalizeKind(modelElement.getAttribute('kind'));
-  const text = wrapVariable(name, kind, settings);
+  const text = wrapVariable(name, kind);
 
   const span = writer.createContainerElement('span', {
     class: `${TEMPLATE_VARIABLE_CLASS} ${TEMPLATE_VARIABLE_CLASS}--${kind}`,
@@ -71,7 +72,7 @@ const isTemplateVariableSpan = viewElement => viewElement.is('element', 'span') 
 
 class InsertTemplateVariableCommand extends Command {
   execute({ name, label, kind } = {}) {
-    if (!name) {
+    if (!name || !VARIABLE_PATH_RE.test(String(name).trim())) {
       return;
     }
 
@@ -155,7 +156,7 @@ class TemplateVariableEditing extends Plugin {
 
     editor.conversion.for('dataDowncast').elementToElement({
       model: TEMPLATE_VARIABLE_MODEL,
-      view: (modelElement, conversionApi) => createDataView(modelElement, conversionApi, getSettings(editor))
+      view: (modelElement, conversionApi) => createDataView(modelElement, conversionApi)
     });
 
     editor.conversion.for('upcast').elementToElement({
@@ -170,7 +171,7 @@ class TemplateVariableEditing extends Plugin {
         const name =
           viewElement.getAttribute(TEMPLATE_VARIABLE_NAME_ATTR) ||
           String(viewElement.getChild(0)?.data || '')
-            .replace(/^<%[-=]?\s*|\s*%>$/g, '')
+            .replace(/^\{\{\s*|\s*(?:\|\s*raw\s*)?\}\}$/g, '')
             .trim();
         const kind = normalizeKind(viewElement.getAttribute(TEMPLATE_VARIABLE_KIND_ATTR));
         const label = viewElement.getAttribute(TEMPLATE_VARIABLE_LABEL_ATTR) || resolveVariableLabel(name, kind, settings.variables);
@@ -192,7 +193,7 @@ class TemplateVariableEditing extends Plugin {
 
           const text = viewItem.data;
           const settings = getSettings(editor);
-          const matches = findTemplateMatches(text, settings);
+          const matches = findTemplateMatches(text);
 
           if (!matches.length) {
             return;
@@ -299,7 +300,7 @@ class TemplateVariableUI extends Plugin {
         }
         const kind = normalizeKind(item.kind);
         const label = item.label || item.name;
-        const kindSuffix = kind === KIND_ESCAPE ? i18n.templateVariableKindEscape || '转义' : i18n.templateVariableKindInterpolate || '插值';
+        const kindSuffix = kind === KIND_RAW ? i18n.templateVariableKindRaw || '原样HTML' : i18n.templateVariableKindInterpolate || '插值';
 
         items.add({
           type: 'button',

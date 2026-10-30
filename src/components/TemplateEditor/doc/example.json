@@ -1,0 +1,65 @@
+{
+  "isFull": false,
+  "list": [
+    {
+      "title": "基础用法",
+      "description": "使用 TemplateEditor.Field 编辑 AI 面试邀请邮件：工具栏可插入变量，切换到预览后用 previewData 渲染正文与 subject 主题，并可切换电脑 / 手机宽度",
+      "code": "./base.js",
+      "scope": [
+        {
+          "name": "_TemplateEditor",
+          "packageName": "@components/TemplateEditor"
+        }
+      ]
+    },
+    {
+      "title": "在Form中使用",
+      "description": "作为 FormInfo 表单字段编辑入职通知模板，支持 name、label、rule 校验；condition={false} 关闭条件块，height 控制编辑区高度",
+      "code": "./form.js",
+      "scope": [
+        {
+          "name": "_TemplateEditor",
+          "packageName": "@components/TemplateEditor"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        },
+        {
+          "name": "remoteLoader",
+          "packageName": "@kne/remote-loader"
+        }
+      ]
+    },
+    {
+      "title": "文本模式（短信）",
+      "description": "type=\"text\" 时仍用 CKEditor 插入变量与行内条件，但 value / onChange 是纯文本（每行一段、丢弃格式），预览以短信气泡展示渲染结果与字数；contactPhone 未提供示例值，预览中以 [联系电话] 占位",
+      "code": "./sms.js",
+      "scope": [
+        {
+          "name": "_TemplateEditor",
+          "packageName": "@components/TemplateEditor"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        }
+      ]
+    },
+    {
+      "title": "条件块与示例数据切换",
+      "description": "通过 condition 配置条件算子，正文按会员等级、优惠码是否为空输出不同内容；切换示例数据可在预览中对比效果，并演示 renderTemplate 渲染主题",
+      "code": "./condition.js",
+      "scope": [
+        {
+          "name": "_TemplateEditor",
+          "packageName": "@components/TemplateEditor"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        }
+      ]
+    }
+  ]
+}

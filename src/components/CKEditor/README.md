@@ -8,7 +8,7 @@
 
 - **双模式**：富文本（HTML）与 Markdown（`isMarkdown`），Markdown 下自动剔除 3D、视频、交互组件、图表、表单相关工具与配置
 - **富媒体插件**：GLB 3D 模型（`@google/model-viewer`）、HTML5 视频、LiveComponent（`LiveComponentEditor` 编辑 + `LiveComponentView` 渲染）、FormCreator（搭建器编辑 + `SchemaRenderer` 渲染）
-- **邮件模版变量**：`TemplateVariablePlugin` 支持插入 lodash 插值/转义变量，编辑态显示 label 芯片，`getData` 输出可配置模版语法
+- **邮件模版变量**：`TemplateVariablePlugin` 支持插入 Liquid 变量（`{{ name }}` / `{{ name | raw }}`），编辑态显示 label 芯片；配合 `validateTemplateHtml` 把模版语法收敛在变量输出与 if/else 的安全范围内
 - **邮件模版条件**：`TemplateConditionPlugin` 默认插入单条件壳（真值/假值/有值/空值/等于/不等于 + 可选否则）；「编辑条件」弹窗可添加扁平且/或多谓词；可选把 if / else 切成块级（`data-template-condition-layout`）
 - **统一上传**：图片、3D、视频共用 `uploadAdapter` / `preset.apis.file`，未配置 `upload` 时回退 base64
 - **预览增强**：`CKEditor.Content` 同步视频尺寸、挂载交互组件/表单/图表、3D 全屏预览（含移动端 overlay）
@@ -20,7 +20,7 @@
 - 需要嵌入 3D 产品模型或说明视频的营销/帮助文档
 - 需要可配置、可复用的交互区块（LiveComponent）的运营页面
 - 需要在富文本中嵌入可填写表单（FormCreator / SchemaRenderer）的场景
-- 邮件/通知等 lodash 模版内容编写（变量与条件）
+- 邮件/通知等 Liquid 模版内容编写（变量与条件）
 - 技术文档等需要 Markdown 源码编辑与输出的场景
 
 
@@ -330,7 +330,7 @@ const TOOLBAR_PRESETS = {
         variables: [
           { name: 'userName', label: '用户名' },
           { name: 'companyName', label: '公司名' },
-          { name: 'rawHtml', label: '原始HTML', kind: 'escape' }
+          { name: 'rawHtml', label: '原始HTML', kind: 'raw' }
         ]
       },
       templateCondition: {
@@ -350,7 +350,7 @@ const TOOLBAR_PRESETS = {
         variables: [
           { name: 'userName', label: '用户名' },
           { name: 'companyName', label: '公司名' },
-          { name: 'rawHtml', label: '原始HTML', kind: 'escape' }
+          { name: 'rawHtml', label: '原始HTML', kind: 'raw' }
         ]
       },
       templateCondition: {
@@ -683,7 +683,7 @@ render(<BaseExample />);
 ```
 
 - 邮件模版变量
-- 插入 lodash 模版变量：编辑态显示 label 芯片，getData 输出可配置的插值/转义语法
+- 插入 Liquid 模版变量：编辑态显示 label 芯片，getData 输出 {{ name }} / {{ name | raw }}
 - _CKEditor(@components/CKEditor),antd(antd)
 
 ```jsx
@@ -720,14 +720,11 @@ const templateVariableConfig = {
   variables: [
     { name: 'userName', label: '用户名' },
     { name: 'companyName', label: '公司名' },
-    { name: 'rawHtml', label: '原始HTML', kind: 'escape' }
-  ],
-  // 与 lodash.templateSettings 同名字段；示例使用自定义 {{ }} / {{- }}
-  interpolate: /\{\{([\s\S]+?)\}\}/g,
-  escape: /\{\{-([\s\S]+?)\}\}/g
+    { name: 'rawHtml', label: '原始HTML', kind: 'raw' }
+  ]
 };
 
-const initData = &#96;<p>你好 {{userName}}，欢迎加入 {{companyName}}。</p><p>以下为原始 HTML：{{-rawHtml}}</p>&#96;;
+const initData = &#96;<p>你好 {{ userName }}，欢迎加入 {{ companyName }}。</p><p>以下为原始 HTML：{{ rawHtml | raw }}</p>&#96;;
 
 const BaseExample = () => {
   const [content, setContent] = useState(initData);
@@ -739,8 +736,8 @@ const BaseExample = () => {
           <div>
             <Title level={4}>邮件模版变量</Title>
             <Paragraph type="secondary">
-              工具栏「模版变量」从配置列表插入；编辑态显示 label 芯片，获取内容为 lodash 模版标签（本示例为自定义
-              <Text code>{'{{name}}'}</Text> / <Text code>{'{{-name}}'}</Text>）。
+              工具栏「模版变量」从配置列表插入；编辑态显示 label 芯片，获取内容为 Liquid 变量标签
+              <Text code>{'{{ name }}'}</Text> / <Text code>{'{{ name | raw }}'}</Text>。
             </Paragraph>
           </div>
           <CKEditor.Field
@@ -768,7 +765,7 @@ render(<BaseExample />);
 ```
 
 - 邮件模版条件
-- 行内条件（真值/假值/有值/空值/等于/不等于 + 可选否则）。块级写在条件最外层 span 的 data-template-condition-layout 上，内部仍是 lodash if/else
+- 行内条件（真值/假值/有值/空值/等于/不等于 + 可选否则）。块级写在条件最外层 span 的 data-template-condition-layout 上，内部是 Liquid {% if %} / {% else %} / {% endif %}
 - _CKEditor(@components/CKEditor),antd(antd)
 
 ```jsx
@@ -791,7 +788,7 @@ const templateConditionConfig = {
   allowNesting: true
 };
 
-const initData = &#96;<p>亲爱的<% if (userName == 'VIP') { %>尊贵的<%= userName %><% } else { %>朋友<% } %>，您好！</p><p>使用优惠码<% if (couponCode != null && couponCode !== '') { %><%= couponCode %>可享折扣<% } %>。</p>&#96;;
+const initData = &#96;<p>亲爱的{% if userName == 'VIP' %}尊贵的{{ userName }}{% else %}朋友{% endif %}，您好！</p><p>使用优惠码{% if couponCode != blank %}{{ couponCode }}可享折扣{% endif %}。</p>&#96;;
 
 const BaseExample = () => {
   const [content, setContent] = useState(initData);
@@ -804,7 +801,7 @@ const BaseExample = () => {
             <Title level={4}>邮件模版条件</Title>
             <Paragraph type="secondary">
               工具栏「条件」插入行内**单条件**壳；选中后浮动条可编辑条件（弹窗内可「添加条件」做扁平且/或）、切换否则，或切成块级。块级里可以选标题和样式，也可以再套一层条件；切回行内时会去掉块级标签和回车换行，只保留文字、变量和仍为行内的嵌套条件。
-              <Text code>getData</Text> 在条件最外层保留属性（含 <Text code>data-template-condition-clauses</Text> / <Text code>joiner</Text>），内部仍是 lodash <Text code>{'<% if %>'}</Text>。
+              <Text code>getData</Text> 在条件最外层保留属性（含 <Text code>data-template-condition-clauses</Text> / <Text code>joiner</Text>），内部是 Liquid <Text code>{'{% if %}'}</Text>。
             </Paragraph>
           </div>
           <CKEditor.Field
@@ -972,7 +969,7 @@ const templateVariableConfig = {
     { name: 'salesName', label: '销售姓名' },
     { name: 'department', label: '所属部门' },
     { name: 'tenantName', label: '租户名称' },
-    { name: 'rawHtml', label: '原始HTML', kind: 'escape' }
+    { name: 'rawHtml', label: '原始HTML', kind: 'raw' }
   ]
 };
 
@@ -1120,7 +1117,7 @@ render(<BaseExample />);
 | formCreator        | **仅富文本**。FormCreator 表单渲染/编辑参数，见下表                                                                                                         |
 | echart.toolbar     | **仅富文本**。图表浮动工具栏，默认 `echartStyle:*`、`resizeEchart:*`、`resizeEchartHeight:*`，可拖拽缩放                                                    |
 | model3d            | **仅富文本**。3D 模型 `model-viewer` 参数，见下表                                                                                                           |
-| templateVariable   | **仅富文本**。邮件模版变量：变量列表与 lodash `templateSettings` 同名字段（`interpolate` / `escape`），见下表                                               |
+| templateVariable   | **仅富文本**。邮件模版变量（Liquid `{{ }}` 语法），见下表                                                                                                   |
 | templateCondition  | **仅富文本**。邮件模版行内条件：算子白名单与可选 else，见下表                                                                                               |
 
 上传函数约定与图片相同：返回字符串 URL，或 `{ code: 0, data: 'url', msg }`（`code !== 0` 时展示失败占位图/提示）。
@@ -1160,47 +1157,46 @@ render(<BaseExample />);
 #### 邮件模版变量（TemplateVariablePlugin）
 
 - 工具栏：`insertTemplateVariable`（需自行加入 `config.toolbar.items`；未配置 `variables` 时按钮禁用）
-- 编辑态：内联 chip，显示 `label`，样式区分插值 / 转义
-- `getData` / `onChange`：输出纯文本模版标签，默认 `<%= name %>` / `<%- name %>`；可用 `interpolate` / `escape` RegExp 自定义（与 `_.templateSettings` 一致）
-- 回填：HTML 中的模版标签会按正则解析为芯片；`label` 优先从 `variables` 查找
+- 编辑态：内联 chip，显示 `label`，样式区分插值 / 原样HTML
+- `getData` / `onChange`：输出 Liquid 变量标签，插值为 `{{ name }}`（渲染端开启 liquidjs `outputEscape: 'escape'` 时会转义），原样HTML为 `{{ name | raw }}`；语法固定，不可自定义
+- 变量名只允许标识符路径（如 `user.name`）；不生成 `{{- }}` 去空白写法，也不生成 `raw` 以外的 filter
+- 回填：只识别上述两种写法并解析为芯片；旧的 lodash `<%= %>` / `<%- %>` 不再识别；`label` 优先从 `variables` 查找
 
 #### templateVariable 参数（config.templateVariable）
 
-| 字段        | 说明                                                                                               | 类型   | 默认值               |
-| ----------- | -------------------------------------------------------------------------------------------------- | ------ | -------------------- |
-| variables   | 可插入变量列表；项含 `name`、`label`、可选 `kind`（`interpolate` \| `escape`，默认 `interpolate`） | array  | `[]`                 |
-| interpolate | 插值语法 RegExp（需含捕获组），同 lodash `templateSettings.interpolate`                            | RegExp | `/<%=([\s\S]+?)%>/g` |
-| escape      | 转义语法 RegExp（需含捕获组），同 lodash `templateSettings.escape`                                 | RegExp | `/<%-([\s\S]+?)%>/g` |
-| evaluate    | 可传入以兼容完整 `templateSettings`；不参与变量 widget 化                                          | RegExp | -                    |
+| 字段      | 说明                                                                                                                         | 类型  | 默认值 |
+| --------- | ---------------------------------------------------------------------------------------------------------------------------- | ----- | ------ |
+| variables | 可插入变量列表；项含 `name`、`label`、可选 `kind`（`interpolate` \| `raw`，默认 `interpolate`；旧值 `escape` 按 `raw` 处理） | array | `[]`   |
 
 #### 邮件模版条件（TemplateConditionPlugin）
 
 - 工具栏：`insertTemplateCondition`（需自行加入 `config.toolbar.items`；变量列表来自 `templateVariable.variables` 或 `templateCondition.variables`）
 - 编辑态：默认行内**单条件**壳；选中后浮动条可「编辑条件」（弹窗内可添加多条扁平且/或谓词）、「否则」、以及「块级」
-- `getData` / `onChange`：条件最外层保留 `data-template-condition-*`（含 `clauses` JSON 与 `joiner`；块级为 `data-template-condition-layout="block"`），内部是 lodash evaluate，多条件如 `<% if ((userName == 'VIP') && (couponCode != null && couponCode !== '')) { %>…<% } %>`
-- 算子白名单：`truthy` / `falsy` / `filled` / `empty` / `eq` / `neq`；扁平多条件仅支持全 `&&` 或全 `||`（无括号分组、无 else-if）；块级 then/else 可再套条件 widget（`allowNesting`）；行内不可嵌套 widget
-- 回填：仅识别本插件规范形态的 `<% if %>`；手写混合 `&&`/`||` 或不规范表达式不 widget 化
+- `getData` / `onChange`：条件最外层保留 `data-template-condition-*`（含 `clauses` JSON 与 `joiner`；块级为 `data-template-condition-layout="block"`），内部是 Liquid `{% if %}`，多条件如 `{% if userName == 'VIP' and couponCode != blank %}…{% else %}…{% endif %}`
+- 算子白名单与 Liquid 写法：`truthy` → `name`、`falsy` → `name == false`、`filled` → `name != blank`、`empty` → `name == blank`、`eq` → `name == 'v'`、`neq` → `name != 'v'`；扁平多条件仅支持全 `and` 或全 `or`（Liquid 无括号分组、无 elsif）；块级 then/else 可再套条件 widget（`allowNesting`）；行内不可嵌套 widget
+- 回填：仅识别本插件规范形态的 `{% if %}`（可带 `{% # ck-layout:block %}` 前缀表示块级）；混合 `and`/`or`、filter 或其它不规范表达式不 widget 化；旧的 lodash `<% if %>` 不再识别
 
 #### templateCondition 参数（config.templateCondition）
 
-| 字段         | 说明                                                            | 类型    | 默认值                           |
-| ------------ | --------------------------------------------------------------- | ------- | -------------------------------- |
-| variables    | 可选；不传则复用 `templateVariable.variables` 作 subject 白名单 | array   | 同 templateVariable              |
+| 字段         | 说明                                                            | 类型    | 默认值                                           |
+| ------------ | --------------------------------------------------------------- | ------- | ------------------------------------------------ |
+| variables    | 可选；不传则复用 `templateVariable.variables` 作 subject 白名单 | array   | 同 templateVariable                              |
 | operators    | 允许的算子列表                                                  | array   | `['truthy','falsy','filled','empty','eq','neq']` |
-| allowElse    | 是否允许否则分支                                                | boolean | `true`                           |
-| allowNesting | 块级条件 then/else 内是否允许再套条件；行内条件始终不可嵌套 | boolean | `true`                           |
-| maxClauses   | 「编辑条件」弹窗最多可添加的谓词条数                            | number  | `5`                              |
-| display      | 新建条件的默认展示；实例可用浮动条在行内 / 块级间切换 | string  | `'inline'`                       |
+| allowElse    | 是否允许否则分支                                                | boolean | `true`                                           |
+| allowNesting | 块级条件 then/else 内是否允许再套条件；行内条件始终不可嵌套     | boolean | `true`                                           |
+| allowBlock   | 是否允许把条件切换为块级；为 `false` 时浮动条隐藏「块级」，已有块级仍可切回行内（纯文本场景使用） | boolean | `true` |
+| maxClauses   | 「编辑条件」弹窗最多可添加的谓词条数                            | number  | `5`                                              |
+| display      | 新建条件的默认展示；实例可用浮动条在行内 / 块级间切换           | string  | `'inline'`                                       |
 
 #### 模版校验工具（包导出）
 
-| 名称                         | 说明                                                     |
-| ---------------------------- | -------------------------------------------------------- |
-| findUnbalancedTemplateTags   | 扫描 `<%` / `%>` 是否配对，返回错误或 null               |
-| validateTemplateHtml         | 配对校验；可传入 `template`（如 `_.template`）做 dry-run |
-| unwrapTemplateConditionSpans | 将编辑器中间态 condition span 转为 lodash evaluate       |
-| buildConditionExpression     | 由 subject/operator/value 生成条件表达式                 |
-| findConditionMatches         | 在文本中找出规范形态的 if/else 匹配                      |
+| 名称                         | 说明                                                                                                                                                                  |
+| ---------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| findUnbalancedTemplateTags   | 扫描 `{{ }}` / `{% %}` 是否配对，返回错误或 null                                                                                                                      |
+| validateTemplateHtml         | 安全语法校验，返回 `{ ok, error }`：只允许 `{{ path }}`、`{{ path \| raw }}`、规范形态的 `{% if %}` / `{% else %}` / `{% endif %}` 与块级注释，再用 liquidjs 解析配对 |
+| unwrapTemplateConditionSpans | 将编辑器中间态 condition span 转为 Liquid `{% if %}`                                                                                                                  |
+| buildConditionExpression     | 由 subject/operator/value 生成 Liquid 条件表达式                                                                                                                      |
+| findConditionMatches         | 在文本中找出规范形态的 if/else 匹配                                                                                                                                   |
 
 #### liveComponent 参数（`config.liveComponent` / Content.liveComponent）
 
@@ -1272,8 +1268,8 @@ render(<BaseExample />);
 | EMAIL_TOOLBAR_ITEMS             | 邮件模版推荐工具栏（含模版变量、模版条件与 `style`）           |
 | EMAIL_STYLE_CSS                 | 无前缀邮件样式 CSS，可注入邮件模版外壳                         |
 | toEmailHtml                     | 兜底工具：给 class 版 HTML 补 inline style（正常流程无需调用） |
-| findUnbalancedTemplateTags      | 模版 `<%`/`%>` 配对检查                                        |
-| validateTemplateHtml            | 模版 HTML 校验（配对 + 可选 lodash.template dry-run）          |
+| findUnbalancedTemplateTags      | 模版 `{{ }}` / `{% %}` 配对检查                                |
+| validateTemplateHtml            | 模版 HTML 安全语法校验（白名单 + liquidjs 解析）               |
 
 #### 邮件模版样式（config.style + EMAIL_STYLE_DEFINITIONS）
 
@@ -1293,7 +1289,8 @@ import CKEditor, { EMAIL_STYLE_DEFINITIONS, EMAIL_TOOLBAR_ITEMS } from '@kne-com
 
 | 元素         | 段落下拉   | 可选样式                                                                   |
 | ------------ | ---------- | -------------------------------------------------------------------------- |
-| `p`          | 正文       | 正文、导语、补充说明、引用段、提示条、警示条、成功条、主按钮、次按钮、页脚 |
+| `p`          | 正文       | 正文、导语、补充说明、引用段、提示条、警示条、成功条、页脚                 |
+| `span`       | 选中文字   | 主按钮 / 次按钮（直角）；主按钮 / 普通按钮 / 危险按钮（圆角、胶囊）        |
 | `h2`         | 标题 1     | 邮件主标题、章节标题（色条）、横幅标题（深底）                             |
 | `h3`         | 标题 2     | 小节标题、小节标题（底线）、小节标题（品牌色）                             |
 | `h4`         | 标题 3     | 小标题、标签标题                                                           |
@@ -1302,11 +1299,11 @@ import CKEditor, { EMAIL_STYLE_DEFINITIONS, EMAIL_TOOLBAR_ITEMS } from '@kne-com
 | `hr`         | 分割线按钮 | 细分割线、粗分割线、虚线分割线、空白间距                                   |
 | `figure`     | 表格按钮   | 邮件表格                                                                   |
 
-对齐、字号、颜色、加粗交给工具栏，样式项不重复这些能力。按钮样式作用在段落上，内部链接会渲染成按钮块：写一行文字 → 加链接 → 套「主按钮」。
+对齐、字号、颜色、加粗交给工具栏，样式项不重复这些能力。按钮都是行内样式：选中文字直接套用即可，可与其它文字同行；文字带链接时链接沿用按钮配色。
 
 #### 邮件客户端兼容
 
-预设只用 Outlook（Word 引擎）与 Gmail 都支持的属性：实体色、`px` 字号行高、`margin` / `padding` / `border` / `background-color`。**不使用**伪元素、`nth-child`、`border-radius`、`box-shadow`、渐变、`flex` / `grid` —— 这些在 inline 化后会丢失或被 Outlook 忽略。
+预设只用 Outlook（Word 引擎）与 Gmail 都支持的属性：实体色、`px` 字号行高、`margin` / `padding` / `border` / `background-color`。**不使用**伪元素、`nth-child`、`box-shadow`、渐变、`flex` / `grid` —— 这些在 inline 化后会丢失或被 Outlook 忽略。`border-radius` 只用于圆角 / 胶囊按钮：Gmail、Apple Mail 等显示圆角，Outlook 桌面版退化为直角按钮。
 
 分割线不靠 `border` 画：`<hr>` 在 Outlook 下容易渲染成双线或被忽略，因此统一用 `height` + `background-color`，并额外写 `color`（Word 引擎按 `color` 绘制 `hr`），同时 `border: 0` 清掉默认样式。
 

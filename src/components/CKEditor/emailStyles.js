@@ -11,9 +11,48 @@
  * Style 插件只列出与当前块元素匹配的样式，所以定义在 h1 上的样式永远选不到。
  *
  * 兼容约束（Outlook/Word 引擎、Gmail，且发信前会 inline 化）：
- * 不用伪元素、nth-child、border-radius、box-shadow、渐变、flex/grid；
+ * 不用伪元素、nth-child、box-shadow、渐变、flex/grid；
+ * border-radius 仅用于圆角 / 胶囊按钮（行内 span），Outlook 桌面版会退化为直角；
  * 颜色用实体值，字号行高用 px，分割线用 height + background-color 并带 color。
  */
+const BUTTON_COLORS = {
+  primary: { name: '主按钮', backgroundColor: '#1677ff', borderColor: '#1677ff', color: '#ffffff' },
+  default: { name: '普通按钮', backgroundColor: '#ffffff', borderColor: '#d9d9d9', color: '#262626' },
+  danger: { name: '危险按钮', backgroundColor: '#ff4d4f', borderColor: '#ff4d4f', color: '#ffffff' }
+};
+
+const BUTTON_SHAPES = {
+  rounded: { name: '圆角', borderRadius: '6px' },
+  pill: { name: '胶囊', borderRadius: '999px' }
+};
+
+/** 行内按钮：挂在选中文字的 span 上；不传 borderRadius 即直角 */
+const buildButtonPreset = ({ className, name, backgroundColor, borderColor, color, borderRadius }) => ({
+  className,
+  targets: [{ element: 'span', name }],
+  styles: {
+    display: 'inline-block',
+    padding: '8px 24px',
+    backgroundColor,
+    border: `1px solid ${borderColor}`,
+    ...(borderRadius ? { borderRadius } : {}),
+    color,
+    fontSize: '15px',
+    lineHeight: '22px',
+    fontWeight: 'bold',
+    textDecoration: 'none'
+  },
+  // 选中文字同时加了链接时，链接沿用按钮配色
+  descendants: [{ selector: 'a', styles: { color, textDecoration: 'none' } }]
+});
+
+const buildButtonPresets = () =>
+  Object.entries(BUTTON_SHAPES).flatMap(([shape, { name: shapeName, borderRadius }]) =>
+    Object.entries(BUTTON_COLORS).map(([type, colors]) =>
+      buildButtonPreset({ ...colors, className: `email-btn-${shape}-${type}`, name: `${colors.name}（${shapeName}）`, borderRadius })
+    )
+  );
+
 export const EMAIL_STYLE_PRESETS = [
   // ── 正文段落（p）──
   {
@@ -76,49 +115,15 @@ export const EMAIL_STYLE_PRESETS = [
     }
   },
   {
-    className: 'email-btn',
-    targets: [{ element: 'p', name: '主按钮' }],
-    styles: { margin: '24px 0', textAlign: 'center', fontSize: '15px', lineHeight: '22px' },
-    // 按钮本体挂在内部链接上：写一行文字 → 加链接 → 套样式
-    descendants: [
-      {
-        selector: 'a',
-        styles: {
-          display: 'inline-block',
-          padding: '12px 28px',
-          backgroundColor: '#1677ff',
-          border: '1px solid #1677ff',
-          color: '#ffffff',
-          fontWeight: 'bold',
-          textDecoration: 'none'
-        }
-      }
-    ]
-  },
-  {
-    className: 'email-btn-ghost',
-    targets: [{ element: 'p', name: '次按钮' }],
-    styles: { margin: '24px 0', textAlign: 'center', fontSize: '15px', lineHeight: '22px' },
-    descendants: [
-      {
-        selector: 'a',
-        styles: {
-          display: 'inline-block',
-          padding: '12px 28px',
-          backgroundColor: '#ffffff',
-          border: '1px solid #1677ff',
-          color: '#1677ff',
-          fontWeight: 'bold',
-          textDecoration: 'none'
-        }
-      }
-    ]
-  },
-  {
     className: 'email-footer',
     targets: [{ element: 'p', name: '页脚' }],
     styles: { margin: '24px 0 0', padding: '16px 0 0', borderTop: '1px solid #e8e8e8', color: '#8c8c8c', fontSize: '12px', lineHeight: '20px' }
   },
+
+  // ── 行内按钮（span）：选中文字套用 ──
+  buildButtonPreset({ ...BUTTON_COLORS.primary, className: 'email-btn', name: '主按钮（直角）' }),
+  buildButtonPreset({ className: 'email-btn-ghost', name: '次按钮（直角）', backgroundColor: '#ffffff', borderColor: '#1677ff', color: '#1677ff' }),
+  ...buildButtonPresets(),
 
   // ── 标题 1（h2）──
   {

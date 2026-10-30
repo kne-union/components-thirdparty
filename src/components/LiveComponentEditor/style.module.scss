@@ -1,3 +1,5 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
 .toolbar-extra {
   display: inline-flex;
   align-items: center;
@@ -87,17 +89,21 @@
         margin-bottom: 8px;
       }
 
-      .ant-tabs-content-holder {
+      // 兼容新旧两种 Tabs 结构：content-holder > content > tabpane / body-holder > body > content
+      .ant-tabs-content-holder,
+      .ant-tabs-body-holder {
         flex: 1 1 0;
         min-height: 0;
         overflow: hidden;
       }
 
+      .ant-tabs-body,
       .ant-tabs-content,
       .ant-tabs-tabpane {
         height: 100%;
       }
 
+      .ant-tabs-content-active,
       .ant-tabs-tabpane-active {
         display: flex;
         flex-direction: column;
@@ -187,6 +193,18 @@
 
 .ai-toolbar-toggle {
   flex: none;
+}
+
+// 移动端工具栏独占标签栏下方一行
+.toolbar-row {
+  flex: none;
+  min-width: 0;
+  margin-bottom: 8px;
+}
+
+.ai-drawer-body {
+  height: 100%;
+  overflow: hidden;
 }
 
 .ai-panel {
@@ -574,15 +592,176 @@
   }
 }
 
-.function-default-value {
-  padding: 4px 11px;
-  border-radius: var(--radius-default, 4px);
-  background-color: var(--font-color-grey-2, #fafafa);
+.tab-hint {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin-bottom: 4px;
+  font-size: 12px;
+  line-height: 1.6;
   color: var(--font-color-grey-5, #8c8c8c);
-  border: 1px solid var(--font-color-grey-4, #d9d9d9);
-  font-size: 13px;
+}
+
+$mono-font: SFMono-Regular, Menlo, Consolas, monospace;
+
+.param-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  height: 100%;
+  min-height: 0;
+  overflow: auto;
+}
+
+.param-table {
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.param-row {
+  display: grid;
+  gap: 8px;
+  align-items: center;
+  padding: 8px 12px;
+}
+
+.is-props .param-row {
+  grid-template-columns: minmax(120px, 1.2fr) 120px minmax(160px, 1.6fr) 32px;
+}
+
+.is-scope .param-row {
+  grid-template-columns: minmax(140px, 1fr) minmax(200px, 2fr) 32px;
+}
+
+.param-head {
+  padding-top: 6px;
+  padding-bottom: 6px;
+  font-size: 12px;
+  color: var(--ant-color-text-secondary);
+  background: var(--ant-color-fill-quaternary);
+}
+
+.param-item {
+  border-top: 1px solid var(--ant-color-border-secondary);
+}
+
+.param-control {
+  width: 100%;
+  min-width: 0;
+}
+
+.param-name,
+.param-name input,
+.param-token {
+  font-family: $mono-font;
+}
+
+.param-prefix {
+  font-family: $mono-font;
+  font-size: 12px;
+  color: var(--ant-color-text-quaternary);
+}
+
+.type-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.type-icon {
+  flex: none;
+  min-width: 26px;
+  font-family: $mono-font;
+  font-size: 11px;
+  line-height: 18px;
+  text-align: center;
+  color: var(--ant-color-primary);
+  background: var(--ant-color-primary-bg);
+  border-radius: 4px;
+}
+
+.param-switch,
+.param-function {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 12px;
+
+  code {
+    font-family: $mono-font;
+    color: var(--ant-color-text-secondary);
+  }
+}
+
+.param-function :global(.ant-typography) {
+  font-size: 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.param-json {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  min-width: 0;
+  height: var(--ant-control-height);
+  padding: 0 11px;
+  font-size: 12px;
+  color: var(--ant-color-text-secondary);
+  text-align: left;
+  background: var(--ant-color-fill-quaternary);
+  border: 1px solid var(--ant-color-border);
+  border-radius: var(--ant-border-radius);
+  cursor: pointer;
+  transition: border-color 0.2s;
+
+  &:hover {
+    border-color: var(--ant-color-primary-hover);
+  }
+
+  &.is-error {
+    border-color: var(--ant-color-error);
+  }
+}
+
+.param-json-text {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  font-family: $mono-font;
+  color: var(--ant-color-text);
+}
+
+.param-json-count {
+  flex: none;
+  color: var(--ant-color-text-tertiary);
+}
+
+.param-json-editor {
+  padding: 0 12px 12px;
+}
+
+.param-error {
+  padding: 0 12px 8px;
+  font-size: 12px;
   line-height: 1.5;
-  cursor: not-allowed;
+  color: var(--ant-color-error);
+}
+
+.param-empty {
+  padding: 24px 12px;
+  font-size: 12px;
+  text-align: center;
+  color: var(--ant-color-text-tertiary);
+  border: 1px dashed var(--ant-color-border);
+  border-radius: 8px;
 }
 
 .content-share-modal {
@@ -673,6 +852,129 @@
   :global {
     .ant-input {
       font-size: 12px;
+    }
+  }
+}
+
+// 紧凑工具栏（标签下方独占一行）：左右贴边，操作按钮靠左，模式切换靠右
+.toolbar-row .toolbar-extra {
+  display: flex;
+  width: 100%;
+  overflow: hidden;
+
+  :global(.ant-space) {
+    flex: 1;
+    min-width: 0;
+  }
+
+  :global(.ant-space-item):has(> .view-mode-segmented) {
+    margin-left: auto;
+  }
+}
+
+.toolbar-extra-slot {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+}
+
+.ref-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 160px;
+  overflow: auto;
+}
+
+.ref-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.ref-label {
+  flex: 0 0 72px;
+  line-height: 22px;
+  font-size: 12px;
+  color: var(--ant-color-text-secondary);
+}
+
+.ref-tokens {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 6px;
+}
+
+.ref-token {
+  padding: 0 6px;
+  line-height: 20px;
+  font-size: 12px;
+  font-family: SFMono-Regular, Menlo, Consolas, monospace;
+  color: var(--ant-color-text);
+  background: var(--ant-color-fill-tertiary);
+  border: 1px solid var(--ant-color-border-secondary);
+  border-radius: 4px;
+  word-break: break-all;
+}
+
+.ref-token-action {
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    color: var(--ant-color-primary);
+    border-color: var(--ant-color-primary-border);
+    background: var(--ant-color-primary-bg);
+  }
+}
+
+.ref-empty {
+  line-height: 22px;
+  font-size: 12px;
+  color: var(--ant-color-text-quaternary);
+}
+
+@include resp.mobile-container {
+  .sites-main {
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .preview-inner {
+    padding: 12px;
+  }
+
+  .ref-row {
+    flex-direction: column;
+    gap: 4px;
+  }
+
+  .ref-label {
+    flex: none;
+  }
+
+  .param-head {
+    display: none;
+  }
+
+  .is-props .param-row {
+    grid-template-columns: minmax(0, 1fr) 112px 32px;
+
+    > :nth-child(3) {
+      grid-column: 1 / 3;
+      grid-row: 2;
+    }
+  }
+
+  .is-scope .param-row {
+    grid-template-columns: minmax(0, 1fr) 32px;
+
+    > :nth-child(2) {
+      grid-column: 1;
+      grid-row: 2;
     }
   }
 }

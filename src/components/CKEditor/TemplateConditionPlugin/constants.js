@@ -22,8 +22,8 @@ export const TEMPLATE_CONDITION_LAYOUT_ATTR = 'data-template-condition-layout';
 export const LAYOUT_INLINE = 'inline';
 export const LAYOUT_BLOCK = 'block';
 
-/** 写在 <% if %> 里的 JS 注释。lodash 执行时忽略；upcast 用来恢复块级，不会出现在邮件正文 */
-export const CONDITION_LAYOUT_BLOCK_MARKER = '/*ck-layout:block*/';
+/** 紧贴在 {% if %} 前的 Liquid 行内注释。渲染时忽略；upcast 用来恢复块级，不会出现在邮件正文 */
+export const CONDITION_LAYOUT_BLOCK_MARKER = '{% # ck-layout:block %}';
 
 /** 算子白名单 */
 export const OPERATOR_TRUTHY = 'truthy';

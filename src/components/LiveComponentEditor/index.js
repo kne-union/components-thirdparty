@@ -1,7 +1,8 @@
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { encode } from 'plantuml-encoder';
 import { decodeLiveComponentConfig } from '@components/LiveComponentView/decodeConfig';
-import { App, Tabs, Flex, Alert, Segmented, Splitter, Collapse, Button, Space, Empty, Tooltip } from 'antd';
+import { App, Tabs, Flex, Segmented, Splitter, Collapse, Button, Space, Empty, Tooltip, Popover } from 'antd';
+import { useIsMobile, usePopupContainer } from '@kne/responsive-utils';
 import {
   MenuOutlined,
   SplitCellsOutlined,
@@ -12,15 +13,15 @@ import {
   SaveOutlined,
   FormOutlined,
   MenuUnfoldOutlined,
-  MenuFoldOutlined,
   ArrowUpOutlined,
-  SelectOutlined
+  SelectOutlined,
+  EllipsisOutlined
 } from '@ant-design/icons';
 import CodeEditor from '@components/CodeEditor';
 import LiveComponentView from '@components/LiveComponentView';
 import useRefCallback from '@kne/use-ref-callback';
 import lodash from 'lodash';
-import { transform, debounce, throttle, get, isEqual } from 'lodash';
+import { transform, debounce, throttle, isEqual } from 'lodash';
 import dayjs from 'dayjs';
 import { useState, useRef, useEffect, useMemo, useImperativeHandle, forwardRef } from 'react';
 import classnames from 'classnames';
@@ -30,6 +31,7 @@ import withLocale from './withLocale';
 import SiteFilePanel, { SaveAsModal } from './SiteFilePanel';
 import ContentShareModal from './ContentShareModal';
 import AiAssistPanel from './AiAssistPanel';
+import AiIcon from './AiIcon';
 import {
   createSiteApi,
   DEFAULT_USER_SITES_STORAGE_KEY,
@@ -54,84 +56,87 @@ import {
   revealEditorPosition,
   scrollElementsIntoView
 } from './previewLocate';
+import { PropsEditor, ScopeEditor, createRowId, getEmptyDefaultValue, validatePropsRows, validateScopeRows } from './ParamsEditor';
 import style from './style.module.scss';
+
+// 标签区宽度低于该值时，桌面版单行工具栏放不下
+const COMPACT_TOOLBAR_WIDTH = 640;
 
 /** @deprecated 使用 decodeLiveComponentConfig */
 export const decodeLiveComponentValue = decodeLiveComponentConfig;
 
 const mergeParams = value => Object.assign({ content: '', props: {}, scope: {} }, decodeLiveComponentConfig(value) || {});
 
-const buildPropsFormData = props => ({
-  props: Object.keys(props).map(name => {
+// 默认值统一以字符串存储（运行时按 type JSON.parse），表单内按类型转成控件需要的值
+const toFormDefaultValue = (type, value) => {
+  if (type === 'number') {
+    const num = value === '' || value == null ? NaN : Number(value);
+    return Number.isNaN(num) ? undefined : num;
+  }
+  if (type === 'boolean') {
+    return value === true || value === 'true';
+  }
+  return value;
+};
+
+const toStoredDefaultValue = (type, value) => {
+  if (type === 'function') {
+    return '()=>null';
+  }
+  if (type === 'number') {
+    return value === '' || value == null ? '' : String(value);
+  }
+  if (type === 'boolean') {
+    return value === true || value === 'true' ? 'true' : 'false';
+  }
+  return value ?? '';
+};
+
+const buildPropsRows = props =>
+  Object.keys(props).map(name => {
     const item = Object.assign({}, props[name]);
+    const type = item.type || 'string';
     return {
+      id: createRowId(),
       name,
-      type: item.type,
-      defaultValue: item.defaultValue
+      type,
+      defaultValue: toFormDefaultValue(type, item.defaultValue) ?? getEmptyDefaultValue(type)
     };
-  })
-});
+  });
 
-const buildScopeFormData = scope => ({
-  scope: Object.keys(scope).map(name => {
-    const item = scope[name];
-    return {
-      name,
-      token: item
-    };
-  })
-});
+const buildScopeRows = scope =>
+  Object.keys(scope).map(name => ({
+    id: createRowId(),
+    name,
+    token: scope[name]
+  }));
 
-const normalizePropsFormData = formData =>
+const normalizePropsRows = rows =>
   transform(
-    formData.props || [],
-    (result, value) => {
-      if (!value?.name) {
+    rows,
+    (result, row) => {
+      if (!row.name) {
         return;
       }
-      result[value.name] = {
-        defaultValue: value.type === 'function' ? '()=>null' : value.defaultValue ?? '',
-        type: value.type
+      result[row.name] = {
+        defaultValue: toStoredDefaultValue(row.type, row.defaultValue),
+        type: row.type
       };
     },
     {}
   );
 
-const normalizeScopeFormData = formData =>
+const normalizeScopeRows = rows =>
   transform(
-    formData.scope || [],
-    (result, value) => {
-      if (!value?.name) {
+    rows,
+    (result, row) => {
+      if (!row.name || !row.token) {
         return;
       }
-      result[value.name] = value.token;
+      result[row.name] = row.token;
     },
     {}
   );
-
-const createFormAutoSaver = useFormContext => {
-  return function FormAutoSaver({ onSave }) {
-    const { formData } = useFormContext();
-    const initializedRef = useRef(false);
-    const snapshotRef = useRef('');
-
-    useEffect(() => {
-      const snapshot = JSON.stringify(formData);
-      if (!initializedRef.current) {
-        initializedRef.current = true;
-        snapshotRef.current = snapshot;
-        return;
-      }
-      if (snapshot === snapshotRef.current) {
-        return;
-      }
-      snapshotRef.current = snapshot;
-      onSave();
-    }, [formData, onSave]);
-
-    return null;
-  };
-};
 
 const SafeRender = createWithRemoteLoader({
   modules: ['components-core:Global@useGlobalContext', 'components-core:Global@PureGlobal', 'components-core:Global@usePreset']
@@ -174,10 +179,8 @@ const SafeRender = createWithRemoteLoader({
 const LiveComponentEditorCore = createWithRemoteLoader({
   modules: [
     'components-core:FormInfo',
-    'components-core:FormInfo@useFormContext',
-    'components-core:InfoPage',
-    'components-core:InfoPage@CentralContent',
-    'components-core:Common@SimpleBar'
+    'components-core:Common@SimpleBar',
+    'components-core:Drawer'
   ]
 })(
   withLocale(
@@ -204,10 +207,8 @@ const LiveComponentEditorCore = createWithRemoteLoader({
       ) => {
         const { formatMessage } = useIntl();
         const { message } = App.useApp();
-        const [FormInfo, useFormContext, InfoPage, CentralContent, SimpleBar] = remoteModules;
-        const FormAutoSaver = useMemo(() => createFormAutoSaver(useFormContext), [useFormContext]);
-        const { Form, TableList } = FormInfo;
-        const { Input, Select } = FormInfo.fields;
+        const [FormInfo, SimpleBar, Drawer] = remoteModules;
+        const { Form } = FormInfo;
         const codeEditorRef = useRef(null);
         const skipEditorChangeRef = useRef(false);
         const updateContentDebouncedRef = useRef(null);
@@ -217,6 +218,52 @@ const LiveComponentEditorCore = createWithRemoteLoader({
           }, 300);
         }
         const [params, setParams] = useState(() => mergeParams(defaultValue));
+        const [propsRows, setPropsRows] = useState(() => buildPropsRows(params.props));
+        const [scopeRows, setScopeRows] = useState(() => buildScopeRows(params.scope));
+        const propsErrors = useMemo(() => validatePropsRows(propsRows), [propsRows]);
+        const scopeErrors = useMemo(() => validateScopeRows(scopeRows), [scopeRows]);
+
+        const submitPropsDebouncedRef = useRef(null);
+        const submitScopeDebouncedRef = useRef(null);
+
+        // 存在校验错误时保留上一次合法的配置
+        if (!submitPropsDebouncedRef.current) {
+          submitPropsDebouncedRef.current = debounce(rows => {
+            if (Object.keys(validatePropsRows(rows)).length) {
+              return;
+            }
+            const nextProps = normalizePropsRows(rows);
+            setParams(currentParams => (isEqual(currentParams.props, nextProps) ? currentParams : Object.assign({}, currentParams, { props: nextProps })));
+          }, 300);
+        }
+
+        if (!submitScopeDebouncedRef.current) {
+          submitScopeDebouncedRef.current = debounce(rows => {
+            if (Object.keys(validateScopeRows(rows)).length) {
+              return;
+            }
+            const nextScope = normalizeScopeRows(rows);
+            setParams(currentParams => (isEqual(currentParams.scope, nextScope) ? currentParams : Object.assign({}, currentParams, { scope: nextScope })));
+          }, 300);
+        }
+
+        const handlePropsRowsChange = useRefCallback(rows => {
+          setPropsRows(rows);
+          submitPropsDebouncedRef.current(rows);
+        });
+
+        const handleScopeRowsChange = useRefCallback(rows => {
+          setScopeRows(rows);
+          submitScopeDebouncedRef.current(rows);
+        });
+
+        const resetParamRows = useRefCallback(nextParams => {
+          submitPropsDebouncedRef.current?.cancel();
+          submitScopeDebouncedRef.current?.cancel();
+          setPropsRows(buildPropsRows(nextParams.props || {}));
+          setScopeRows(buildScopeRows(nextParams.scope || {}));
+        });
+
         const enableSites = Array.isArray(sites);
         const [currentFile, setCurrentFile] = useState(null);
         const [saveAsOpen, setSaveAsOpen] = useState(false);
@@ -224,6 +271,65 @@ const LiveComponentEditorCore = createWithRemoteLoader({
         const [treeRefreshToken, setTreeRefreshToken] = useState(0);
         const [sitesCollapsed, setSitesCollapsed] = useState(false);
         const [aiCollapsed, setAiCollapsed] = useState(false);
+        const isMobile = useIsMobile();
+        // 移动端侧栏改为抽屉，默认关闭，与桌面端折叠状态互不影响
+        const [mobileSitesOpen, setMobileSitesOpen] = useState(false);
+        const [mobileAiOpen, setMobileAiOpen] = useState(false);
+        const getPopupContainer = usePopupContainer();
+        // 编辑区本身过窄（如两侧面板同时展开）时也使用紧凑工具栏
+        const editorRootRef = useRef(null);
+        const [narrowEditor, setNarrowEditor] = useState(false);
+        useEffect(() => {
+          const tabsEl = editorRootRef.current?.querySelector(`.${CSS.escape(style['editor-tabs'])}`);
+          if (!tabsEl) {
+            return;
+          }
+          const observer = new ResizeObserver(([entry]) => {
+            setNarrowEditor(entry.contentRect.width < COMPACT_TOOLBAR_WIDTH);
+          });
+          observer.observe(tabsEl);
+          return () => observer.disconnect();
+        }, [isMobile]);
+        const compactToolbar = isMobile || narrowEditor;
+        // 移动端工具栏不换行：toolbarExtra 放不下时收进「更多」按钮
+        const toolbarRef = useRef(null);
+        const extraSlotRef = useRef(null);
+        const extraMoreRef = useRef(null);
+        const extraWidthRef = useRef(0);
+        const [extraCollapsed, setExtraCollapsed] = useState(false);
+        const hasToolbarExtra = !!toolbarExtra;
+        useEffect(() => {
+          const container = toolbarRef.current;
+          const space = container?.firstElementChild;
+          if (!compactToolbar || !hasToolbarExtra || !container || !space) {
+            setExtraCollapsed(false);
+            return;
+          }
+          // 按钮组铺满整行（模式切换贴右），需累加各项宽度而非用 scrollWidth
+          const getContentWidth = () => {
+            const items = Array.from(space.children);
+            const gap = parseFloat(getComputedStyle(space).columnGap) || 0;
+            return items.reduce((sum, item) => sum + item.offsetWidth, 0) + gap * Math.max(items.length - 1, 0);
+          };
+          const check = () => {
+            if (extraSlotRef.current) {
+              extraWidthRef.current = extraSlotRef.current.offsetWidth;
+              if (getContentWidth() > container.clientWidth) {
+                setExtraCollapsed(true);
+              }
+              return;
+            }
+            const moreWidth = extraMoreRef.current?.offsetWidth || 0;
+            if (getContentWidth() - moreWidth + extraWidthRef.current <= container.clientWidth) {
+              setExtraCollapsed(false);
+            }
+          };
+          check();
+          const observer = new ResizeObserver(check);
+          observer.observe(container);
+          Array.from(space.children).forEach(item => observer.observe(item));
+          return () => observer.disconnect();
+        }, [compactToolbar, hasToolbarExtra, extraCollapsed]);
         const [aiEnabled, setAiEnabled] = useState(false);
         const [activeSiteHost, setActiveSiteHost] = useState(null);
         const [selectedSource, setSelectedSource] = useState(null);
@@ -249,8 +355,7 @@ const LiveComponentEditorCore = createWithRemoteLoader({
           updateContentDebouncedRef.current?.cancel?.();
           skipEditorChangeRef.current = true;
           setParams(merged);
-          setPropsFormData(buildPropsFormData(merged.props));
-          setScopeFormData(buildScopeFormData(merged.scope));
+          resetParamRows(merged);
           codeEditorRef.current?.setValue(merged.content || '');
           updateContentDebouncedRef.current?.cancel?.();
           Promise.resolve().then(() => {
@@ -277,10 +382,11 @@ const LiveComponentEditorCore = createWithRemoteLoader({
             setValue: value => {
               const newParams = mergeParams(value);
               setParams(newParams);
+              resetParamRows(newParams);
               codeEditorRef.current?.setValue(newParams.content || '');
             }
           }),
-          [outputContent]
+          [outputContent, resetParamRows]
         );
 
         useEffect(() => {
@@ -289,10 +395,9 @@ const LiveComponentEditorCore = createWithRemoteLoader({
           }
           const merged = mergeParams(defaultValue);
           setParams(merged);
-          setPropsFormData(buildPropsFormData(merged.props));
-          setScopeFormData(buildScopeFormData(merged.scope));
+          resetParamRows(merged);
           codeEditorRef.current?.setValue(merged.content || '');
-        }, [defaultValue]);
+        }, [defaultValue, resetParamRows]);
         useEffect(() => {
           if (defaultValueRef.current !== outputContent) {
             defaultValueRef.current = outputContent;
@@ -302,39 +407,24 @@ const LiveComponentEditorCore = createWithRemoteLoader({
         const [mod, setMod] = useState(defaultMod);
 
         const { content, props, scope } = Object.assign({}, { content: '', props: {}, scope: {} }, params);
-        const [propsFormData, setPropsFormData] = useState(() => buildPropsFormData(props));
-        const [scopeFormData, setScopeFormData] = useState(() => buildScopeFormData(scope));
-        const propsFormRef = useRef(null);
-        const scopeFormRef = useRef(null);
-
-        const submitPropsDebouncedRef = useRef(null);
-        const submitScopeDebouncedRef = useRef(null);
-
-        if (!submitPropsDebouncedRef.current) {
-          submitPropsDebouncedRef.current = debounce(() => {
-            propsFormRef.current?.submit();
-          }, 300);
-        }
-
-        if (!submitScopeDebouncedRef.current) {
-          submitScopeDebouncedRef.current = debounce(() => {
-            scopeFormRef.current?.submit();
-          }, 300);
-        }
-
-        const handlePropsFormSave = useRefCallback(() => {
-          submitPropsDebouncedRef.current?.();
-        });
-
-        const handleScopeFormSave = useRefCallback(() => {
-          submitScopeDebouncedRef.current?.();
+        const handleInsertReference = useRefCallback(async text => {
+          const editor = mod !== 'preview' && codeEditorRef.current?.getEditor?.();
+          if (editor) {
+            editor.executeEdits('insert-reference', [{ range: editor.getSelection(), text, forceMoveMarkers: true }]);
+            editor.focus();
+            return;
+          }
+          try {
+            await navigator.clipboard.writeText(text);
+            message.success(formatMessage({ id: 'RefCopied' }));
+          } catch (e) {
+            message.warning(text);
+          }
         });
 
         const flushFormSaves = useRefCallback(() => {
           submitPropsDebouncedRef.current?.flush();
           submitScopeDebouncedRef.current?.flush();
-          propsFormRef.current?.submit();
-          scopeFormRef.current?.submit();
         });
 
         useEffect(() => {
@@ -941,190 +1031,136 @@ const LiveComponentEditorCore = createWithRemoteLoader({
           </div>
         );
 
+        const toolbar = (
+          <div ref={toolbarRef} className={style['toolbar-extra']}>
+            <Space size={compactToolbar ? 4 : 8} align="center">
+              {enableSites && isMobile ? (
+                <Button
+                  icon={<MenuUnfoldOutlined />}
+                  title={formatMessage({ id: 'SitesExpand' })}
+                  aria-label={formatMessage({ id: 'SitesExpand' })}
+                  onClick={() => setMobileSitesOpen(true)}
+                />
+              ) : null}
+              <Space.Compact>
+                <Tooltip title={formatMessage({ id: 'Copy' })}>
+                  <Button icon={<CopyOutlined />} onClick={handleCopy} />
+                </Tooltip>
+                <Tooltip title={formatMessage({ id: 'ImportFromClipboard' })}>
+                  <Button icon={<SnippetsOutlined />} onClick={handleImportFromClipboard} />
+                </Tooltip>
+              </Space.Compact>
+              {enableSites && (
+                <Space.Compact>
+                  <Tooltip title={formatMessage({ id: 'Save' })}>
+                    <Button icon={<SaveOutlined />} disabled={!canSaveCurrent} onClick={handleSave} />
+                  </Tooltip>
+                  <Tooltip title={formatMessage({ id: 'SaveAs' })}>
+                    <Button
+                      icon={<FormOutlined />}
+                      disabled={!mergedSites.length}
+                      onClick={() => setSaveAsOpen(true)}
+                    />
+                  </Tooltip>
+                  <Tooltip title={formatMessage({ id: 'CopyContentUrl' })}>
+                    <Button
+                      icon={<LinkOutlined />}
+                      disabled={!canCopyContentUrl}
+                      onClick={handleCopyContentUrl}
+                    />
+                  </Tooltip>
+                </Space.Compact>
+              )}
+              {hasToolbarExtra && compactToolbar && extraCollapsed ? (
+                <Popover
+                  trigger="click"
+                  placement="bottomRight"
+                  getPopupContainer={getPopupContainer}
+                  content={<Space size={8}>{toolbarExtra}</Space>}>
+                  <Button ref={extraMoreRef} icon={<EllipsisOutlined />} />
+                </Popover>
+              ) : hasToolbarExtra && compactToolbar ? (
+                <span ref={extraSlotRef} className={style['toolbar-extra-slot']}>
+                  {toolbarExtra}
+                </span>
+              ) : (
+                toolbarExtra
+              )}
+              {activeKey === 'content' && (
+                <Segmented
+                  className={style['view-mode-segmented']}
+                  value={mod}
+                  onChange={setMod}
+                  options={[
+                    {
+                      label: compactToolbar ? null : formatMessage({ id: 'ModeEditor' }),
+                      title: formatMessage({ id: 'ModeEditor' }),
+                      value: 'editor',
+                      icon: <MenuOutlined />
+                    },
+                    {
+                      label: compactToolbar ? null : formatMessage({ id: 'ModeMix' }),
+                      title: formatMessage({ id: 'ModeMix' }),
+                      value: 'mix',
+                      icon: <SplitCellsOutlined />
+                    },
+                    {
+                      label: compactToolbar ? null : formatMessage({ id: 'ModePreview' }),
+                      title: formatMessage({ id: 'ModePreview' }),
+                      value: 'preview',
+                      icon: <EyeOutlined />
+                    }
+                  ]}
+                />
+              )}
+              {showAiPanel && (isMobile || aiCollapsed) ? (
+                <Button
+                  className={style['ai-toolbar-toggle']}
+                  icon={<AiIcon />}
+                  title={formatMessage({ id: 'AiExpand' })}
+                  aria-label={formatMessage({ id: 'AiExpand' })}
+                  onClick={() => (isMobile ? setMobileAiOpen(true) : setAiCollapsed(false))}
+                />
+              ) : null}
+            </Space>
+          </div>
+        );
+
         const editorTabs = (
           <Tabs
             className={style['editor-tabs']}
             activeKey={activeKey}
             onChange={nextKey => {
               flushFormSaves();
-              if (nextKey === 'props') {
-                setPropsFormData(buildPropsFormData(props));
-              }
-              if (nextKey === 'scope') {
-                setScopeFormData(buildScopeFormData(scope));
-              }
               setActiveKey(nextKey);
             }}
-            tabBarExtraContent={
-              <div className={style['toolbar-extra']}>
-                <Space size={8} align="center">
-                  <Space.Compact>
-                    <Tooltip title={formatMessage({ id: 'Copy' })}>
-                      <Button icon={<CopyOutlined />} onClick={handleCopy} />
-                    </Tooltip>
-                    <Tooltip title={formatMessage({ id: 'ImportFromClipboard' })}>
-                      <Button icon={<SnippetsOutlined />} onClick={handleImportFromClipboard} />
-                    </Tooltip>
-                  </Space.Compact>
-                  {enableSites && (
-                    <Space.Compact>
-                      <Tooltip title={formatMessage({ id: 'Save' })}>
-                        <Button icon={<SaveOutlined />} disabled={!canSaveCurrent} onClick={handleSave} />
-                      </Tooltip>
-                      <Tooltip title={formatMessage({ id: 'SaveAs' })}>
-                        <Button
-                          icon={<FormOutlined />}
-                          disabled={!mergedSites.length}
-                          onClick={() => setSaveAsOpen(true)}
-                        />
-                      </Tooltip>
-                      <Tooltip title={formatMessage({ id: 'CopyContentUrl' })}>
-                        <Button
-                          icon={<LinkOutlined />}
-                          disabled={!canCopyContentUrl}
-                          onClick={handleCopyContentUrl}
-                        />
-                      </Tooltip>
-                    </Space.Compact>
-                  )}
-                  {toolbarExtra}
-                  {activeKey === 'content' && (
-                    <Segmented
-                      className={style['view-mode-segmented']}
-                      value={mod}
-                      onChange={setMod}
-                      options={[
-                        {
-                          label: formatMessage({ id: 'ModeEditor' }),
-                          value: 'editor',
-                          icon: <MenuOutlined />
-                        },
-                        {
-                          label: formatMessage({ id: 'ModeMix' }),
-                          value: 'mix',
-                          icon: <SplitCellsOutlined />
-                        },
-                        {
-                          label: formatMessage({ id: 'ModePreview' }),
-                          value: 'preview',
-                          icon: <EyeOutlined />
-                        }
-                      ]}
-                    />
-                  )}
-                  {showAiPanel && aiCollapsed ? (
-                    <Button
-                      type="text"
-                      size="small"
-                      className={style['ai-toolbar-toggle']}
-                      icon={<MenuFoldOutlined rotate={180} />}
-                      title={formatMessage({ id: 'AiExpand' })}
-                      aria-label={formatMessage({ id: 'AiExpand' })}
-                      onClick={() => setAiCollapsed(false)}
-                    />
-                  ) : null}
-                </Space>
-              </div>
+            tabBarExtraContent={compactToolbar ? null : toolbar}
+            renderTabBar={
+              compactToolbar
+                ? (tabBarProps, DefaultTabBar) => (
+                    <>
+                      <DefaultTabBar {...tabBarProps} />
+                      <div className={style['toolbar-row']}>{toolbar}</div>
+                    </>
+                  )
+                : undefined
             }
             items={[
               {
                 key: 'props',
                 label: formatMessage({ id: 'TabProps' }),
-                children: (
-                  <Form
-                    ref={propsFormRef}
-                    data={propsFormData}
-                    onSubmit={formData => {
-                      const nextProps = normalizePropsFormData(formData);
-                      setParams(currentParams => {
-                        if (isEqual(currentParams.props, nextProps)) {
-                          return currentParams;
-                        }
-                        return Object.assign({}, currentParams, { props: nextProps });
-                      });
-                    }}>
-                    <FormAutoSaver onSave={handlePropsFormSave} />
-                    <TableList
-                      title={formatMessage({ id: 'ParamListTitle' })}
-                      name="props"
-                      defaultLength={0}
-                      minLength={0}
-                      list={[
-                        <Input name="name" label={formatMessage({ id: 'VarName' })} rule="REQ LEN-0-100" />,
-                        <Select
-                          name="type"
-                          label={formatMessage({ id: 'Type' })}
-                          rule="REQ"
-                          defaultValue="string"
-                          options={[
-                            { label: formatMessage({ id: 'TypeString' }), value: 'string' },
-                            { label: formatMessage({ id: 'TypeNumber' }), value: 'number' },
-                            { label: formatMessage({ id: 'TypeBoolean' }), value: 'boolean' },
-                            { label: formatMessage({ id: 'TypeArray' }), value: 'array' },
-                            { label: formatMessage({ id: 'TypeObject' }), value: 'object' },
-                            { label: formatMessage({ id: 'TypeFunction' }), value: 'function' }
-                          ]}
-                          onChange={(value, item, { openApi, groupArgs }) => {
-                            setTimeout(() => {
-                              openApi.setField({
-                                name: 'defaultValue',
-                                groupName: 'props',
-                                groupIndex: groupArgs[0].index,
-                                value: ''
-                              });
-                            }, 100);
-                          }}
-                        />,
-                        <Input
-                          name="defaultValue"
-                          label={formatMessage({ id: 'DefaultValue' })}
-                          rule="LEN-0-500"
-                          display={({ formData, groupArgs }) => {
-                            return get(formData.props, `${groupArgs[0].index}.type`) !== 'function';
-                          }}
-                        />,
-                        <div
-                          className={style['function-default-value']}
-                          name="defaultValue"
-                          label={formatMessage({ id: 'DefaultValue' })}
-                          display={({ formData, groupArgs }) => {
-                            return get(formData.props, `${groupArgs[0].index}.type`) === 'function';
-                          }}>
-                          {'()=>null'}
-                        </div>
-                      ]}
-                    />
-                  </Form>
-                )
+                children: <PropsEditor rows={propsRows} errors={propsErrors} onChange={handlePropsRowsChange} />
               },
               {
                 key: 'scope',
                 label: formatMessage({ id: 'TabScope' }),
                 children: (
-                  <Form
-                    ref={scopeFormRef}
-                    data={scopeFormData}
-                    onSubmit={formData => {
-                      const nextScope = normalizeScopeFormData(formData);
-                      setParams(currentParams => {
-                        if (isEqual(currentParams.scope, nextScope)) {
-                          return currentParams;
-                        }
-                        return Object.assign({}, currentParams, { scope: nextScope });
-                      });
-                    }}>
-                    <FormAutoSaver onSave={handleScopeFormSave} />
-                    <TableList
-                      title={formatMessage({ id: 'ScopeListTitle' })}
-                      name="scope"
-                      defaultLength={0}
-                      minLength={0}
-                      list={[
-                        <Input name="name" label={formatMessage({ id: 'VarName' })} rule="REQ LEN-0-100" />,
-                        <Input name="token" label={formatMessage({ id: 'Token' })} rule="REQ LEN-0-100" />
-                      ]}
-                    />
-                  </Form>
+                  <ScopeEditor
+                    rows={scopeRows}
+                    errors={scopeErrors}
+                    builtins={['Antd', ...Object.keys(libs || {})]}
+                    onChange={handleScopeRowsChange}
+                  />
                 )
               },
               {
@@ -1139,41 +1175,48 @@ const LiveComponentEditorCore = createWithRemoteLoader({
                           key: 'refer',
                           label: formatMessage({ id: 'RefLabel' }),
                           children: (
-                            <Alert
-                              message={
-                                <InfoPage>
-                                  <CentralContent
-                                    dataSource={{ props, scope }}
-                                    col={1}
-                                    columns={[
-                                      {
-                                        name: 'props',
-                                        title: formatMessage({ id: 'RefAvailableProps' }),
-                                        getValueOf: item => {
-                                          return Object.keys(item.props)
-                                            .map(str => `props.${str}`)
-                                            .join(',');
-                                        }
-                                      },
-                                      {
-                                        name: 'scope',
-                                        title: formatMessage({ id: 'RefAvailableComponents' }),
-                                        getValueOf: item => {
-                                          return ['Antd', ...Object.keys(item.scope)].join(',');
-                                        }
-                                      },
-                                      {
-                                        name: 'lib',
-                                        title: formatMessage({ id: 'RefAvailableLibs' }),
-                                        getValueOf: () => {
-                                          return Object.keys(libs).join(',');
-                                        }
-                                      }
-                                    ]}
-                                  />
-                                </InfoPage>
-                              }
-                            />
+                            <div className={style['ref-list']}>
+                              {[
+                                {
+                                  key: 'props',
+                                  title: formatMessage({ id: 'RefAvailableProps' }),
+                                  tokens: Object.keys(props || {}).map(str => ({ label: `props.${str}`, text: `props.${str}` }))
+                                },
+                                {
+                                  key: 'scope',
+                                  title: formatMessage({ id: 'RefAvailableComponents' }),
+                                  tokens: [
+                                    { label: 'Antd', text: 'Antd' },
+                                    ...Object.keys(scope || {}).map(str => ({ label: str, text: `<${str} />` }))
+                                  ]
+                                },
+                                {
+                                  key: 'lib',
+                                  title: formatMessage({ id: 'RefAvailableLibs' }),
+                                  tokens: Object.keys(libs || {}).map(str => ({ label: str, text: str }))
+                                }
+                              ].map(group => (
+                                <div key={group.key} className={style['ref-row']}>
+                                  <div className={style['ref-label']}>{group.title}</div>
+                                  <div className={style['ref-tokens']}>
+                                    {group.tokens.length ? (
+                                      group.tokens.map(token => (
+                                        <Tooltip key={token.label} title={formatMessage({ id: mod === 'preview' ? 'RefClickCopy' : 'RefClickInsert' })}>
+                                          <button
+                                            type="button"
+                                            className={classnames(style['ref-token'], style['ref-token-action'])}
+                                            onClick={() => handleInsertReference(token.text)}>
+                                            {token.label}
+                                          </button>
+                                        </Tooltip>
+                                      ))
+                                    ) : (
+                                      <span className={style['ref-empty']}>{formatMessage({ id: 'RefEmpty' })}</span>
+                                    )}
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
                           )
                         }
                       ]}
@@ -1181,7 +1224,7 @@ const LiveComponentEditorCore = createWithRemoteLoader({
                     <div className={style['content-stage']}>
                       {mod === 'editor' && editor}
                       {mod === 'mix' && (
-                        <Splitter style={{ height: '100%' }}>
+                        <Splitter layout={isMobile ? 'vertical' : 'horizontal'} style={{ height: '100%' }}>
                           <Splitter.Panel>{editor}</Splitter.Panel>
                           <Splitter.Panel>{preview}</Splitter.Panel>
                         </Splitter>
@@ -1200,29 +1243,84 @@ const LiveComponentEditorCore = createWithRemoteLoader({
           enableSites && style['editor-with-sites']
         );
 
+        const renderSitePanel = ({ onOpenFile, onCollapse }) => (
+          <SiteFilePanel
+            sites={sites}
+            onSitesChange={handleSitesChange}
+            siteActionsOpen={siteActionsOpen}
+            userSitesStorageKey={resolvedUserSitesKey}
+            transformContentUrl={transformContentUrl}
+            currentFile={currentFile}
+            onOpenFile={onOpenFile}
+            onCurrentFileChange={setCurrentFile}
+            onActiveHostChange={setActiveSiteHost}
+            refreshToken={treeRefreshToken}
+            onCollapse={onCollapse}
+          />
+        );
+
+        const renderAiPanel = ({ onCollapse }) => (
+          <AiAssistPanel
+            siteHost={aiSiteHost}
+            content={content}
+            scope={scope}
+            props={props}
+            libs={Object.assign({}, getLibs(), libs)}
+            selection={selection}
+            limitToSelection={limitToSelection}
+            onLimitToSelectionChange={setLimitToSelection}
+            onApplyGenerate={handleAiApplyGenerate}
+            onCollapse={onCollapse}
+            formatMessage={formatMessage}
+          />
+        );
+
         return (
           <>
-            <div className={editorRootClassName}>
-              {enableSites ? (
+            <div ref={editorRootRef} className={editorRootClassName}>
+              {enableSites && isMobile ? (
+                <>
+                  <div className={style['sites-main']}>{editorTabs}</div>
+                  <Drawer
+                    placement="left"
+                    forceRender
+                    closable={false}
+                    footer={null}
+                    bodyScroll={false}
+                    open={mobileSitesOpen}
+                    onClose={() => setMobileSitesOpen(false)}>
+                    <div className={style['sites-aside-body']}>
+                      {renderSitePanel({
+                        onOpenFile: (...args) => {
+                          setMobileSitesOpen(false);
+                          return handleOpenFile(...args);
+                        },
+                        onCollapse: () => setMobileSitesOpen(false)
+                      })}
+                    </div>
+                  </Drawer>
+                  {showAiPanel ? (
+                    <Drawer
+                      placement="right"
+                      closable={false}
+                      footer={null}
+                      bodyScroll={false}
+                      open={mobileAiOpen}
+                      onClose={() => setMobileAiOpen(false)}>
+                      <div className={style['ai-drawer-body']}>
+                        {renderAiPanel({ onCollapse: () => setMobileAiOpen(false) })}
+                      </div>
+                    </Drawer>
+                  ) : null}
+                </>
+              ) : enableSites ? (
                 <>
                   <aside
                     className={`${style['sites-aside']}${sitesCollapsed ? ` ${style['sites-aside-collapsed']}` : ''}`}
                     style={sitesCollapsed ? undefined : { width: sitesPanelWidth }}>
                     {!sitesCollapsed ? (
                       <div className={style['sites-aside-body']}>
-                        <SiteFilePanel
-                          sites={sites}
-                          onSitesChange={handleSitesChange}
-                          siteActionsOpen={siteActionsOpen}
-                          userSitesStorageKey={resolvedUserSitesKey}
-                          transformContentUrl={transformContentUrl}
-                          currentFile={currentFile}
-                          onOpenFile={handleOpenFile}
-                          onCurrentFileChange={setCurrentFile}
-                          onActiveHostChange={setActiveSiteHost}
-                          refreshToken={treeRefreshToken}
-                          onCollapse={() => setSitesCollapsed(true)}
-                        />
+                        {renderSitePanel({ onOpenFile: handleOpenFile, onCollapse: () => setSitesCollapsed(true) })}
                       </div>
                     ) : (
                       <Button
@@ -1239,19 +1337,7 @@ const LiveComponentEditorCore = createWithRemoteLoader({
                   <div className={style['sites-main']}>{editorTabs}</div>
                   {showAiPanel && !aiCollapsed ? (
                     <aside className={style['ai-aside']} style={{ width: aiPanelWidth }}>
-                      <AiAssistPanel
-                        siteHost={aiSiteHost}
-                        content={content}
-                        scope={scope}
-                        props={props}
-                        libs={Object.assign({}, getLibs(), libs)}
-                        selection={selection}
-                        limitToSelection={limitToSelection}
-                        onLimitToSelectionChange={setLimitToSelection}
-                        onApplyGenerate={handleAiApplyGenerate}
-                        onCollapse={() => setAiCollapsed(true)}
-                        formatMessage={formatMessage}
-                      />
+                      {renderAiPanel({ onCollapse: () => setAiCollapsed(true) })}
                     </aside>
                   ) : null}
                 </>

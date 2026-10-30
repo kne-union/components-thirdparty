@@ -72,7 +72,7 @@ export const buildCKEditorI18n = formatMessage => {
     templateVariableWidgetLabel: fm({ id: 'TemplateVariableWidgetLabel' }),
     templateVariableEmpty: fm({ id: 'TemplateVariableEmpty' }),
     templateVariableKindInterpolate: fm({ id: 'TemplateVariableKindInterpolate' }),
-    templateVariableKindEscape: fm({ id: 'TemplateVariableKindEscape' }),
+    templateVariableKindRaw: fm({ id: 'TemplateVariableKindRaw' }),
     templateConditionLabel: fm({ id: 'TemplateConditionLabel' }),
     templateConditionWidgetLabel: fm({ id: 'TemplateConditionWidgetLabel' }),
     templateConditionEmpty: fm({ id: 'TemplateConditionEmpty' }),

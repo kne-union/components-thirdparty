@@ -799,6 +799,37 @@
     }
   }
 
+  $button-types: (
+    primary: (var(--primary-color, #1677ff), var(--primary-color, #1677ff), #ffffff),
+    default: (#ffffff, #d9d9d9, var(--font-color, #262626)),
+    danger: (#ff4d4f, #ff4d4f, #ffffff)
+  );
+  $button-shapes: (
+    rounded: 6px,
+    pill: 999px
+  );
+
+  @each $shape, $radius in $button-shapes {
+    @each $type, $colors in $button-types {
+      span.btn-#{$shape}-#{$type} {
+        display: inline-block;
+        padding: 0.3em 1.4em;
+        border: 1px solid nth($colors, 2);
+        border-radius: $radius;
+        background: nth($colors, 1);
+        color: nth($colors, 3);
+        font-weight: bold;
+        line-height: 1.5;
+        text-decoration: none;
+
+        a {
+          color: inherit;
+          text-decoration: none;
+        }
+      }
+    }
+  }
+
   .tag-label {
     display: inline-block;
     font-size: 0.8em;
@@ -1045,8 +1076,8 @@ html.ck-model3d-overlay-open {
   border-color: #91caff;
 }
 
-.ck-editor__editable span.ck-template-variable.ck-template-variable--escape,
-.ck.ck-content span.ck-template-variable.ck-template-variable--escape {
+.ck-editor__editable span.ck-template-variable.ck-template-variable--raw,
+.ck.ck-content span.ck-template-variable.ck-template-variable--raw {
   color: #d46b08;
   background: #fff7e6;
   border-color: #ffd591;

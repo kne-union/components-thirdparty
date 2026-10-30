@@ -33,7 +33,7 @@ const templateVariableConfig = {
     { name: 'salesName', label: '销售姓名' },
     { name: 'department', label: '所属部门' },
     { name: 'tenantName', label: '租户名称' },
-    { name: 'rawHtml', label: '原始HTML', kind: 'escape' }
+    { name: 'rawHtml', label: '原始HTML', kind: 'raw' }
   ]
 };
 
