@@ -4,25 +4,16 @@ import { useMemo, useRef, useState } from 'react';
 import { createWithRemoteLoader } from '@kne/remote-loader';
 import { useIntl } from '@kne/react-intl';
 import { useIsMobile } from '@kne/responsive-utils';
-import { Liquid } from 'liquidjs';
+import { htmlToText, renderTemplate, textToHtml, validateTemplateHtml } from '@kne/message-template';
 import cloneDeep from 'lodash/cloneDeep';
 import get from 'lodash/get';
 import set from 'lodash/set';
 import classnames from 'classnames';
-import CKEditor, { EMAIL_STYLE_DEFINITIONS, EMAIL_TOOLBAR_ITEMS, toEmailHtml, validateTemplateHtml } from '@components/CKEditor';
-import { htmlToText, textToHtml } from './textTemplate';
+import CKEditor, { EMAIL_STYLE_DEFINITIONS, EMAIL_TOOLBAR_ITEMS, toEmailHtml } from '@components/CKEditor';
 import withLocale from './withLocale';
 import style from './style.module.scss';
 
-/** 与 CKEditor 模版插件约定一致：{{ name }} 转义输出，{{ name | raw }} 原样输出 */
-const htmlLiquid = new Liquid({ outputEscape: 'escape', strictFilters: true });
-/** 纯文本（短信等）不做 HTML 转义 */
-const textLiquid = new Liquid({ strictFilters: true });
-
-export const renderTemplate = (template, data = {}, { type = 'html' } = {}) =>
-  (type === 'text' ? textLiquid : htmlLiquid).parseAndRenderSync(String(template ?? ''), data);
-
-export { htmlToText, textToHtml };
+export { renderTemplate, htmlToText, textToHtml };
 
 const TEXT_TOOLBAR_ITEMS = ['undo', 'redo', '|', 'insertTemplateVariable', 'insertTemplateCondition'];
 
