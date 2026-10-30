@@ -12,13 +12,16 @@
 | subject | 邮件主题模板；传入后预览顶部展示渲染后的主题（信封头），仅 `type="html"` 生效 | string | - |
 | condition | 是否启用条件块；传对象时作为 CKEditor `templateCondition` 配置（如 `operators`、`allowElse`、`allowNesting`） | boolean \| object | `true` |
 | config | 透传给 CKEditor 的额外配置，会覆盖同名默认项 | object | - |
+| readOnly | 只读模式：CKEditor 进入只读并隐藏工具栏，保留「内容 / 预览」切换，适合详情页展示模板 | boolean | false |
+| copyable | 在「内容 / 预览」切换栏右侧显示「复制」按钮，复制模板源码（`value`） | boolean | false |
+| uploadAdapter | 透传给 CKEditor 的图片上传适配，同 `CKEditor.Field` 的 `uploadAdapter` | object | - |
 | height | 编辑区最小高度与预览区高度（px） | number | `html` 为 480，`text` 为 160 |
 | className | 外层容器类名 | string | - |
 
 说明：
 
 - 没有 `variables` 时工具栏不显示「插入变量」；`condition={false}` 时不显示「条件」
-- 预览流程：`validateTemplateHtml` 校验 → `toEmailHtml` inline 邮件样式 → liquidjs 渲染（`outputEscape: 'escape'`，`{{ name | raw }}` 原样输出）→ 沙箱 iframe
+- 预览流程：`validateTemplateHtml` 校验 → `toEmailHtml` inline 邮件样式 → liquidjs 渲染（`outputEscape: 'escape'`，`{{ name | raw }}` 原样输出）→ 链接统一加 `target="_blank" rel="noopener noreferrer"` → 沙箱 iframe（不允许脚本，允许弹出新标签页）
 - 文本模式：工具栏只保留撤销、重做、插入变量、条件；条件只能是行内（块级会跨段落，转成文本后无法识别回条件块）；每个段落输出为一行，`<br>` 输出为换行，粗体等格式不进入输出；预览不做 HTML 转义，以短信气泡展示并统计字数
 - `variables` / `condition` / `config` 建议在组件外定义或 `useMemo`，避免每次渲染生成新对象
 

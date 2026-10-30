@@ -541,6 +541,7 @@ const CKEditorFieldView = withLocale(
     openConditionEditorModal,
     onBlur,
     onFocus,
+    readOnly = false,
     ...props
   }) => {
     const { formatMessage } = useIntl();
@@ -670,9 +671,10 @@ const CKEditorFieldView = withLocale(
     }, [customStyle, measuredToolbarDropdownMaxWidth]);
 
     return (
-      <div ref={wrapperRef} className={classnames(className, style['editor'])} style={wrapperStyle}>
+      <div ref={wrapperRef} className={classnames(className, style['editor'], { [style['is-read-only']]: readOnly })} style={wrapperStyle}>
         <CKEditor5
           editor={ClassicEditor}
+          disabled={readOnly}
           data={value}
           config={merge({}, editorConfig, {
             licenseKey: 'GPL',
@@ -709,6 +711,10 @@ const CKEditorFieldView = withLocale(
                 })
           })}
           onChange={(event, editor) => {
+            // 只读时编辑器加载内容也会触发 change（数据规范化），不回写外部值
+            if (readOnly) {
+              return;
+            }
             const data = editor.getData();
             onChange(data);
           }}

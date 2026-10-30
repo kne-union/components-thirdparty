@@ -1,3 +1,6 @@
+import get from 'lodash/get';
+import { findTemplateMatches } from '@kne/message-template';
+
 export { normalizeVariableKind, wrapVariable, resolveVariableLabel, findTemplateMatches } from '@kne/message-template';
 
 /**
@@ -5,7 +8,34 @@ export { normalizeVariableKind, wrapVariable, resolveVariableLabel, findTemplate
  */
 export const resolveTemplateVariableSettings = (config = {}) => {
   const variables = Array.isArray(config.variables) ? config.variables : [];
-  return { variables };
+  const previewData = config.previewData && typeof config.previewData === 'object' ? config.previewData : {};
+  return { variables, previewData };
+};
+
+/** 编辑区样式取值：previewData 优先，其次 variables[].example；取不到返回 undefined */
+export const resolveStyleVariableValue = (name, { variables, previewData }) => {
+  const value = get(previewData, name);
+  if (value !== undefined && value !== null && value !== '') {
+    return String(value);
+  }
+  const example = variables.find(item => item?.name === name)?.example;
+  return example !== undefined && example !== null && example !== '' ? String(example) : undefined;
+};
+
+/** 把样式值里的 {{ 变量 }} 换成示例值；有变量取不到值时原样返回 */
+export const resolveStyleValue = (value, settings) => {
+  if (typeof value !== 'string' || !value.includes('{{')) {
+    return value;
+  }
+  let resolved = value;
+  for (const match of findTemplateMatches(value)) {
+    const replacement = resolveStyleVariableValue(match.name, settings);
+    if (replacement === undefined) {
+      return value;
+    }
+    resolved = resolved.replace(match.raw, replacement);
+  }
+  return resolved;
 };
 
 /**
