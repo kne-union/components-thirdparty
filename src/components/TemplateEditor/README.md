@@ -257,6 +257,8 @@ render(<ConditionExample />);
 
 ### renderTemplate
 
+以下工具函数由 [@kne/message-template](https://github.com/kne-union/message-template) 提供并在此转出，前端与 Node 端（如服务端发送）可直接依赖该包使用同一套渲染与校验规则。
+
 | 参数 | 说明 | 类型 |
 | --- | --- | --- |
 | template | Liquid 模板字符串 | string |
