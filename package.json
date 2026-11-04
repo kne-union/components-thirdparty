@@ -1,6 +1,6 @@
 {
   "name": "@kne-components/components-thirdparty",
-  "version": "0.1.59",
+  "version": "0.1.60",
   "description": "用于封装一些体积较大的需要使用时再加载的第三方库",
   "scripts": {
     "init": "husky",
@@ -80,8 +80,8 @@
     "husky": "^9.0.11",
     "lodash": "^4.17.23",
     "prettier": "^3.2.5",
-    "react": "^18.2.0",
-    "react-dom": "^18.2.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
     "react-router-dom": "^6.22.2",
     "sass": "^1.75.0"
   },
