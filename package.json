@@ -1,7 +1,7 @@
 {
   "name": "@kne-components/components-thirdparty",
   "version": "0.1.61",
-  "description": "用于封装一些体积较大的需要使用时再加载的第三方库",
+  "description": "用于封装一些体积较大的需要使用时再加载的第三方库.",
   "scripts": {
     "init": "husky",
     "start": "cross-env PORT=3050 COMPONENTS_NAME=components-thirdparty MODULES_DEV_PUBLIC_URL=/ craco start",
