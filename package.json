@@ -1,10 +1,10 @@
 {
   "name": "@kne-components/components-thirdparty",
-  "version": "0.1.62",
+  "version": "0.1.63",
   "description": "用于封装一些体积较大的需要使用时再加载的第三方库.",
   "scripts": {
     "init": "husky",
-    "start": "cross-env PORT=3050 COMPONENTS_NAME=components-thirdparty MODULES_DEV_PUBLIC_URL=/ craco start",
+    "start": "cross-env PORT=3015 COMPONENTS_NAME=components-thirdparty MODULES_DEV_PUBLIC_URL=/ craco start",
     "build": "cross-env COMPONENTS_NAME=components-thirdparty MODULES_DEV_PUBLIC_URL=components-thirdparty craco build",
     "create": "modules-dev-create",
     "test": "craco test --coverage",
