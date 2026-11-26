@@ -73,23 +73,45 @@ const DiffEditor = forwardRef(
       });
       editor.layout();
     }, [editor, renderSideBySide, readOnly, hideUnchangedRegions, options]);
-    // keepCurrent* 后由我们在卸挂时先解绑再 dispose，避免 widget 重置前 model 已被销毁
+    // keepCurrent* 避免 @monaco-editor/react 在 dispose widget 前先 dispose model；
+    // 卸挂时先 setModel(null) 解绑，再微任务里 dispose，避免与 DiffEditorWidget 重置竞态
     useEffect(() => {
+      const originalPath = originalModelPath;
+      const modifiedPath = modifiedModelPath;
       return () => {
         const { editor: diffEditor, monaco } = apiRef.current;
+        apiRef.current = {};
+        let originalModel;
+        let modifiedModel;
         try {
-          diffEditor?.setModel({ original: null, modified: null });
+          const current = diffEditor?.getModel?.();
+          originalModel = current?.original;
+          modifiedModel = current?.modified;
+          diffEditor?.setModel?.(null);
         } catch (e) {
-          // ignore
+          // ignore disposed editor
         }
-        if (!monaco) {
-          return;
-        }
-        try {
-          monaco.editor.getModel(monaco.Uri.parse(originalModelPath))?.dispose();
-          monaco.editor.getModel(monaco.Uri.parse(modifiedModelPath))?.dispose();
-        } catch (e) {
-          // ignore
+        const disposeModels = () => {
+          try {
+            originalModel?.dispose?.();
+            modifiedModel?.dispose?.();
+          } catch (e) {
+            // ignore
+          }
+          if (!monaco) {
+            return;
+          }
+          try {
+            monaco.editor.getModel(monaco.Uri.parse(originalPath))?.dispose();
+            monaco.editor.getModel(monaco.Uri.parse(modifiedPath))?.dispose();
+          } catch (e) {
+            // ignore
+          }
+        };
+        if (typeof queueMicrotask === 'function') {
+          queueMicrotask(disposeModels);
+        } else {
+          setTimeout(disposeModels, 0);
         }
       };
     }, [originalModelPath, modifiedModelPath]);
