@@ -62,17 +62,63 @@ render(<BaseExample />);
 ```
 
 - Markdown 模式
-- 展示 Markdown 模式下的编辑器，支持 Markdown 语法输入和编辑
-- _CKEditor(@components/CKEditor),antd(antd),_MarkdownRender(@kne/markdown-components-render)
+- Markdown 模式：md-components（yml 围栏 / 行内）在编辑器内实时渲染，默认支持 RemoteLoader 与 antd 基础组件，markdownOptions 扩展 components / variables；预览用 CKEditor.Content isMarkdown
+- _CKEditor(@components/CKEditor),antd(antd)
 
 ```jsx
 const { default: CKEditor } = _CKEditor;
-const { Flex, Card, Space, Typography, Switch, Divider } = antd;
+const { Flex, Card, Space, Typography, Switch, Divider, Tag, message } = antd;
 const { useState } = React;
 const { Title } = Typography;
-const { default: MarkdownRender } = _MarkdownRender;
 
-const initData = &#96;
+// 扩展组件：type 与 components 的键名对应
+const UserCard = ({ name, title, onClick }) => (
+  <Card size="small" title={name} extra={<a onClick={onClick}>联系</a>} style={{ width: 280 }}>
+    <Tag color="blue">{title}</Tag>
+  </Card>
+);
+
+const componentsData = &#96;
+## 组件渲染 🧩
+
+Markdown 模式下 \&#96;\&#96;\&#96;yml 围栏里的 md-components 会在编辑器内实时渲染，块级点右上角按钮、行内点组件后的编辑图标即可编辑；工具栏「组件」可插入。
+
+\&#96;\&#96;\&#96;yml
+md-components:
+  type: Alert
+  props:
+    type: success
+    showIcon: true
+    message: 默认支持 antd 基础组件
+\&#96;\&#96;\&#96;
+
+\&#96;\&#96;\&#96;yml
+md-components:
+  type: RemoteLoader
+  props:
+    module: components-core:Content
+    list:
+      - label: 姓名
+        content: 张三
+      - label: 职位
+        content: 前端工程师
+\&#96;\&#96;\&#96;
+
+\&#96;\&#96;\&#96;yml
+md-components:
+  type: UserCard
+  props:
+    name: 李四
+    title: 产品经理
+    onClick: $handleContact
+\&#96;\&#96;\&#96;
+
+行内组件：\&#96;md-components:Button{"type":"link","children":"行内按钮","onClick":"$handleContact"}\&#96;
+&#96;;
+
+const initData =
+  componentsData +
+  &#96;
 ## Markdown output 🛫
 
 [CKEditor 5](https://ckeditor.com/) can be configured to output Markdown instead of HTML. Markdown is a lightweight markup language that you can use to add formatting to plain text documents. Use the **Source** button to check and edit the Markdown source code of this content.
@@ -125,6 +171,11 @@ You can also use Markdown to create various text blocks, such as:
 const MarkdownExample = () => {
   const [isMarkdown, setIsMarkdown] = useState(true);
   const [content, setContent] = useState(initData);
+  // 编辑器与预览共用：与默认组件合并，同名覆盖
+  const markdownOptions = {
+    components: { UserCard },
+    variables: { handleContact: () => message.info('联系一下') }
+  };
   return (
     <Flex vertical gap={16}>
       <Card>
@@ -135,9 +186,17 @@ const MarkdownExample = () => {
             </Title>
             <Switch checked={isMarkdown} onChange={setIsMarkdown} checkedChildren="Markdown" unCheckedChildren="富文本" />
           </Flex>
-          <CKEditor.Field key={&#96;editor-${isMarkdown}&#96;} isMarkdown={isMarkdown} value={content} onChange={setContent} />
+          <CKEditor.Field
+            key={&#96;editor-${isMarkdown}&#96;}
+            isMarkdown={isMarkdown}
+            markdownOptions={markdownOptions}
+            value={content}
+            onChange={setContent}
+          />
           <Divider orientation="left">内容预览</Divider>
-          {isMarkdown ? <MarkdownRender>{content}</MarkdownRender> : <CKEditor.Content>{content}</CKEditor.Content>}
+          <CKEditor.Content isMarkdown={isMarkdown} markdownOptions={markdownOptions}>
+            {content}
+          </CKEditor.Content>
         </Space>
       </Card>
     </Flex>
@@ -554,7 +613,7 @@ const BaseExample = () => {
             <Title level={4}>交互组件</Title>
             <Paragraph type="secondary">
               通过 <Text code>config.liveComponent</Text> 配置预览与插入弹窗（含多站点文件面板）；编辑区与
-              CKEditor.Content 预览均通过 LiveComponentView 渲染。双击已插入组件可再次编辑。
+              CKEditor.Content 预览均通过 LiveComponentView 渲染。选中后点右上角编辑按钮可再次编辑。
             </Paragraph>
           </div>
           <CKEditor.Field
@@ -607,7 +666,7 @@ const sampleOption = {
 const encodedOption = encodeURIComponent(JSON.stringify(sampleOption));
 
 const initData = &#96;<h2>ECharts 图表示例</h2>
-<p>点击工具栏 <strong>图表</strong> 按钮，在弹窗中用 JSONEditor 编辑 ECharts <code>option</code> 后插入。选中图表可拖拽调整大小，双击可再次编辑配置。</p>
+<p>点击工具栏 <strong>图表</strong> 按钮，在弹窗中用 JSONEditor 编辑 ECharts <code>option</code> 后插入。选中图表可拖拽调整大小，点右上角编辑按钮可再次编辑配置。</p>
 <figure class="ck-echart" style="height:400px;">
   <div class="ck-echart-inner" data-echart-option="${encodedOption}" style="height:400px;"></div>
 </figure>&#96;;
@@ -863,7 +922,7 @@ const initData = &#96;<h2>
     &nbsp;
 </section>
 <p>
-    点击工具栏「表单」按钮，在弹窗中使用 FormCreator 搭建表单，确认后以特殊标签插入文档；编辑区与 CKEditor.Content 均通过 SchemaRenderer 渲染。双击已插入块可再次编辑。
+    点击工具栏「表单」按钮，在弹窗中使用 FormCreator 搭建表单，确认后以特殊标签插入文档；编辑区与 CKEditor.Content 均通过 SchemaRenderer 渲染。选中后点右上角编辑按钮可再次编辑。
 </p>&#96;;
 
 const BaseExample = () => {
@@ -973,7 +1032,7 @@ const templateVariableConfig = {
   ]
 };
 
-const modalToolbarItems = ['undo', 'redo', '|', 'bold', 'italic', '|', 'insertTemplateVariable', 'insertTemplateCondition', '|', 'sourceEditing'];
+const modalToolbarItems = ['undo', 'redo', '|', 'bold', 'italic', 'removeFormat', '|', 'insertTemplateVariable', 'insertTemplateCondition', '|', 'sourceEditing'];
 
 const BaseExample = createWithRemoteLoader({
   modules: ['components-core:FormInfo', 'components-core:FormInfo@useFormModal']
@@ -1044,6 +1103,67 @@ render(<BaseExample />);
 
 ```
 
+- 在useFormModal中使用
+- 弹窗内使用默认工具栏的编辑器字段，验收工具栏不会全部收进「更多」、弹窗滚动时吸顶位置正确
+- _CKEditor(@components/CKEditor),antd(antd),remoteLoader(@kne/remote-loader)
+
+```jsx
+const { createWithRemoteLoader } = remoteLoader;
+const { default: CKEditor } = _CKEditor;
+const { Button, Space, Typography } = antd;
+const { useState } = React;
+const { Paragraph, Text } = Typography;
+
+// 内容刻意加长，弹窗内滚动时验收工具栏吸顶位置
+const longContent = Array.from({ length: 30 }, (_, index) => &#96;<p>第 ${index + 1} 段：滚动弹窗，工具栏应贴在弹窗可视区域顶部，不留空隙。</p>&#96;).join(
+  ''
+);
+
+const ModalExample = createWithRemoteLoader({
+  modules: ['components-core:FormInfo', 'components-core:FormInfo@useFormModal']
+})(({ remoteModules }) => {
+  const [FormInfo, useFormModal] = remoteModules;
+  const { Input } = FormInfo.fields;
+  const formModal = useFormModal();
+  const [result, setResult] = useState('');
+
+  const openModal = () => {
+    const modalApi = formModal({
+      title: '弹窗中编辑（默认工具栏）',
+      size: 'large',
+      formProps: {
+        data: { title: '弹窗标题', content: &#96;<h2>弹窗内的编辑器</h2>${longContent}&#96; },
+        onSubmit: data => {
+          setResult(data?.content || '');
+          modalApi.close();
+        }
+      },
+      children: <FormInfo column={1} list={[<Input name="title" label="标题" rule="REQ" />, <CKEditor name="content" label="内容" rule="REQ" />]} />
+    });
+  };
+
+  return (
+    <Space direction="vertical" style={{ width: '100%' }}>
+      <Paragraph type="secondary">
+        验收点：打开弹窗后工具栏按钮按宽度正常展示，不会全部收进「⋮」；弹窗内滚动时工具栏吸附在可视区域顶部，不额外下移。
+      </Paragraph>
+      <Button type="primary" onClick={openModal}>
+        打开 useFormModal
+      </Button>
+      {result ? (
+        <Paragraph>
+          <Text type="secondary">提交内容长度：</Text>
+          <Text>{result.length}</Text>
+        </Paragraph>
+      ) : null}
+    </Space>
+  );
+});
+
+render(<ModalExample />);
+
+```
+
 ### API
 
 ### CKEditor
@@ -1056,23 +1176,24 @@ render(<BaseExample />);
 
 #### 属性说明
 
-| 属性名        | 说明                                                                                                                                                                                 | 类型     | 默认值                                      |
-| ------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- | ------------------------------------------- |
-| className     | 外层容器类名                                                                                                                                                                         | string   | -                                           |
-| style         | 外层容器样式；内部会合并 `--ck-toolbar-dropdown-max-width`                                                                                                                           | object   | -                                           |
-| isMarkdown    | 是否 Markdown 模式。为 `true` 时不加载 3D、视频、交互组件、图表、表单插件，并从工具栏移除 `model3dUpload`、`videoUpload`、`insertLiveComponent`、`insertEchart`、`insertFormCreator` | boolean  | false                                       |
-| config        | CKEditor 5 配置，与内置 `defaultConfig` 深合并                                                                                                                                       | object   | 见下方 config                               |
-| plugins       | 追加的 CKEditor 插件类                                                                                                                                                               | array    | []                                          |
-| locale        | 界面语言，`zh-CN` 或 `en` 等；未传时使用 `@kne/global-context` 的 `locale`                                                                                                           | string   | 上下文 locale                               |
-| uploadAdapter | 图片上传与粘贴转存；富文本下亦作为 `modelUpload` / `videoUpload` 的默认合并源                                                                                                        | object   | `preset.apis.file` 的 `upload`、`uploadUrl` |
-| liveComponent | **兼容简写**。与 `config.liveComponent` 合并；推荐直接写在 `config.liveComponent`（见下表）                                                                                          | object   | `{}`                                        |
-| formCreator   | **兼容简写**。与 `config.formCreator` 合并；推荐直接写在 `config.formCreator`（见下表）                                                                                              | object   | `{}`                                        |
-| model3d       | 3D 模型预览扩展参数，与 `config.model3d` 合并，见下表                                                                                                                                | object   | 见 `defaultConfig.model3d`                  |
-| value         | 编辑器 HTML / Markdown 内容                                                                                                                                                          | string   | -                                           |
-| onChange      | 内容变化回调 `(html: string) => void`                                                                                                                                                | function | -                                           |
-| onFocus       | 编辑器获得焦点回调                                                                                                                                                                   | function | -                                           |
-| onBlur        | 编辑器失焦回调；作为表单项时由 `useDecorator` 注入，用于触发失焦校验                                                                                                                 | function | -                                           |
-| readOnly      | 只读模式：开启 CKEditor 只读（`disabled`）并隐藏工具栏，不回调 `onChange`                                                                                                            | boolean  | false                                       |
+| 属性名          | 说明                                                                                                                                                                                 | 类型     | 默认值                                      |
+| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------- | ------------------------------------------- |
+| className       | 外层容器类名                                                                                                                                                                         | string   | -                                           |
+| style           | 外层容器样式；内部会合并 `--ck-toolbar-dropdown-max-width`                                                                                                                           | object   | -                                           |
+| isMarkdown      | 是否 Markdown 模式。为 `true` 时不加载 3D、视频、交互组件、图表、表单插件，并从工具栏移除 `model3dUpload`、`videoUpload`、`insertLiveComponent`、`insertEchart`、`insertFormCreator` | boolean  | false                                       |
+| config          | CKEditor 5 配置，与内置 `defaultConfig` 深合并                                                                                                                                       | object   | 见下方 config                               |
+| plugins         | 追加的 CKEditor 插件类                                                                                                                                                               | array    | []                                          |
+| locale          | 界面语言，`zh-CN` 或 `en` 等；未传时使用 `@kne/global-context` 的 `locale`                                                                                                           | string   | 上下文 locale                               |
+| uploadAdapter   | 图片上传与粘贴转存；富文本下亦作为 `modelUpload` / `videoUpload` 的默认合并源                                                                                                        | object   | `preset.apis.file` 的 `upload`、`uploadUrl` |
+| liveComponent   | **兼容简写**。与 `config.liveComponent` 合并；推荐直接写在 `config.liveComponent`（见下表）                                                                                          | object   | `{}`                                        |
+| formCreator     | **兼容简写**。与 `config.formCreator` 合并；推荐直接写在 `config.formCreator`（见下表）                                                                                              | object   | `{}`                                        |
+| model3d         | 3D 模型预览扩展参数，与 `config.model3d` 合并，见下表                                                                                                                                | object   | 见 `defaultConfig.model3d`                  |
+| markdownOptions | 仅 Markdown 模式：`components` 为 md-components 可用组件（与默认 RemoteLoader + antd 基础组件合并，同名覆盖）；`variables` 为 props 中 `$name` 取值的变量表                          | object   | -                                           |
+| value           | 编辑器 HTML / Markdown 内容                                                                                                                                                          | string   | -                                           |
+| onChange        | 内容变化回调 `(html: string) => void`                                                                                                                                                | function | -                                           |
+| onFocus         | 编辑器获得焦点回调                                                                                                                                                                   | function | -                                           |
+| onBlur          | 编辑器失焦回调；作为表单项时由 `useDecorator` 注入，用于触发失焦校验                                                                                                                 | function | -                                           |
+| readOnly        | 只读模式：开启 CKEditor 只读（`disabled`）并隐藏工具栏，不回调 `onChange`                                                                                                            | boolean  | false                                       |
 
 #### 工具栏宽度
 
@@ -1084,13 +1205,15 @@ render(<BaseExample />);
 
 #### 属性说明
 
-| 属性名        | 说明                                                               | 类型   | 默认值 |
-| ------------- | ------------------------------------------------------------------ | ------ | ------ |
-| className     | 预览根节点类名（叠加 `ck ck-content`）                             | string | -      |
-| children      | HTML 字符串，经 `dangerouslySetInnerHTML` 渲染                     | string | -      |
-| liveComponent | 传给 `LiveComponentView` 的扩展参数，需与编辑区 `Field` 侧配置一致 | object | -      |
-| formCreator   | 传给 `SchemaRenderer` 的扩展参数，需与编辑区 `Field` 侧配置一致    | object | -      |
-| model3d       | 传给预览区 `model-viewer` 的属性与全屏等行为配置                   | object | -      |
+| 属性名          | 说明                                                                                       | 类型    | 默认值 |
+| --------------- | ------------------------------------------------------------------------------------------ | ------- | ------ |
+| className       | 预览根节点类名（叠加 `ck ck-content`）                                                     | string  | -      |
+| children        | HTML 字符串，经 `dangerouslySetInnerHTML` 渲染                                             | string  | -      |
+| liveComponent   | 传给 `LiveComponentView` 的扩展参数，需与编辑区 `Field` 侧配置一致                         | object  | -      |
+| formCreator     | 传给 `SchemaRenderer` 的扩展参数，需与编辑区 `Field` 侧配置一致                            | object  | -      |
+| model3d         | 传给预览区 `model-viewer` 的属性与全屏等行为配置                                           | object  | -      |
+| isMarkdown      | 为 `true` 时 `children` 按 Markdown 渲染（markdown-components-render），支持 md-components | boolean | false  |
+| markdownOptions | 仅 Markdown：`{ components, variables }`，需与编辑区 `Field` 一致                          | object  | -      |
 
 #### 预览行为
 
@@ -1140,20 +1263,20 @@ render(<BaseExample />);
 - 工具栏：`insertLiveComponent`，弹窗内嵌 `LiveComponentEditor`
 - **Field 侧请在 `config.liveComponent` 中完成配置**（高度、libs、弹窗 `editor.*` 等）；可通过 `config.liveComponent.editor.sites`（或同对象顶层 `sites`）开启多站点文件面板
 - 存储：`<section class="component-box ck-live-component" data-live-component="PlantUML编码配置">`
-- 编辑区与 `CKEditor.Content` 均通过 `LiveComponentView` 渲染；选中后右上角提供「编辑」按钮，双击亦可再次打开编辑
+- 编辑区与 `CKEditor.Content` 均通过 `LiveComponentView` 渲染；选中后右上角提供「编辑」按钮
 
 #### ECharts 图表（EchartPlugin）
 
 - 工具栏：`insertEchart`，弹窗内嵌 `JSONEditor` 编辑 ECharts `option` JSON
 - 存储：`<figure class="ck-echart"><div class="ck-echart-inner" data-echart-option="..."></div></figure>`
-- 编辑区与 `CKEditor.Content` 均通过 `@components/Echart` 渲染；选中后可拖拽调整宽高，双击可再次编辑配置
+- 编辑区与 `CKEditor.Content` 均通过 `@components/Echart` 渲染；选中后可拖拽调整宽高，右上角提供「编辑」按钮
 
 #### FormCreator 表单（FormCreatorPlugin）
 
 - 工具栏：`insertFormCreator`，弹窗内嵌 `@components/FormCreator` 的 `FormCreatorField` 搭建表单
 - **Field 侧请在 `config.formCreator` 中配置**；**Content 侧用 `formCreator.formProps`（对象）给文档内所有表单的 `Form` 统一传参**（如 `onSubmit`、`data`）
 - 存储：`<section class="component-box ck-form-creator" data-form-creator-schema="encodeURIComponent(JSON)">`
-- 编辑区与 `CKEditor.Content` 均通过 `SchemaRenderer` 渲染；选中后右上角提供「编辑」按钮，双击亦可再次打开编辑
+- 编辑区与 `CKEditor.Content` 均通过 `SchemaRenderer` 渲染；选中后右上角提供「编辑」按钮
 
 #### 邮件模版变量（TemplateVariablePlugin）
 
@@ -1255,8 +1378,20 @@ render(<BaseExample />);
 - 不注册 `Model3dPlugin`、`VideoPlugin`、`LiveComponentPlugin`、`EchartPlugin`、`FormCreatorPlugin`
 - 从 `config` 中剥离 `model3d`、`modelUpload`、`videoUpload`、`mediaVideo`、`liveComponent`、`formCreator`
 - 自定义 `plugins` 传入上述插件时会被过滤
+- 注册 `MarkdownComponentsPlugin`，工具栏未写 `insertMarkdownComponent` 时自动插在 `codeBlock` 之后（无 `codeBlock` 则追加到末尾）
 
-预览 Markdown 请配合 `@kne/markdown-components-render`（见 `doc/markdown.js`）。
+#### md-components 组件
+
+基于 `@kne/markdown-components-render`，编辑器内实时渲染为 widget；`onChange` 输出仍是原始 Markdown 语法。工具栏「组件」插入时可选块级 / 行内，弹窗统一用 YML 编辑（左编辑右预览，窄屏上下），行内组件保存时自动转为行内语法；块级点右上角编辑按钮、行内点组件后的编辑图标进行编辑。
+
+| 形式 | 写法                                                                                          |
+| ---- | --------------------------------------------------------------------------------------------- |
+| 块级 | `yml` 围栏，内容以 `md-components:` 为根键，含 `type`、`props`                                |
+| 行内 | 行内代码 `md-components:Type{"key":"value"}`，`Type` 仅字母数字下划线，props 内不能嵌套花括号 |
+
+默认组件：`RemoteLoader`（`props.module` 指定远程模块，如 `components-core:Content`）、`Alert`、`Badge`、`Button`、`Card`、`Descriptions`、`Divider`、`Flex`、`Image`、`Progress`、`Space`、`Steps`、`Table`、`Tag`、`Tooltip`、`Typography`、`Text`、`Title`、`Paragraph`、`Link`。
+
+扩展：`Field` 与 `Content` 传相同的 `markdownOptions={{ components, variables }}`；props 中 `$name` 从 `variables` 取值（如事件回调）。预览用 `<CKEditor.Content isMarkdown markdownOptions={...}>`（见 `doc/markdown.js`）。
 
 ### 包导出工具函数
 

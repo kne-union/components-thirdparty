@@ -40,7 +40,7 @@ const BaseExample = () => {
             <Title level={4}>交互组件</Title>
             <Paragraph type="secondary">
               通过 <Text code>config.liveComponent</Text> 配置预览与插入弹窗（含多站点文件面板）；编辑区与
-              CKEditor.Content 预览均通过 LiveComponentView 渲染。双击已插入组件可再次编辑。
+              CKEditor.Content 预览均通过 LiveComponentView 渲染。选中后点右上角编辑按钮可再次编辑。
             </Paragraph>
           </div>
           <CKEditor.Field

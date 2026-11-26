@@ -26,7 +26,7 @@ const initData = `<h2>
     &nbsp;
 </section>
 <p>
-    点击工具栏「表单」按钮，在弹窗中使用 FormCreator 搭建表单，确认后以特殊标签插入文档；编辑区与 CKEditor.Content 均通过 SchemaRenderer 渲染。双击已插入块可再次编辑。
+    点击工具栏「表单」按钮，在弹窗中使用 FormCreator 搭建表单，确认后以特殊标签插入文档；编辑区与 CKEditor.Content 均通过 SchemaRenderer 渲染。选中后点右上角编辑按钮可再次编辑。
 </p>`;
 
 const BaseExample = () => {

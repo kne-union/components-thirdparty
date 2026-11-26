@@ -1,0 +1,31 @@
+{
+  "isFull": false,
+  "list": [
+    {
+      "title": "基础用法",
+      "description": "对比两段代码，默认左右并排、只读，并折叠未改动的区域",
+      "code": "./base.js",
+      "scope": [
+        {
+          "name": "_DiffEditor",
+          "packageName": "@components/DiffEditor"
+        }
+      ]
+    },
+    {
+      "title": "对比 JSON 与切换视图",
+      "description": "original / modified 直接传对象，自动按 JSON 格式化并高亮；通过 renderSideBySide 在并排与内联视图之间切换",
+      "code": "./json.js",
+      "scope": [
+        {
+          "name": "_DiffEditor",
+          "packageName": "@components/DiffEditor"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        }
+      ]
+    }
+  ]
+}

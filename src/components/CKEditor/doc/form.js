@@ -37,7 +37,7 @@ const templateVariableConfig = {
   ]
 };
 
-const modalToolbarItems = ['undo', 'redo', '|', 'bold', 'italic', '|', 'insertTemplateVariable', 'insertTemplateCondition', '|', 'sourceEditing'];
+const modalToolbarItems = ['undo', 'redo', '|', 'bold', 'italic', 'removeFormat', '|', 'insertTemplateVariable', 'insertTemplateCondition', '|', 'sourceEditing'];
 
 const BaseExample = createWithRemoteLoader({
   modules: ['components-core:FormInfo', 'components-core:FormInfo@useFormModal']

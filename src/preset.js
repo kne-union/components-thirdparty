@@ -79,7 +79,7 @@ export const globalInit = async () => {
   const componentsCoreRemote = {
     ...registry,
     remote: 'components-core',
-    defaultVersion: '0.6.8'
+    defaultVersion: '0.7.8'
   };
   remoteLoaderPreset({
     remotes: {
@@ -88,12 +88,12 @@ export const globalInit = async () => {
       'components-iconfont': {
         ...registry,
         remote: 'components-iconfont',
-        defaultVersion: '0.1.8'
+        defaultVersion: '0.3.0'
       },
       'components-admin': {
         ...registry,
         remote: 'components-admin',
-        defaultVersion: '1.1.133'
+        defaultVersion: '1.1.157'
       },
       'components-thirdparty':
         process.env.NODE_ENV === 'development'

@@ -23,7 +23,7 @@ const sampleOption = {
 const encodedOption = encodeURIComponent(JSON.stringify(sampleOption));
 
 const initData = `<h2>ECharts 图表示例</h2>
-<p>点击工具栏 <strong>图表</strong> 按钮，在弹窗中用 JSONEditor 编辑 ECharts <code>option</code> 后插入。选中图表可拖拽调整大小，双击可再次编辑配置。</p>
+<p>点击工具栏 <strong>图表</strong> 按钮，在弹窗中用 JSONEditor 编辑 ECharts <code>option</code> 后插入。选中图表可拖拽调整大小，点右上角编辑按钮可再次编辑配置。</p>
 <figure class="ck-echart" style="height:400px;">
   <div class="ck-echart-inner" data-echart-option="${encodedOption}" style="height:400px;"></div>
 </figure>`;
