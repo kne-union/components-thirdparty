@@ -1,0 +1,153 @@
+@use '~@kne/responsive-utils/scss' as resp;
+
+.modal {
+  :global(.ant-modal-header) {
+    margin-bottom: 0;
+    padding-bottom: 12px;
+  }
+
+  :global(.ant-modal-title) {
+    width: 100%;
+  }
+
+  :global(.ant-modal-body) {
+    padding-top: 12px;
+  }
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding-right: 28px;
+  min-width: 0;
+}
+
+.header-main {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.header-title {
+  flex: none;
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 24px;
+  white-space: nowrap;
+}
+
+.mode-tag {
+  margin: 0;
+  border-radius: 4px;
+  line-height: 20px;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+}
+
+.template {
+  width: 128px;
+}
+
+.help {
+  color: var(--font-color-grey, rgba(0, 0, 0, 0.45));
+  font-size: 14px;
+  cursor: help;
+
+  &:hover {
+    color: var(--primary-color);
+  }
+}
+
+.dialog {
+  @include resp.responsive-container;
+}
+
+.layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  height: min(420px, 62vh);
+  border: 1px solid var(--font-color-grey-4, #f0f0f0);
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.pane {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+
+  &:first-child {
+    border-right: 1px solid var(--font-color-grey-4, #f0f0f0);
+  }
+}
+
+.pane-label {
+  flex: none;
+  padding: 6px 12px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--font-color-grey, rgba(0, 0, 0, 0.45));
+  background: var(--bg-color-grey-1, #fafafa);
+  border-bottom: 1px solid var(--font-color-grey-4, #f0f0f0);
+}
+
+.editor {
+  flex: 1;
+  min-height: 0;
+}
+
+.preview {
+  flex: 1;
+  min-height: 0;
+  padding: 12px;
+  overflow: auto;
+  background: #fff;
+}
+
+.error {
+  font-size: 12px;
+  color: var(--font-color-grey, rgba(0, 0, 0, 0.45));
+  word-break: break-all;
+}
+
+@include resp.mobile-container {
+  .header {
+    flex-wrap: wrap;
+    align-items: flex-start;
+    padding-right: 24px;
+    gap: 8px;
+  }
+
+  .header-main,
+  .header-actions {
+    width: 100%;
+  }
+
+  .header-actions {
+    justify-content: flex-start;
+  }
+
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 240px auto;
+    height: auto;
+  }
+
+  .pane:first-child {
+    border-right: 0;
+    border-bottom: 1px solid var(--font-color-grey-4, #f0f0f0);
+  }
+
+  .preview {
+    max-height: 260px;
+  }
+}

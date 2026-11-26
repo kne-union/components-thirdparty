@@ -16,6 +16,7 @@ import { encodeOptionForHtmlAttribute, stringifyEchartOption } from './optionCod
 import { EchartStyleEditing, EchartStyleUI } from './style';
 import { EchartResizeEditing, EchartResizeUI } from './resize';
 import { EchartToolbar } from './toolbar';
+import { insertCornerEditButton } from '../shared/insertCornerEditButton';
 import {
   applyEchartHeightToDom,
   consumeEchartStyleClasses,
@@ -63,6 +64,16 @@ const createEchartFigureView = (modelElement, writer, { editor, renderChart, asW
 
   if (asWidget) {
     const i18n = editor.config.get('ckeditorI18n') || {};
+
+    insertCornerEditButton(writer, figure, {
+      label: i18n.liveComponentEditAction || '编辑',
+      onEdit: () => {
+        editor.model.change(modelWriter => {
+          modelWriter.setSelection(modelElement, 'on');
+        });
+        openEchartDialogForEditor(editor, modelElement.getAttribute('option') || DEFAULT_ECHART_OPTION_TEXT);
+      }
+    });
 
     return toWidget(figure, writer, { label: i18n.echartWidgetLabel || '图表' });
   }
@@ -147,7 +158,6 @@ class EchartEditing extends Plugin {
 
     this._defineConverters();
     this._listenHeightChanges();
-    this._setupDoubleClickEdit();
   }
 
   _listenHeightChanges() {
@@ -167,31 +177,6 @@ class EchartEditing extends Plugin {
           }
         }
       }
-    });
-  }
-
-  _setupDoubleClickEdit() {
-    const editor = this.editor;
-
-    this.listenTo(editor.editing.view.document, 'dblclick', (evt, data) => {
-      const figure = data.domTarget?.closest?.(`figure.${ECHART_FIGURE_CLASS}`);
-
-      if (!figure) {
-        return;
-      }
-
-      const viewFigure = editor.editing.view.domConverter.domToView(figure);
-      const modelElement = viewFigure && editor.editing.mapper.toModelElement(viewFigure);
-
-      if (!modelElement?.is('element', ECHART_MODEL)) {
-        return;
-      }
-
-      editor.model.change(writer => {
-        writer.setSelection(modelElement, 'on');
-      });
-
-      openEchartDialogForEditor(editor, modelElement.getAttribute('option') || DEFAULT_ECHART_OPTION_TEXT);
     });
   }
 

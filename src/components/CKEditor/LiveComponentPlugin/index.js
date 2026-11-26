@@ -139,7 +139,6 @@ class LiveComponentEditing extends Plugin {
     });
 
     this._defineConverters();
-    this._setupDoubleClickEdit();
   }
 
   _defineConverters() {
@@ -217,30 +216,6 @@ class LiveComponentEditing extends Plugin {
     });
   }
 
-  _setupDoubleClickEdit() {
-    const editor = this.editor;
-
-    this.listenTo(editor.editing.view.document, 'dblclick', (evt, data) => {
-      const section = data.domTarget?.closest?.(`section.${LIVE_COMPONENT_CLASS}`);
-
-      if (!section) {
-        return;
-      }
-
-      const viewSection = editor.editing.view.domConverter.domToView(section);
-      const modelElement = viewSection && editor.editing.mapper.toModelElement(viewSection);
-
-      if (!modelElement?.is('element', LIVE_COMPONENT_MODEL)) {
-        return;
-      }
-
-      editor.model.change(writer => {
-        writer.setSelection(modelElement, 'on');
-      });
-
-      openLiveComponentDialogForEditor(editor, modelElement.getAttribute('content') || '');
-    });
-  }
 }
 
 const openLiveComponentDialogForEditor = (editor, initialValue) => {

@@ -18,7 +18,7 @@
     },
     {
       "title": "Markdown 模式",
-      "description": "展示 Markdown 模式下的编辑器，支持 Markdown 语法输入和编辑",
+      "description": "Markdown 模式：md-components（yml 围栏 / 行内）在编辑器内实时渲染，默认支持 RemoteLoader 与 antd 基础组件，markdownOptions 扩展 components / variables；预览用 CKEditor.Content isMarkdown",
       "code": "./markdown.js",
       "scope": [
         {
@@ -28,10 +28,6 @@
         {
           "name": "antd",
           "packageName": "antd"
-        },
-        {
-          "name": "_MarkdownRender",
-          "packageName": "@kne/markdown-components-render"
         }
       ]
     },
@@ -194,6 +190,25 @@
       "title": "在Form中使用",
       "description": "页内 Form 与 useFormModal 中使用编辑器；弹窗示例带模版变量和条件，用于验收下拉",
       "code": "./form.js",
+      "scope": [
+        {
+          "name": "_CKEditor",
+          "packageName": "@components/CKEditor"
+        },
+        {
+          "name": "antd",
+          "packageName": "antd"
+        },
+        {
+          "name": "remoteLoader",
+          "packageName": "@kne/remote-loader"
+        }
+      ]
+    },
+    {
+      "title": "在useFormModal中使用",
+      "description": "弹窗内使用默认工具栏的编辑器字段，验收工具栏不会全部收进「更多」、弹窗滚动时吸顶位置正确",
+      "code": "./modal.js",
       "scope": [
         {
           "name": "_CKEditor",

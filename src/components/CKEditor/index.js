@@ -76,6 +76,9 @@ import TemplateVariablePlugin from './TemplateVariablePlugin';
 import TemplateConditionPlugin from './TemplateConditionPlugin';
 import FormCreatorPlugin from './FormCreatorPlugin';
 import EmailStylePlugin from './emailStylePlugin';
+import DialogToolbarLayoutPlugin from './dialogToolbarLayout';
+import MarkdownComponentsPlugin from './MarkdownComponentsPlugin';
+import MarkdownComponentsView from './MarkdownComponentsPlugin/MarkdownComponentsView';
 
 import { syncContentVideoLayout } from './VideoPlugin/utils';
 import { createDefaultMediaToolbar } from './shared/mediaWidget/constants';
@@ -152,7 +155,8 @@ const defaultPlugins = [
   GeneralHtmlSupport,
   Style,
   SelectAll,
-  OssUploadAdapterPlugin
+  OssUploadAdapterPlugin,
+  DialogToolbarLayoutPlugin
 ];
 
 const richTextPlugins = [
@@ -539,6 +543,7 @@ const CKEditorFieldView = withLocale(
     model3d: model3dProp,
     openCompareValueModal,
     openConditionEditorModal,
+    markdownOptions,
     onBlur,
     onFocus,
     readOnly = false,
@@ -548,6 +553,8 @@ const CKEditorFieldView = withLocale(
     const ckeditorI18n = useMemo(() => buildCKEditorI18n(formatMessage), [formatMessage]);
     const [value, onChange] = useControlValue(props);
     const wrapperRef = useRef(null);
+    const markdownRenderOptionsRef = useRef({});
+    markdownRenderOptionsRef.current = markdownOptions || {};
     const measuredToolbarDropdownMaxWidth = useToolbarDropdownMaxWidth(wrapperRef);
     const contextLocale = useGlobalValue('locale');
     const themeToken = useGlobalValue('themeToken');
@@ -569,7 +576,7 @@ const CKEditorFieldView = withLocale(
       ];
 
       if (isMarkdown) {
-        list.push(Markdown);
+        list.push(Markdown, MarkdownComponentsPlugin);
       }
 
       return list;
@@ -640,6 +647,10 @@ const CKEditorFieldView = withLocale(
           item !== 'insertEchart' &&
           item !== 'insertFormCreator'
       );
+      if (!toolbarItems.includes('insertMarkdownComponent')) {
+        const codeBlockIndex = toolbarItems.indexOf('codeBlock');
+        toolbarItems.splice(codeBlockIndex === -1 ? toolbarItems.length : codeBlockIndex + 1, 0, 'insertMarkdownComponent');
+      }
       const {
         model3d: _model3d,
         modelUpload: _modelUpload,
@@ -655,6 +666,10 @@ const CKEditorFieldView = withLocale(
         toolbar: {
           ...merged.toolbar,
           items: toolbarItems
+        },
+        // 函数形式避免 lodash.merge 深拷贝组件，且能读到最新的 markdownOptions
+        markdownComponents: {
+          getOptions: () => markdownRenderOptionsRef.current
         }
       };
     }, [isMarkdown, config, liveComponentConfig, formCreatorConfig, model3dConfig, ckeditorI18n, openCompareValueModal, openConditionEditorModal, themeToken, locale]);
@@ -934,7 +949,15 @@ const CKEditor = createWithRemoteLoader({
 
 CKEditor.Field = CKEditorField;
 
-const CKContent = ({ className, children, liveComponent: liveComponentProp, formCreator: formCreatorProp, model3d: model3dProp }) => {
+const CKContent = ({
+  className,
+  children,
+  isMarkdown,
+  markdownOptions,
+  liveComponent: liveComponentProp,
+  formCreator: formCreatorProp,
+  model3d: model3dProp
+}) => {
   const ref = useRef(null);
   const themeToken = useGlobalValue('themeToken');
   const locale = useGlobalValue('locale');
@@ -1016,6 +1039,14 @@ const CKContent = ({ className, children, liveComponent: liveComponentProp, form
       teardownFormCreatorContentPreview(container);
     };
   }, [children, liveComponentOptions, formCreatorOptions, model3dOptions]);
+
+  if (isMarkdown) {
+    return (
+      <MarkdownComponentsView className={className} components={markdownOptions?.components} variables={markdownOptions?.variables}>
+        {children}
+      </MarkdownComponentsView>
+    );
+  }
 
   return <div ref={ref} className={classnames('ck ck-content', className)} dangerouslySetInnerHTML={{ __html: children }} />;
 };
