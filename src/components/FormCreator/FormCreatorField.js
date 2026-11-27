@@ -53,45 +53,43 @@ const FormCreatorField = withLocale(
       const isMobile = useIsMobile();
       const { message } = App.useApp();
       const formModal = useFormModal();
+      // 对齐 components-core FormInfo：createModalRender + 宿主字段映射（onCancel→onClose，footer 函数先执行）
+      // 剥离 width，避免阻断 react-modal 移动端全屏；表单场景走 FormInfo.FormModal（勿回传 footer/modalRender，避免叠两层 Form）
+      // 剥离 className：form-creator 的 property-modal 会让 .ant-modal-body 整体滚动，而 core Modal 的标题/底栏也在 .ant-modal-body 内
       const renderModalBase = useMemo(
         () => createModalRender({ footerButtons: [], bodyScroll: true }),
         [createModalRender]
       );
-      const defaultRenderModal = useRefCallback(
-        ({
-          onCancel,
-          footer,
+      const mapHostToOverlayProps = useRefCallback(
+        ({ onCancel, footer, modalRender, formProps, saveText, autoClose, cancelText, width: _width, className: _className, ...rest }) => ({
+          ...rest,
+          onClose: onCancel,
+          footer: typeof footer === 'function' ? footer() : footer,
           modalRender,
           formProps,
           saveText,
           autoClose,
-          cancelText,
-          width: _width,
-          ...rest
-        }) => {
-          if (formProps?.onSubmit) {
-            return (
-              <FormInfo.FormModal
-                {...rest}
-                formProps={formProps}
-                onClose={onCancel}
-                okText={saveText}
-                cancelText={cancelText}
-                autoClose={autoClose}
-              />
-            );
-          }
-
-          const { children, ...modalRest } = rest;
-          return renderModalBase({
-            ...modalRest,
-            onClose: onCancel,
-            footer: typeof footer === 'function' ? footer() : footer,
-            modalRender,
-            children
-          });
-        }
+          cancelText
+        })
       );
+      const defaultRenderModal = useRefCallback(hostProps => {
+        const mapped = mapHostToOverlayProps(hostProps);
+        if (mapped.formProps?.onSubmit) {
+          const { formProps, saveText, autoClose, cancelText, footer: _footer, modalRender: _modalRender, ...rest } = mapped;
+          return (
+            <FormInfo.FormModal
+              {...rest}
+              bodyScroll
+              formProps={formProps}
+              onClose={mapped.onClose}
+              okText={saveText}
+              cancelText={cancelText}
+              autoClose={autoClose}
+            />
+          );
+        }
+        return renderModalBase(mapped);
+      });
       const { Input } = FormInfo.fields;
 
       const groupApis = useMemo(() => resolveGroupApis(apis), [apis]);

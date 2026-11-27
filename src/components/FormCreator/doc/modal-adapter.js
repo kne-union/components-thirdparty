@@ -56,12 +56,13 @@ const ModalAdapterExample = createWithRemoteLoader({
 
   const renderDrawer = useMemo(() => {
     const renderDrawerBase = createDrawerRender({ placement: 'right', footerButtons: [], bodyScroll: true });
-    // 宿主协议：onCancel → onClose，footer 函数需先执行；width 由 Drawer 自身决定（移动端全宽）
-    return ({ formProps, saveText, autoClose, cancelText, onCancel, footer, width, ...props }) =>
+    // 与包装层 defaultRenderModal 相同的宿主映射：onCancel→onClose，footer 函数先执行；剥离 formProps/width
+    return ({ formProps, saveText, autoClose, cancelText, onCancel, footer, modalRender, width, ...props }) =>
       renderDrawerBase({
         ...props,
         onClose: onCancel,
-        footer: typeof footer === 'function' ? footer() : footer
+        footer: typeof footer === 'function' ? footer() : footer,
+        modalRender
       });
   }, [createDrawerRender]);
 
