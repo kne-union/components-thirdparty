@@ -12,7 +12,7 @@ npm i --save @kne/form-creator
 
 ### 概述
 
-配置式表单搭建组件：通过字段列表 UI 产出 Schema，并用 `@kne/form-info` 实时预览与运行时渲染。
+配置式表单搭建组件：通过字段列表 UI 产出 Schema，并用 `@kne/form-info` 实时预览与运行时渲染；支持矩阵量表（MatrixScale）、带「其他」的单选/复选组（RadioGroupOther / CheckboxGroupOther）及 modern / block / indexType 选项样式。
 
 
 ### 示例
@@ -33,19 +33,62 @@ npm i --save @kne/form-creator
 #### 示例代码
 
 - 配置式表单搭建(全屏)
-- 通过模块列表添加/编辑/排序，右侧实时预览；默认示例含列表嵌套与选项切换
-- _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"],_FormInfo(@kne/form-info)[import * as _FormInfo from "@kne/form-info"]
+- 模块搭建与实时预览；工具栏可导入/导出 Schema JSON（弹窗内 JSONEditor）
+- _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],_JsonView(@kne/json-view)[import * as _JsonView from "@kne/json-view"],(@kne/json-view/dist/index.css)[import "@kne/json-view/dist/index.css"],antd(antd)[import antd from "antd"],remoteLoader(@kne/remote-loader)[import * as remoteLoader from "@kne/remote-loader"]
 
 ```jsx
-const {default: FormCreator, defaultSchema, createBlock, createField, createStep, createChoiceOption} = _FormCreator;
+const {
+  default: FormCreator,
+  defaultSchema,
+  createBlock,
+  createField,
+  createStep,
+  createChoiceOption,
+  normalizeSchema
+} = _FormCreator;
 const {default: JsonView} = _JsonView;
-const {useState} = React;
-const {Typography} = antd;
+const {createWithRemoteLoader, preset: remoteLoaderPreset} = remoteLoader;
+const {useState, useRef} = React;
+const {Typography, Button, Space, Alert, message, Modal} = antd;
 
 const {Text} = Typography;
 
-const BaseExample = () => {
-    const [schema, setSchema] = useState(() => ({
+/** 仅在用到 JSONEditor 时声明 components-thirdparty（merge 进全局 remotes，不覆盖 core） */
+remoteLoaderPreset({
+  remotes: {
+    'components-thirdparty': {
+      url: 'https://uc.fatalent.cn',
+      tpl: '{{url}}/packages/@kne-components/{{remote}}/{{version}}/build',
+      remote: 'components-thirdparty',
+      defaultVersion: '0.1.64'
+    }
+  }
+});
+
+const SchemaJsonEditor = ({JSONEditorField, initialText, textRef}) => {
+  const [text, setText] = useState(initialText);
+  return (
+    <JSONEditorField
+      height={420}
+      value={text}
+      onChange={next => {
+        setText(next);
+        textRef.current = next;
+      }}
+    />
+  );
+};
+
+const BaseExample = createWithRemoteLoader({
+  // JSONEditor.Field：纯 UI（value/onChange）；默认 JSONEditor 是 FormInfo 字段
+  // Schema 弹窗用 antd Modal 受控打开（示例页未挂 ModalContextHolder，useModal 会静默无效果）
+  modules: ['components-thirdparty:JSONEditor.Field']
+})(({remoteModules}) => {
+  const [JSONEditorField] = remoteModules;
+  const [schemaJsonOpen, setSchemaJsonOpen] = useState(false);
+  const schemaJsonTextRef = useRef('');
+  const [schemaJsonInitial, setSchemaJsonInitial] = useState('');
+  const [schema, setSchema] = useState(() => ({
         ...defaultSchema(),
         actions: {
             showSubmit: true,
@@ -104,6 +147,42 @@ const BaseExample = () => {
                         block: true,
                         description: '选填',
                         props: {rows: 3, placeholder: '补充说明'}
+                    }),
+                    createField({
+                        type: 'RadioGroupOther',
+                        name: 'channel',
+                        label: '了解渠道',
+                        rule: 'REQ',
+                        block: true,
+                        props: {
+                            modern: true,
+                            block: true,
+                            indexType: 'letter',
+                            options: [
+                                {label: '招聘网站', value: 'website'},
+                                {label: '内部推荐', value: 'referral'},
+                                {label: '校园宣讲', value: 'campus'}
+                            ],
+                            otherProps: {placeholder: '请说明其他渠道'}
+                        }
+                    }),
+                    createField({
+                        type: 'CheckboxGroupOther',
+                        name: 'benefits',
+                        label: '期望福利',
+                        block: true,
+                        props: {
+                            modern: true,
+                            block: true,
+                            indexType: 'check',
+                            options: [
+                                {label: '五险一金', value: 'insurance'},
+                                {label: '带薪年假', value: 'vacation'},
+                                {label: '餐补', value: 'meal'}
+                            ],
+                            otherOption: {label: '其他福利', value: 'other'},
+                            otherProps: {placeholder: '请描述其他福利'}
+                        }
                     })
                 ]
             }),
@@ -401,6 +480,42 @@ const BaseExample = () => {
                 maxLength: 3,
                 minLength: 1
             }),
+            createBlock('matrixScale', {
+                title: '一天中各项活动的时间占比',
+                name: 'timeShare',
+                rowTitle: '活动',
+                layout: 'options',
+                fieldType: 'RadioGroup',
+                rule: 'REQ',
+                rows: [
+                    { label: '工作/学习', name: 'work' },
+                    { label: '通勤', name: 'commute' },
+                    { label: '休闲娱乐', name: 'leisure' }
+                ],
+                options: [
+                    { label: '几乎没有（0%）', value: 'none' },
+                    { label: '少量（1%-20%）', value: 'little' },
+                    { label: '约一半（41%-60%）', value: 'half' },
+                    { label: '大部分（81%-100%）', value: 'most' }
+                ]
+            }),
+            createBlock('matrixScale', {
+                title: '近一周每天的时长（小时）',
+                name: 'weekHours',
+                rowTitle: '项目',
+                layout: 'columns',
+                fieldType: 'InputNumber',
+                rule: 'REQ',
+                rows: [
+                    { label: '工作', name: 'work' },
+                    { label: '运动', name: 'exercise' }
+                ],
+                columns: [
+                    { label: '周一', name: 'mon' },
+                    { label: '周二', name: 'tue' },
+                    { label: '周三', name: 'wed' }
+                ]
+            }),
             createBlock('steps', {
                 title: '入职补充信息',
                 autoStep: true,
@@ -475,14 +590,91 @@ const BaseExample = () => {
         ]
     }));
 
-    return <div>
-        <FormCreator value={schema} onChange={setSchema} />
-        <div style={{marginTop: 16}}>
-            <JsonView data={schema} theme="light" collapsedFrom={2} searchable={false} />
-            <Text type="secondary">初始示例已包含表单分组、列表、表格列表、行内编辑列表、列表嵌套、选项切换、多字段、分步等模块。</Text>
-        </div>
-    </div>;
-};
+  const handleSchemaJson = () => {
+    const initialText = JSON.stringify(schema, null, 2);
+    schemaJsonTextRef.current = initialText;
+    setSchemaJsonInitial(initialText);
+    setSchemaJsonOpen(true);
+  };
+
+  const handleCopySchemaJson = () => {
+    const text = schemaJsonTextRef.current;
+    if (navigator.clipboard?.writeText) {
+      navigator.clipboard.writeText(text).then(
+        () => message.success('已复制 Schema JSON'),
+        () => message.error('复制失败')
+      );
+    } else {
+      message.info(text);
+    }
+  };
+
+  const handleApplySchemaJson = () => {
+    const text = schemaJsonTextRef.current;
+    if (!String(text || '').trim()) {
+      message.warning('请先编辑 Schema JSON');
+      return;
+    }
+    try {
+      setSchema(normalizeSchema(JSON.parse(text)));
+      message.success('已应用 Schema');
+      setSchemaJsonOpen(false);
+    } catch (e) {
+      message.error('JSON 无效，请检查后再试');
+    }
+  };
+
+  return (
+    <Space direction="vertical" size={16} style={{width: '100%'}}>
+      <Alert
+        type="info"
+        showIcon
+        message="Schema JSON"
+        description={
+          <span>
+            工具栏「Schema JSON」打开弹窗（远程 <Text code>components-thirdparty:JSONEditor.Field</Text>
+            ）：「复制」导出当前内容，「应用」把修改写回编辑器（经 <Text code>normalizeSchema</Text>）。
+          </span>
+        }
+      />
+      <FormCreator
+        value={schema}
+        onChange={setSchema}
+        extraToolbar={
+          <Button size="small" onClick={handleSchemaJson}>
+            Schema JSON
+          </Button>
+        }
+      />
+      <Modal
+        title="Schema JSON"
+        open={schemaJsonOpen}
+        onCancel={() => setSchemaJsonOpen(false)}
+        width={860}
+        destroyOnHidden
+        footer={
+          <Space>
+            <Button onClick={() => setSchemaJsonOpen(false)}>取消</Button>
+            <Button onClick={handleCopySchemaJson}>复制</Button>
+            <Button type="primary" onClick={handleApplySchemaJson}>
+              应用
+            </Button>
+          </Space>
+        }
+      >
+        {schemaJsonOpen ? (
+          <SchemaJsonEditor key={schemaJsonInitial} JSONEditorField={JSONEditorField} initialText={schemaJsonInitial} textRef={schemaJsonTextRef} />
+        ) : null}
+      </Modal>
+      <div>
+        <JsonView data={schema} theme="light" collapsedFrom={2} searchable={false} />
+        <Text type="secondary">
+          初始示例已包含表单分组、列表、表格列表、行内编辑列表、列表嵌套、选项切换、多字段、分步、矩阵量表等模块。
+        </Text>
+      </div>
+    </Space>
+  );
+});
 
 render(<BaseExample />);
 
@@ -588,6 +780,119 @@ const SchemaRenderExample = () => {
 };
 
 render(<SchemaRenderExample />);
+
+
+```
+
+- 步骤展示样式
+- steps 模块的 stepsStyle：default 完整步骤条（默认），focus 突出当前步骤标题与分段进度
+- _FormCreator(@kne/form-creator)[import * as _FormCreator from "@kne/form-creator"],(@kne/form-creator/dist/index.css)[import "@kne/form-creator/dist/index.css"],antd(antd)[import antd from "antd"]
+
+```jsx
+const { SchemaRenderer, createBlock, createField, createStep } = _FormCreator;
+const { useMemo, useState } = React;
+const { Alert, Flex, Segmented, Typography } = antd;
+const { Text } = Typography;
+
+const createOnboardingSteps = stepsStyle =>
+  createBlock('steps', {
+    title: '入职信息登记',
+    subtitle: '按步骤完成，每步校验通过后进入下一步',
+    stepsStyle,
+    items: [
+      createStep({
+        title: '个人信息',
+        column: 2,
+        list: [
+          createField({ type: 'Input', name: 'name', label: '姓名', rule: 'REQ', props: { placeholder: '请输入姓名' } }),
+          createField({ type: 'Input', name: 'mobile', label: '手机号', rule: 'REQ TEL', props: { placeholder: '请输入手机号' } }),
+          createField({ type: 'Input', name: 'email', label: '邮箱', rule: 'REQ EMAIL', props: { placeholder: 'name@company.com' } }),
+          createField({ type: 'DatePicker', name: 'birthday', label: '出生日期', props: { placeholder: '请选择日期' } })
+        ]
+      }),
+      createStep({
+        title: '岗位与入职安排（含所属部门、岗位名称与入职日期确认，请与 HR 沟通后填写）',
+        column: 2,
+        list: [
+          createField({
+            type: 'Select',
+            name: 'department',
+            label: '所属部门',
+            rule: 'REQ',
+            props: {
+              placeholder: '请选择部门',
+              options: [
+                { label: '产品研发中心', value: 'rd' },
+                { label: '市场营销部', value: 'marketing' },
+                { label: '人力资源部', value: 'hr' }
+              ]
+            }
+          }),
+          createField({ type: 'Input', name: 'position', label: '岗位名称', rule: 'REQ', props: { placeholder: '例如：高级前端工程师' } }),
+          createField({ type: 'DatePicker', name: 'joinDate', label: '入职日期', rule: 'REQ', props: { placeholder: '请选择日期' } })
+        ]
+      }),
+      createStep({
+        title: '紧急联系人',
+        column: 2,
+        list: [
+          createField({ type: 'Input', name: 'contactName', label: '联系人姓名', rule: 'REQ', props: { placeholder: '请输入姓名' } }),
+          createField({ type: 'Input', name: 'contactMobile', label: '联系人电话', rule: 'REQ TEL', props: { placeholder: '请输入手机号' } })
+        ]
+      }),
+      createStep({
+        title: '银行卡与薪资账户',
+        column: 2,
+        list: [
+          createField({ type: 'Input', name: 'bankName', label: '开户银行', rule: 'REQ', props: { placeholder: '例如：招商银行上海分行' } }),
+          createField({ type: 'Input', name: 'bankAccount', label: '银行卡号', rule: 'REQ', props: { placeholder: '请输入银行卡号' } })
+        ]
+      }),
+      createStep({
+        title: '其他说明',
+        column: 1,
+        list: [createField({ type: 'TextArea', name: 'remark', label: '备注', block: true, props: { rows: 3, placeholder: '如有特殊情况请说明' } })]
+      })
+    ]
+  });
+
+const StepsStyleExample = () => {
+  const [stepsStyle, setStepsStyle] = useState('focus');
+  const schema = useMemo(
+    () => ({
+      actions: { showSubmit: true, showReset: true, submitText: '提交登记' },
+      blocks: [createOnboardingSteps(stepsStyle)]
+    }),
+    [stepsStyle]
+  );
+
+  return (
+    <Flex vertical gap={16}>
+      <Alert
+        type="info"
+        showIcon
+        message="步骤展示样式"
+        description={
+          <span>
+            steps 模块通过 <Text code>stepsStyle</Text> 切换导航样式：<Text code>default</Text>（默认）为完整步骤条；
+            <Text code>focus</Text> 突出当前步骤标题（长标题自动换行）与分段进度，已完成的进度段可点击回退，适合步骤多、标题长或窄屏场景。编辑器中可在「编辑模块」里配置。
+          </span>
+        }
+      />
+      <Segmented
+        value={stepsStyle}
+        onChange={setStepsStyle}
+        options={[
+          { label: '聚焦当前步骤（focus）', value: 'focus' },
+          { label: '完整步骤条（default）', value: 'default' }
+        ]}
+      />
+      <SchemaRenderer key={stepsStyle} schema={schema} />
+    </Flex>
+  );
+};
+
+render(<StepsStyleExample />);
 
 
 ```
@@ -2184,12 +2489,13 @@ const ModalAdapterExample = createWithRemoteLoader({
 
   const renderDrawer = useMemo(() => {
     const renderDrawerBase = createDrawerRender({ placement: 'right', footerButtons: [], bodyScroll: true });
-    // 宿主协议：onCancel → onClose，footer 函数需先执行；width 由 Drawer 自身决定（移动端全宽）
-    return ({ formProps, saveText, autoClose, cancelText, onCancel, footer, width, ...props }) =>
+    // 与包装层 defaultRenderModal 相同的宿主映射：onCancel→onClose，footer 函数先执行；剥离 formProps/width
+    return ({ formProps, saveText, autoClose, cancelText, onCancel, footer, modalRender, width, ...props }) =>
       renderDrawerBase({
         ...props,
         onClose: onCancel,
-        footer: typeof footer === 'function' ? footer() : footer
+        footer: typeof footer === 'function' ? footer() : footer,
+        modalRender
       });
   }, [createDrawerRender]);
 
@@ -2446,14 +2752,16 @@ import { SchemaContent, SchemaContentInner } from '@kne/form-creator';
   },
   blocks: [{
     id: string,
-    kind: 'formInfo' | 'list' | 'tableList' | 'editableList' | 'multiField' | 'object' | 'choice' | 'steps',
+    kind: 'formInfo' | 'list' | 'tableList' | 'editableList' | 'multiField' | 'matrixScale' | 'object' | 'choice' | 'steps',
     title?, subtitle?, column?, gap?, bordered?, important?,
     name?, label?, addText?, addPosition?, maxLength?, minLength?, fieldType?, autoStep?,
+    layout?, rowTitle?, rule?, rows?, columns?, // matrixScale
     mode?, selectorName?, selectorInData?, discriminator?,
+    stepsStyle?: 'default' | 'focus', // steps 导航样式，默认 default
     list?: [{ id, type, name, label, tips?, description?, rule?, block?, hidden?, locked?, visibleWhen?, props? }],
     itemBlocks?: Block[], // list / editableList：列表项内子模块
     blocks?: Block[], // formInfo / object：子模块
-    options?: [{ id, title, list?, blocks?: Block[] }], // choice
+    options?: [{ id, title, list?, blocks?: Block[] }] | [{ label, value }], // choice 选项 或 matrixScale 量表选项
     items?: [{ id, title, column, list: [...], blocks?: Block[] }] // steps 专用
   }]
 }
@@ -2492,7 +2800,7 @@ import { SchemaContent, SchemaContentInner } from '@kne/form-creator';
 
 - `field` 为提交数据中的路径，object 模块内字段带前缀，如 `contact.phone`
 - 不满足条件的字段不渲染、不参与校验，已填的值会被清空；`SchemaContent` 按数据同样隐藏
-- 列表类模块（list / tableList / editableList / multiField）内的字段既不能配置条件，也不能作为触发字段
+- 列表类模块（list / tableList / editableList / multiField / matrixScale）内的字段既不能配置条件，也不能作为触发字段
 - 条件引用的字段不存在、位于列表类模块内或正则无效时，该条件被忽略（编辑器显示「条件失效」）；全部条件失效时字段照常显示
 - 编辑器会拦截循环依赖；触发字段改名时自动同步引用
 - `schemaToDataSchema` 中条件字段不进入 `required`，并在 `description` 中附加条件说明
@@ -2506,7 +2814,7 @@ Schema 内的展示文案既可以是字符串，也可以是按语言区分的�
 | 支持多语言的位置 | 说明 |
 |------|------|
 | 字段 | label、tips、description、props.placeholder、props.options[].label / description、Switch 的 checkedChildren / unCheckedChildren |
-| 模块 | title、subtitle、label、addText；tableList 列 title；choice 选项 title；steps 步骤 title |
+| 模块 | title、subtitle、label、addText；tableList 列 title；choice 选项 title；steps 步骤 title；matrixScale 的 rowTitle、rows[].label、options[].label、columns[].label |
 | actions | submitText、resetText、cancelText |
 
 支持哪些语言由调用方通过 `languages` 决定，组件不内置语言列表：
@@ -2548,7 +2856,8 @@ FormCreator 不传 `languages` 时为单语言输入（与改造前一致，存�
 | object | 对象分组 | name, title, column, gap, bordered, list（字段名渲染为 `name.field`）, **blocks** |
 | choice | 选项分支 | title, **mode**(`single`\|`multiple`), **minLength** / **maxLength**（仅多选：最少/最多选几项）, selectorName, selectorInData, options[{ title, list, **blocks** }] |
 | multiField | 同类型多值 | name, label, fieldType, addText（不支持子模块） |
-| steps | 步骤表单 | title, subtitle, bordered, autoStep, items[{ title, column, list, **blocks** }] |
+| matrixScale | 矩阵量表（`@kne/form-info` MatrixScale）：每行共用同一 `fieldType` | name, title, **rowTitle**, **layout**（`options` 选项矩阵 \| `columns` 单元格矩阵 \| `field` 每行一个字段）, fieldType（默认 RadioGroup）, rule（如 `REQ`）, **rows**`[{ label, name }]`, **options**（layout=options）, **columns**`[{ label, name }]`（layout=columns）；不支持子模块 |
+| steps | 步骤表单 | title, subtitle, bordered, autoStep, stepsStyle（`default` 完整步骤条 / `focus` 突出当前步骤标题与分段进度）, items[{ title, column, list, **blocks** }] |
 
 `choice`：顶部同一条选项 UI；`single` 只挂载当前选项内容，`multiple` 平铺所有选中项。多选时可配置 `minLength` / `maxLength` 限制最少、最多选择几个（提交时校验；达到上限后未选项禁用）。JSON Schema 的 oneOf/anyOf 可分别映射为 `mode: 'single'/'multiple'`。`allOf` 无需独立 kind，展开为多个 sibling blocks 即可。
 
@@ -2557,7 +2866,20 @@ FormCreator 不传 `languages` 时为单语言输入（与改造前一致，存�
 #### 字段类型
 
 基础：Input、TextArea、InputNumber、Switch、Checkbox、DatePicker  
-选择：Select、RadioGroup、CheckboxGroup、SuperSelect、SuperSelectPlus
+选择：Select、RadioGroup、CheckboxGroup、RadioGroupOther、CheckboxGroupOther、SuperSelect、SuperSelectPlus
+
+`RadioGroup` / `CheckboxGroup` / `RadioGroupOther` / `CheckboxGroupOther` 的 `props` 额外支持（透传 `@kne/react-form-antd@>=4.1.14`）：
+
+| 属性 | 类型 | 说明 |
+|------|------|------|
+| inline | boolean | 编辑器侧「横向排列」；渲染时若未开 `block` 且 `inline=false`，沿用纵向兜底 |
+| modern | boolean | 新版序号色块样式 |
+| block | boolean | 块级纵向占满选项 |
+| indexType | `'letter'\|'number'\|'check'` | 仅 `modern` 时生效；默认字母 |
+| otherOption | `{ label?, value? }` | 仅 Other：自定义「其他」选项文案/值（默认 value=`other`） |
+| otherProps | object | 仅 Other：选中「其他」后 TextArea 的 props（如 `placeholder`） |
+
+Other 字段提交值为 `{ value, other? }`（单选 `value` 为字符串，多选为数组）。
 
 #### 工具方法
 
@@ -2584,6 +2906,7 @@ const dataSchema = schemaToDataSchema(schema);
 | object | `properties[name]` = nested object（字段名为相对 name） |
 | list / tableList / editableList | `properties[name]` = array of object |
 | multiField | `properties[name]` = array，元素为 `fieldType` 的 valueSchema |
+| matrixScale | `properties[name]` = object：options/field 时每行一个属性；columns 时每行嵌套 object（列为格子） |
 | steps | 各 step 字段/子块并入当前层 |
 | choice（single） | `oneOf`：每支含 selector `const` + 该 option 字段 |
 | choice（multiple） | 当前层 selector 为数组 + `anyOf` 各 option 字段支 |

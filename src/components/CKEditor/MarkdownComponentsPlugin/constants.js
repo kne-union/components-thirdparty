@@ -79,6 +79,29 @@ export const TEMPLATES = {
           children: 操作`
     },
     {
+      label: 'Flex',
+      value: `md-components:
+  type: Flex
+  props:
+    gap: middle
+    wrap: wrap
+    align: center
+    children:
+      - type: Tag
+        props:
+          color: blue
+          children: 标签一
+      - type: Tag
+        props:
+          color: green
+          children: 标签二
+      - type: Button
+        props:
+          type: primary
+          size: small
+          children: 操作`
+    },
+    {
       label: 'RemoteLoader',
       value: `md-components:
   type: RemoteLoader
